@@ -18,6 +18,7 @@ import ast
 from pathlib import Path
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -700,3 +701,143 @@ def test_pairing_approved_page_redirects_after_five_seconds_to_return_to() -> No
     body = response.body.decode("utf-8")
     assert '<meta http-equiv="refresh" content="5;url=/dashboard/reviews">' in body
     assert "signed in" in body.lower()
+
+
+# --- pairing confirmation gate (device-code phishing fix) --------------------------------------
+#
+# Before this gate existed, completing GitHub sign-in with a pairing_code carried in the /sign-in
+# link was, by itself, enough to grant that code's terminal access to every repository the signed
+# -in account controls -- see _auto_approve_waiting_pairing's git history. An attacker who obtains
+# their own valid pairing code (trivially: run the TUI once) can build that link and send it to a
+# victim; the victim clicking it and signing in normally used to be enough. Every test below
+# proves the fix at the layer where the bug actually lived: the callback route and the new
+# approve route, not just the already-correct _auto_approve_waiting_pairing function.
+
+
+def test_pairing_confirm_page_names_the_device_and_posts_to_approve() -> None:
+    from pr_reviewer.control_plane.oauth_api import _pairing_confirm_page
+
+    response = _pairing_confirm_page("deadbeef", "attacker's <script>laptop", "/dashboard")
+
+    assert response.status_code == 200
+    assert isinstance(response.body, bytes)
+    body = response.body.decode("utf-8")
+    # Escaped: a device_name is whatever the pairing code's creator named it, attacker-controlled.
+    assert "<script>" not in body
+    assert "attacker&#x27;s" in body or "attacker&#39;s" in body
+    assert '<form method="post" action="/api/auth/github/approve-pairing">' in body
+    assert 'name="pairing_code_hash" value="deadbeef"' in body
+    assert 'name="return_to" value="/dashboard"' in body
+
+
+def test_callback_shows_a_confirmation_page_instead_of_silently_approving(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The regression proof: a completed, single-installation sign-in with a waiting pairing code
+    # must NOT reach approve_pairing_by_hash on its own. The pairing code must stay "pending"
+    # after the callback -- only the explicit /approve-pairing POST may move it to "exchangeable".
+    from pr_reviewer.control_plane.pairing import create_pairing_code, pairing_status
+
+    installation_id = 660001
+    insert_installation_row(installation_id)
+    fake_client = FakeGitHubClient(
+        github_user_id=9001,
+        installation_ids=(installation_id,),
+        repositories_by_installation={installation_id: {1: "widgets"}},
+    )
+    monkeypatch.setattr(
+        "pr_reviewer.control_plane.github_oauth.httpx.Client", lambda: fake_client
+    )
+
+    pairing = create_pairing_code("victims-actual-terminal", "chal-hijack")
+    sign_in = start_a_sign_in()
+    with connection() as conn, conn.transaction():
+        conn.execute(
+            "update oauth_states set pairing_code_hash = %s where state_hash = %s",
+            (hash_runner_credential(pairing.code), hash_runner_credential(sign_in.state)),
+        )
+
+    client = TestClient(app)
+    client.cookies.set("gh_oauth_binding", sign_in.binding_secret)
+    response = client.get(
+        "/api/auth/github/callback",
+        params={"code": "some-code", "state": sign_in.state},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert "victims-actual-terminal" in response.text
+    assert "Approve" in response.text
+    # The critical assertion: signing in alone did not grant anything.
+    assert pairing_status(pairing.code, "chal-hijack") == "pending"
+
+
+def test_approve_pairing_route_grants_the_pairing_after_an_explicit_post() -> None:
+    import time
+
+    from pr_reviewer.control_plane.github_auth import LiveInstallationAssertion
+    from pr_reviewer.control_plane.github_oauth import issue_live_sign_in
+    from pr_reviewer.control_plane.pairing import create_pairing_code, pairing_status
+
+    installation_id = 660002
+    insert_installation_row(installation_id)
+    pairing = create_pairing_code("laptop", "chal-approve")
+    assertion = LiveInstallationAssertion(
+        github_user_id=9002,
+        installations={installation_id: {2: "widgets"}},
+        expires_at=int(time.time()) + 300,
+    )
+
+    client = TestClient(app)
+    client.cookies.set("gh_live_sign_in", issue_live_sign_in(assertion))
+    response = client.post(
+        "/api/auth/github/approve-pairing",
+        data={
+            "pairing_code_hash": hash_runner_credential(pairing.code),
+            "return_to": "/dashboard",
+        },
+    )
+
+    assert response.status_code == 200
+    assert pairing_status(pairing.code, "chal-approve") == "exchangeable"
+
+
+def test_approve_pairing_route_refuses_without_the_live_sign_in_cookie() -> None:
+    # This is the property that makes the confirmation gate real: without a valid session cookie
+    # from the browser that actually completed sign-in, nobody can grant the pairing, including a
+    # cross-site form auto-submitted by a phishing page (SameSite=Lax excludes the cookie there).
+    from pr_reviewer.control_plane.pairing import create_pairing_code, pairing_status
+
+    pairing = create_pairing_code("laptop", "chal-no-cookie")
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/auth/github/approve-pairing",
+        data={
+            "pairing_code_hash": hash_runner_credential(pairing.code),
+            "return_to": "/dashboard",
+        },
+    )
+
+    assert response.status_code == 401
+    assert pairing_status(pairing.code, "chal-no-cookie") == "pending"
+
+
+def test_approve_pairing_route_rejects_a_return_to_outside_the_allowlist() -> None:
+    import time
+
+    from pr_reviewer.control_plane.github_auth import LiveInstallationAssertion
+    from pr_reviewer.control_plane.github_oauth import issue_live_sign_in
+
+    assertion = LiveInstallationAssertion(
+        github_user_id=9003, installations={}, expires_at=int(time.time()) + 300
+    )
+    client = TestClient(app)
+    client.cookies.set("gh_live_sign_in", issue_live_sign_in(assertion))
+
+    response = client.post(
+        "/api/auth/github/approve-pairing",
+        data={"pairing_code_hash": "irrelevant", "return_to": "https://evil.example/"},
+    )
+
+    assert response.status_code == 400

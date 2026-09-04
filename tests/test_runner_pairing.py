@@ -82,6 +82,39 @@ def count_runners_named(device_name: str) -> int:
 # github_oauth.py grew the real, GitHub-verified one.
 
 
+def test_pending_pairing_device_name_returns_the_device_only_while_still_waiting(
+    make_verified_installation_access: VerifiedAccessFactory,
+) -> None:
+    # The hosted sign-in callback's confirmation page (control_plane/oauth_api.py) uses this to
+    # decide what to show, and it must never itself decide anything: it is a read-only lookup, so
+    # a browser that loads the callback and never clicks Approve leaves the code untouched.
+    from pr_reviewer.control_plane.pairing import (
+        approve_pairing,
+        create_pairing_code,
+        pending_pairing_device_name,
+    )
+
+    installation_id = 5099
+    insert_installation(installation_id)
+    pairing = create_pairing_code("attackers-laptop", sha256_hex("v"))
+    code_hash = sha256_hex(pairing.code)
+
+    assert pending_pairing_device_name(code_hash) == "attackers-laptop"
+
+    access = make_verified_installation_access(42, installation_id, {778904: "widgets"})
+    approve_pairing(pairing.code, access, [778904])
+
+    # Once approved (whether by the confirmation POST or the manual /dashboard flow), it is no
+    # longer "waiting" -- a second load of the callback must not show the confirm page again.
+    assert pending_pairing_device_name(code_hash) is None
+
+
+def test_pending_pairing_device_name_is_none_for_an_unknown_or_expired_code() -> None:
+    from pr_reviewer.control_plane.pairing import pending_pairing_device_name
+
+    assert pending_pairing_device_name(sha256_hex("never-issued")) is None
+
+
 def test_pairing_code_is_stored_hashed_never_plaintext() -> None:
     from pr_reviewer.control_plane.pairing import create_pairing_code
 

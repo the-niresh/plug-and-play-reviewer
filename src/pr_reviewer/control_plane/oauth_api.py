@@ -10,7 +10,7 @@ Max-Age matches the state's own expiry so the cookie cannot outlive the row it a
 from __future__ import annotations
 
 import html
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -25,15 +25,17 @@ from pr_reviewer.control_plane.github_auth import (
     VerifiedGitHubUser,
 )
 from pr_reviewer.control_plane.github_oauth import (
+    ALLOWED_RETURN_TO_PATHS,
     LIVE_SIGN_IN_COOKIE_NAME,
     STATE_TTL_SECONDS,
     begin_sign_in,
     capture_live_assertion,
     complete_sign_in,
     issue_live_sign_in,
+    read_live_sign_in,
     verify_installation_access,
 )
-from pr_reviewer.control_plane.pairing import approve_pairing_by_hash
+from pr_reviewer.control_plane.pairing import approve_pairing_by_hash, pending_pairing_device_name
 from pr_reviewer.control_plane.repository_policy import hash_runner_credential
 
 router = APIRouter(prefix="/api/auth/github", tags=["github-oauth"])
@@ -170,9 +172,38 @@ installation. You can go back to it, or wait a moment to continue here.</p>
     )
 
 
+def _pairing_confirm_page(pairing_code_hash: str, device_name: str, return_to: str) -> HTMLResponse:
+    """Shown instead of silently granting access: a pairing code was waiting on this exact
+    sign-in, but granting it is a decision only the person in the browser can make, not something
+    completing GitHub OAuth implies by itself. Without this step, anyone who can get a victim to
+    click a "sign in" link carrying an attacker's own pairing code -- e.g. by emailing it, the way
+    device-code phishing works against RFC 8628 flows -- would silently bind their own terminal to
+    the victim's repositories the moment the victim signed in normally. Requiring an explicit,
+    named "Approve" click here is the same mitigation GitHub's own device flow uses.
+    """
+    device = html.escape(device_name)
+    destination = html.escape(return_to, quote=True)
+    code_hash = html.escape(pairing_code_hash, quote=True)
+    return HTMLResponse(
+        f"""<!doctype html>
+<title>Approve this device?</title>
+<body style="font:16px/1.6 system-ui;max-width:34rem;margin:12vh auto;padding:0 1.5rem">
+<h1 style="font-size:1.4rem">A terminal wants to pair as you</h1>
+<p>A device named <strong>{device}</strong> is waiting to pair with your GitHub account. Only
+approve this if you started that sign-in yourself, from that terminal.</p>
+<form method="post" action="/api/auth/github/approve-pairing">
+<input type="hidden" name="pairing_code_hash" value="{code_hash}">
+<input type="hidden" name="return_to" value="{destination}">
+<button type="submit">Approve "{device}"</button>
+</form>
+<p><a href="{destination}">Cancel, do not pair this device</a></p>
+</body>"""
+    )
+
+
 def _auto_approve_waiting_pairing(
     pairing_code_hash: str,
-    user: VerifiedGitHubUser,
+    user: VerifiedGitHubUser | None,
     assertion: LiveInstallationAssertion,
 ) -> PairingApproved | PairingDenied | None:
     """Link the terminal's waiting pairing to the installation this sign-in just proved control
@@ -209,17 +240,18 @@ def callback_route(
     assertion = capture_live_assertion(user)
 
     response: RedirectResponse | HTMLResponse
-    if pairing_code_hash is not None:
-        outcome = _auto_approve_waiting_pairing(pairing_code_hash, user, assertion)
-        if isinstance(outcome, PairingDenied):
-            response = _pairing_denied_page(outcome.reason)
-        elif isinstance(outcome, PairingApproved):
-            # A person who just watched a "sign in with GitHub" button turn into a
-            # 302 with no other feedback has no way to tell the terminal actually
-            # received anything -- this is that confirmation, not just a redirect.
-            response = _pairing_approved_page(user.return_to)
+    if pairing_code_hash is not None and len(assertion.installations) == 1:
+        # Single-installation is the only case an automatic grant is even on the table (see
+        # _auto_approve_waiting_pairing's own docstring); this is a read-only lookup, so nothing
+        # is granted yet, only whether there is still something waiting worth asking about.
+        device_name = pending_pairing_device_name(pairing_code_hash)
+        if device_name is None:
+            response = _pairing_denied_page("invalid_or_expired_code")
         else:
-            response = RedirectResponse(url=user.return_to, status_code=302)
+            # Granting happens only from the /approve-pairing POST below, after a person reads
+            # the device name and clicks Approve -- see that route and _pairing_confirm_page for
+            # why completing GitHub sign-in must never be enough by itself.
+            response = _pairing_confirm_page(pairing_code_hash, device_name, user.return_to)
     else:
         response = RedirectResponse(url=user.return_to, status_code=302)
 
@@ -234,3 +266,36 @@ def callback_route(
         samesite="lax",
     )
     return response
+
+
+@router.post("/approve-pairing")
+async def approve_pairing_confirmation_route(request: Request) -> HTMLResponse:
+    """The only place a pairing code waiting on a GitHub sign-in actually gets granted. Gated on
+    the live-sign-in cookie /callback just set, which SameSite=Lax excludes from a cross-site POST
+    (only "safe" top-level navigations carry a Lax cookie cross-site, never a form POST), so a
+    phishing page cannot auto-submit this on a victim's behalf -- it can only be reached by the
+    same browser that completed GitHub sign-in, clicking the button _pairing_confirm_page showed.
+
+    Parsed by hand with parse_qsl rather than FastAPI's Form(...): the form's two fields are a
+    plain application/x-www-form-urlencoded body (the browser's default, no enctype set on
+    _pairing_confirm_page's form), and Form(...) would pull in python-multipart for that alone.
+    """
+    body = (await request.body()).decode("utf-8")
+    fields = dict(parse_qsl(body))
+    pairing_code_hash = fields.get("pairing_code_hash", "")
+    return_to = fields.get("return_to", "")
+    if return_to not in ALLOWED_RETURN_TO_PATHS:
+        raise HTTPException(status_code=400, detail="return_to_not_allowed")
+    assertion = read_live_sign_in(request.cookies.get(LIVE_SIGN_IN_COOKIE_NAME, ""))
+    if assertion is None:
+        raise HTTPException(status_code=401, detail="missing_sign_in")
+
+    outcome = _auto_approve_waiting_pairing(pairing_code_hash, None, assertion)
+    if isinstance(outcome, PairingDenied):
+        return _pairing_denied_page(outcome.reason)
+    if isinstance(outcome, PairingApproved):
+        return _pairing_approved_page(return_to)
+    # None: the ambiguous-installation or access-denied case. The confirm page was only ever
+    # shown for a single, just-verified installation, so reaching this means something changed
+    # (e.g. the installation was revoked) between the callback and this click.
+    return _pairing_denied_page("unknown_installation")

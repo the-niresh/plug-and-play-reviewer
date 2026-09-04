@@ -92,6 +92,24 @@ def _upsert_repository(
     return uuid.UUID(str(row["id"]))
 
 
+def pending_pairing_device_name(code_hash: str) -> str | None:
+    """Read-only lookup for the hosted sign-in callback's confirmation page: is this pairing code
+    still waiting (not yet approved, not expired), and if so which device is it for. Never writes
+    anything -- approve_pairing_by_hash below is the only function that spends a pairing code, so
+    a browser that never clicks "Approve" on that confirmation page leaves the code untouched.
+    """
+    with connection() as conn:
+        row = conn.execute(
+            """
+            select device_name from pairing_codes
+            where code_hash = %s and approved_at is null
+              and created_at > now() - interval '10 minutes'
+            """,
+            (code_hash,),
+        ).fetchone()
+    return str(row["device_name"]) if row is not None else None
+
+
 def approve_pairing(
     code: str,
     access: VerifiedInstallationAccess,
