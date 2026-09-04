@@ -95,7 +95,12 @@ def test_the_poll_goes_to_the_hosted_client_not_the_local_daemon() -> None:
     running, status = _run(client)
     assert running, "the app must still be alive after signing in"
     assert client.status_calls > 0, "pairing status must be polled on the hosted client"
-    assert status == "signed in", status
+    # Not "signed in": this Harness mounts a bare ConnectPanel with no on_pairing_exchangeable
+    # handler, so nothing ever calls show_signed_in() -- that only happens on ReviewerApp,
+    # after it has actually exchanged the code for a credential (app.py). What this test
+    # exists to prove is unaffected: the poll went to the hosted client, and the app is
+    # still alive.
+    assert status == "finishing sign-in...", status
 
 
 def test_a_refused_poll_is_reported_instead_of_killing_the_app() -> None:

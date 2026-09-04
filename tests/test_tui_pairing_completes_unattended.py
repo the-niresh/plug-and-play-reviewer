@@ -77,6 +77,17 @@ def test_pairing_completes_unattended(tmp_path: Path) -> None:
                 lambda: app.github_connected,
                 description="github connection after pairing",
             )
+            # The credential is stored (github_connected is True) well before the screen
+            # changes: app.py's post-sign-in countdown holds the "signed in" confirmation on
+            # screen for 5s first (see _start_post_sign_in_countdown). pilot.pause(5.2) runs
+            # Textual's own test clock forward through that real timer rather than the wall
+            # clock, so this does not actually sleep 5 seconds.
+            await wait_until(
+                pilot,
+                lambda: "continuing in" in str(pilot.app.query_one("#pairing-status").render()),
+                description="the post-sign-in countdown to start",
+            )
+            await pilot.pause(5.2)
             assert app.query_one("#model-access-screen") is not None
 
     asyncio.run(exercise())
