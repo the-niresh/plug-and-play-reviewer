@@ -4,11 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pr_reviewer.reviewer.review_pull_request import (
-    _SYSTEM_PROMPT,
-    DIFF_ONLY_PROMPT_NAME,
-    DIFF_ONLY_PROMPT_VERSION,
-)
+from pr_reviewer.prompts.diff_only import DIFF_ONLY_PROMPT
 from pr_reviewer.reviewer.specialists import SPECIALIST_CONCERNS
 
 _SPECIALIST_PROMPT_CONTENT: dict[str, str] = {
@@ -44,10 +40,10 @@ class AgentPromptEntry:
 def list_builtin_agent_prompts() -> tuple[AgentPromptEntry, ...]:
     entries: list[AgentPromptEntry] = [
         AgentPromptEntry(
-            agent_id=DIFF_ONLY_PROMPT_NAME,
+            agent_id=DIFF_ONLY_PROMPT.name,
             label="One-agent reviewer",
-            version=DIFF_ONLY_PROMPT_VERSION,
-            content=_SYSTEM_PROMPT.strip(),
+            version=DIFF_ONLY_PROMPT.version,
+            content=DIFF_ONLY_PROMPT.content.strip(),
         )
     ]
     for concern in SPECIALIST_CONCERNS:
