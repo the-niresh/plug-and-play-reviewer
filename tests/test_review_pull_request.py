@@ -8,6 +8,7 @@ stay inside test bodies.
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 from typing import Any
 
@@ -77,14 +78,31 @@ def _packed(files: list[PullRequestFile]) -> Any:
 def _fake_model(parsed: dict[str, Any]) -> Any:
     from pr_reviewer.models.provider import ModelResponse
 
+    first_parsed = parsed
+
     class FakeModel:
         def __init__(self) -> None:
             self.calls: list[Any] = []
 
         def complete_json(self, request: Any) -> Any:
             self.calls.append(request)
+            if request.schema_name == "FindingReflectionScores":
+                raw_candidates = next(
+                    item.content
+                    for item in request.untrusted_inputs
+                    if item.name == "candidate_findings"
+                )
+                candidate_count = len(json.loads(raw_candidates))
+                response_parsed = {
+                    "scores": [
+                        {"index": index, "score": 1.0, "reason": "accepted"}
+                        for index in range(candidate_count)
+                    ]
+                }
+            else:
+                response_parsed = first_parsed
             return ModelResponse(
-                parsed=parsed,
+                parsed=response_parsed,
                 output_hash="a" * 64,
                 provider_request_id=None,
                 provider="openai",
@@ -233,7 +251,7 @@ def test_closed_pr_before_the_model_call_records_cancelled_not_a_dead_lease() ->
     assert outcome.is_complete() is False
 
 
-def test_active_heartbeat_runs_once_then_the_model_call() -> None:
+def test_active_heartbeat_runs_once_then_the_model_calls() -> None:
     from pr_reviewer.contracts.runner import LeaseState
 
     packed = _packed([_file("app.py")])
@@ -261,7 +279,7 @@ def test_active_heartbeat_runs_once_then_the_model_call() -> None:
         model_name="gpt-4o-mini",
         heartbeat=heartbeat,
     )
-    assert events == ["heartbeat", "model"]
+    assert events == ["heartbeat", "model", "model"]
 
 
 def test_prompt_states_omitted_files_and_partial_coverage_is_never_complete() -> None:

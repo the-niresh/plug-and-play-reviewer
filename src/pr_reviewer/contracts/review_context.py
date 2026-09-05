@@ -82,6 +82,7 @@ class ReviewOutcome(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     candidates: tuple[FindingCandidate, ...]
+    suppressed_candidates: tuple[FindingCandidate, ...] = ()
     packing_strategy_version: str = Field(min_length=1)
     covers_all_changed_files: bool
     omitted_files: tuple[OmittedFile, ...]

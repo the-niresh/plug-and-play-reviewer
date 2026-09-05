@@ -25,6 +25,8 @@ class FindingDraft(BaseModel):
     rationale: str = Field(min_length=1)
     evidence: list[str] = Field(min_length=1)
     confidence: float = Field(ge=0, le=1)
+    reflection_score: float | None = Field(default=None, ge=0, le=1)
+    reflection_reason: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def validate_line_range(self) -> FindingDraft:

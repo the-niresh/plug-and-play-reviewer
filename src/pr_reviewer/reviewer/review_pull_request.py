@@ -19,6 +19,7 @@ from pr_reviewer.github.pull_request import PullRequestSnapshot
 from pr_reviewer.models.provider import ModelProvider, ModelRequest
 from pr_reviewer.prompts.diff_only import DIFF_ONLY_PROMPT
 from pr_reviewer.reviewer.diff_budget import omission_prompt_section
+from pr_reviewer.reviewer.reflect import reflect_findings
 from pr_reviewer.security.prompt_boundaries import UntrustedText, wrap_untrusted_review_inputs
 
 MAX_FINDING_DRAFTS = 32
@@ -87,8 +88,15 @@ def review_pull_request(
         )
     )
     parsed_candidates = _candidates_from_parsed(response.parsed, packed)
-    return ReviewOutcome(
+    reflected = reflect_findings(
+        model=model,
+        model_name=model_name,
+        packed=packed,
         candidates=parsed_candidates.candidates,
+    )
+    return ReviewOutcome(
+        candidates=reflected.accepted,
+        suppressed_candidates=reflected.suppressed,
         packing_strategy_version=packed.packing_strategy_version,
         covers_all_changed_files=packed.covers_all_changed_files,
         omitted_files=packed.omitted_files,

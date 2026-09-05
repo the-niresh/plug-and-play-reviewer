@@ -167,6 +167,19 @@ def finish_completion(
         findings = parsed.get("findings")
         if not isinstance(findings, list):
             raise ModelSchemaMismatch()
+    elif request.schema_name == "FindingReflectionScores":
+        scores = parsed.get("scores")
+        if not isinstance(scores, list):
+            raise ModelSchemaMismatch()
+        for score in scores:
+            if not isinstance(score, dict):
+                raise ModelSchemaMismatch()
+            if not isinstance(score.get("index"), int):
+                raise ModelSchemaMismatch()
+            if not isinstance(score.get("score"), int | float):
+                raise ModelSchemaMismatch()
+            if not isinstance(score.get("reason"), str) or not score["reason"]:
+                raise ModelSchemaMismatch()
     else:
         raise ModelSchemaMismatch()
     canonical = json.dumps(parsed, sort_keys=True, separators=(",", ":"))
