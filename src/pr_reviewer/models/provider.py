@@ -23,7 +23,15 @@ ModelVendor = Literal["openai", "anthropic"]
 # USD per million tokens (input, output). Unknown models fail closed so cost cannot go uncounted.
 _PRICE_PER_MILLION: dict[tuple[str, str], tuple[Decimal, Decimal]] = {
     ("openai", "gpt-4o-mini"): (Decimal("0.15"), Decimal("0.60")),
+    ("openai", "gpt-4o"): (Decimal("2.50"), Decimal("10.00")),
+    ("openai", "gpt-4.1-mini"): (Decimal("0.40"), Decimal("1.60")),
+    ("openai", "gpt-4.1"): (Decimal("2.00"), Decimal("8.00")),
+    ("openai", "o3-mini"): (Decimal("1.10"), Decimal("4.40")),
     ("anthropic", "claude-3-5-haiku-latest"): (Decimal("0.80"), Decimal("4.00")),
+    ("anthropic", "claude-3-5-sonnet-latest"): (Decimal("3.00"), Decimal("15.00")),
+    ("anthropic", "claude-3-7-sonnet-latest"): (Decimal("3.00"), Decimal("15.00")),
+    ("anthropic", "claude-sonnet-4-20250514"): (Decimal("3.00"), Decimal("15.00")),
+    ("anthropic", "claude-haiku-4-20250414"): (Decimal("1.00"), Decimal("5.00")),
 }
 
 

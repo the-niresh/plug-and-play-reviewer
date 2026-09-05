@@ -28,10 +28,11 @@ from pr_reviewer.agent_surfaces.core import (
     SurfaceReview,
     remediation_prompt_for_finding,
 )
+from pr_reviewer.context_budget import context_budget_for_model
 from pr_reviewer.contracts.github import PullRequestRef
-from pr_reviewer.contracts.review_context import ContextBudget
 from pr_reviewer.github.pull_request import fetch_pull_request
 from pr_reviewer.models.anthropic_provider import AnthropicProvider
+from pr_reviewer.models.catalogue import default_model_for, is_known_provider_model
 from pr_reviewer.models.openai_provider import OpenAIProvider
 from pr_reviewer.models.provider import ModelProvider
 from pr_reviewer.models.providers import ProviderName
@@ -45,9 +46,6 @@ OPENAI_KEY_ENV = "OPENAI_API_KEY"
 # ponytail: a plain 4-chars-per-token heuristic, not a real tokenizer. This only decides how much
 # diff the packer includes before the same budget the model itself will enforce; swap for a real
 # tokenizer (tiktoken) if packing gets measurably too eager or too conservative.
-DEFAULT_CONTEXT_WINDOW = 128_000
-DEFAULT_OUTPUT_ALLOWANCE = 4_000
-
 
 class _StaticTokenProvider:
     """Hands back one token regardless of installation_id.
@@ -102,7 +100,13 @@ class LiveAgentReviewBackend:
                 f"Set {ANTHROPIC_KEY_ENV} or {OPENAI_KEY_ENV} before requesting a review.",
             )
         provider_name, model = provider_choice
-        del provider_name
+        model_name = request.model or default_model_for(provider_name)
+        if not is_known_provider_model(provider_name, model_name):
+            raise AgentSurfaceRefusal(
+                "unsupported_model",
+                f"{model_name!r} is not available for {provider_name}.",
+                action="Choose a model listed for that provider, then retry the review.",
+            )
 
         token = os.environ[GITHUB_TOKEN_ENV]
         snapshot = fetch_pull_request(
@@ -115,10 +119,10 @@ class LiveAgentReviewBackend:
             token_provider=_StaticTokenProvider(token),
         )
 
-        budget = ContextBudget.from_window(DEFAULT_CONTEXT_WINDOW, DEFAULT_OUTPUT_ALLOWANCE)
+        budget = context_budget_for_model(model_name)
         packed = pack_diff(snapshot, budget, _count_tokens)
 
-        outcome = review_pull_request(snapshot, packed, [], model)
+        outcome = review_pull_request(snapshot, packed, [], model, model_name=model_name)
 
         findings = tuple(
             SurfaceFinding(

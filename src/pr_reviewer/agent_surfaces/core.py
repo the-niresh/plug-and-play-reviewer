@@ -117,6 +117,7 @@ class AgentReviewRequest(BaseModel):
     owner: str = Field(min_length=1)
     repository: str = Field(min_length=1)
     pull_request: int = Field(gt=0)
+    model: str | None = Field(default=None, min_length=1)
 
 
 class SurfaceFinding(BaseModel):

@@ -70,7 +70,7 @@ def test_review_uses_one_prompt_object_for_content_name_and_version() -> None:
     )
     model = CapturingModel()
 
-    review_pull_request(snapshot, packed, [], model)
+    review_pull_request(snapshot, packed, [], model, model_name="gpt-4o-mini")
 
     request = model.calls[0]
     assert request.prompt_name == DIFF_ONLY_PROMPT.name

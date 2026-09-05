@@ -42,6 +42,7 @@ def review_pull_request(
     context: list[ReviewContextItem],
     model: ModelProvider,
     *,
+    model_name: str,
     heartbeat: Callable[[], LeaseState] | None = None,
 ) -> ReviewOutcome:
     if heartbeat is not None:
@@ -75,7 +76,7 @@ def review_pull_request(
     )
     response = model.complete_json(
         ModelRequest(
-            model="gpt-4o-mini",
+            model=model_name,
             prompt_name=DIFF_ONLY_PROMPT.name,
             prompt_version=DIFF_ONLY_PROMPT.version,
             prompt_content=prompt_content,

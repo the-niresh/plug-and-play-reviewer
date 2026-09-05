@@ -107,6 +107,7 @@ def _review(
     files: list[PullRequestFile] | None = None,
     context: list[Any] | None = None,
     heartbeat: Any = None,
+    model_name: str = "gpt-4o-mini",
 ) -> tuple[Any, Any]:
     from pr_reviewer.reviewer.review_pull_request import review_pull_request
 
@@ -117,6 +118,7 @@ def _review(
         packed,
         context if context is not None else [],
         model,
+        model_name=model_name,
         heartbeat=heartbeat,
     )
     return outcome, model
@@ -221,6 +223,7 @@ def test_closed_pr_before_the_model_call_records_cancelled_not_a_dead_lease() ->
         packed,
         [],
         model,
+        model_name="gpt-4o-mini",
         heartbeat=heartbeat,
     )
     assert events == ["heartbeat"]
@@ -255,6 +258,7 @@ def test_active_heartbeat_runs_once_then_the_model_call() -> None:
         packed,
         [],
         model,
+        model_name="gpt-4o-mini",
         heartbeat=heartbeat,
     )
     assert events == ["heartbeat", "model"]
