@@ -89,7 +89,7 @@ def reflect_findings(
         scores = ReflectionScores.model_validate(response.parsed).scores
     except ValidationError as exc:
         raise ModelSchemaMismatch() from exc
-    if len(scores) != len(candidates):
+    if {score.index for score in scores} != set(range(len(candidates))):
         raise ModelSchemaMismatch()
 
     score_by_index = {score.index: score for score in scores}
