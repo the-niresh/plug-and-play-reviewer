@@ -86,6 +86,9 @@ class ReviewOutcome(BaseModel):
     covers_all_changed_files: bool
     omitted_files: tuple[OmittedFile, ...]
     cancelled: bool = False
+    schema_rejected_findings: int = Field(default=0, ge=0)
+    grounding_rejected_findings: int = Field(default=0, ge=0)
+    duplicate_rejected_findings: int = Field(default=0, ge=0)
 
     def is_complete(self) -> bool:
         return not self.cancelled and self.covers_all_changed_files
