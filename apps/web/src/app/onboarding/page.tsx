@@ -26,17 +26,16 @@ type ModePayload = {
   forces_human_approval: boolean;
 };
 
-/** The pairing steps, numbered because they are a real sequence: the model key
- *  cannot be saved before the local daemon hands back a CSRF token. */
-const STEPS = [
-  { n: 1, title: "Sign in", hint: "on the hosted control plane" },
-  { n: 2, title: "Pick repositories", hint: "after GitHub sign-in" },
-  { n: 3, title: "Add a model key", hint: "stored on this machine only" },
-  { n: 4, title: "Confirm runtime mode", hint: "Docker isolation decides it" },
-] as const;
+type OnboardingStep = {
+  id: string;
+  title: string;
+  hint: string;
+  required_fields: string[];
+};
 
 export default function OnboardingPage() {
   const [mode, setMode] = useState<ModePayload | null>(null);
+  const [steps, setSteps] = useState<OnboardingStep[]>([]);
   const [modeError, setModeError] = useState(false);
   // The local daemon (not this page) knows the hosted origin and the allowlisted
   // return_to it is configured with, so the URL is fetched rather than built here -- the
@@ -48,19 +47,22 @@ export default function OnboardingPage() {
 
     async function load() {
       try {
-        const [modeResponse, sessionResponse, signInResponse] = await Promise.all([
+        const [modeResponse, sessionResponse, signInResponse, stepsResponse] = await Promise.all([
           fetch(`${LOCAL_API}/onboarding/mode`, { credentials: "include" }),
           fetch(`${LOCAL_API}/onboarding/session`, { credentials: "include" }),
           fetch(`${LOCAL_API}/onboarding/pairing/sign-in`, { credentials: "include" }),
+          fetch(`${LOCAL_API}/onboarding/steps`, { credentials: "include" }),
         ]);
-        if (!modeResponse.ok || !sessionResponse.ok || !signInResponse.ok) {
+        if (!modeResponse.ok || !sessionResponse.ok || !signInResponse.ok || !stepsResponse.ok) {
           throw new Error("onboarding API unavailable");
         }
         const payload = (await modeResponse.json()) as ModePayload;
         const signIn = (await signInResponse.json()) as { url: string };
+        const sharedSteps = (await stepsResponse.json()) as { steps: OnboardingStep[] };
         if (!cancelled) {
           setMode(payload);
           setSignInUrl(signIn.url);
+          setSteps(sharedSteps.steps);
         }
       } catch {
         if (!cancelled) {
@@ -93,10 +95,10 @@ export default function OnboardingPage() {
       </header>
 
       <ol className="mb-12 grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
-        {STEPS.map((step) => (
-          <li key={step.n} className="bg-card px-4 py-3">
+        {steps.map((step, index) => (
+          <li key={step.id} className="bg-card px-4 py-3">
             <span className="text-primary font-mono text-xs">
-              {String(step.n).padStart(2, "0")}
+              {String(index + 1).padStart(2, "0")}
             </span>
             <p className="mt-1 text-sm font-medium">{step.title}</p>
             <p className="text-muted-foreground text-xs">{step.hint}</p>

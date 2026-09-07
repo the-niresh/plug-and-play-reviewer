@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from pr_reviewer.containers.runtime import ContainerProbe
 from pr_reviewer.contracts.runner import PairingDenied, RunnerCredential
+from pr_reviewer.onboarding.state import steps_payload, validate_step
 from pr_reviewer.runner.modes import RuntimeMode, select_runtime_mode
 from pr_reviewer.runner.secrets import SecretStore
 
@@ -56,6 +57,10 @@ class ModelKeyBody(BaseModel):
 class ExchangeBody(BaseModel):
     code: str = Field(min_length=1)
     proof: str = Field(min_length=1)
+
+
+class StepValidationBody(BaseModel):
+    payload: dict[str, object]
 
 
 class PendingPairingClient:
@@ -148,6 +153,17 @@ def create_local_onboarding_app(
         )
         return response
 
+    @app.get("/onboarding/steps")
+    def onboarding_steps() -> dict[str, object]:
+        return {"steps": list(steps_payload())}
+
+    @app.post("/onboarding/steps/{step_id}/validate")
+    def validate_onboarding_step(step_id: str, body: StepValidationBody) -> JSONResponse:
+        result = validate_step(step_id, body.payload)
+        if result.valid:
+            return JSONResponse({"valid": True, "errors": []})
+        return JSONResponse({"valid": False, "errors": list(result.errors)}, status_code=400)
+
     @app.get("/onboarding/pairing/sign-in")
     def pairing_sign_in() -> dict[str, str]:
         query = urlencode({"return_to": return_to})
@@ -176,6 +192,14 @@ def create_local_onboarding_app(
     ) -> JSONResponse:
         if not _csrf_ok(secret_bytes, request, x_csrf_token):
             return JSONResponse({"error": "csrf"}, status_code=403)
+        provider_validation = validate_step("provider", {"provider": body.provider})
+        key_validation = validate_step("key", {"key": body.key})
+        if not provider_validation.valid or not key_validation.valid:
+            errors = list(provider_validation.errors) + list(key_validation.errors)
+            return JSONResponse(
+                {"error": "invalid_step_payload", "errors": errors},
+                status_code=400,
+            )
         del body.provider
         secrets.set(LOCAL_MODEL_KEY_SECRET_NAME, body.key)
         return JSONResponse({"stored": True})
