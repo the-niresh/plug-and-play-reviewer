@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from typing import Protocol
 
 from pr_reviewer.agent_surfaces.core import (
     AgentReviewRequest,
@@ -30,7 +31,8 @@ from pr_reviewer.agent_surfaces.core import (
 )
 from pr_reviewer.context_budget import context_budget_for_model
 from pr_reviewer.contracts.github import PullRequestRef
-from pr_reviewer.github.pull_request import fetch_pull_request
+from pr_reviewer.contracts.review_context import PackedDiff, ReviewContextItem
+from pr_reviewer.github.pull_request import PullRequestSnapshot, fetch_pull_request
 from pr_reviewer.models.anthropic_provider import AnthropicProvider
 from pr_reviewer.models.catalogue import default_model_for, is_known_provider_model
 from pr_reviewer.models.openai_provider import OpenAIProvider
@@ -78,11 +80,37 @@ def _count_tokens(text: str) -> int:
     return max(1, len(text) // 4)
 
 
+class RetrievalExecutor(Protocol):
+    """Turns a fetched PR into repository context the diff alone does not show.
+
+    A real executor runs retrieve_context (retrieval/hybrid_search.py) against a
+    prebuilt index and converts the RetrievedChunk results into ReviewContextItem,
+    the same shape review_pull_request already wraps as untrusted input. There is
+    no wired index yet, so NullRetrievalExecutor is the default: it fails open to
+    a diff-only review instead of failing the request.
+    """
+
+    def retrieve(
+        self, snapshot: PullRequestSnapshot, packed: PackedDiff
+    ) -> list[ReviewContextItem]: ...
+
+
+class NullRetrievalExecutor:
+    def retrieve(
+        self, snapshot: PullRequestSnapshot, packed: PackedDiff
+    ) -> list[ReviewContextItem]:
+        del snapshot, packed
+        return []
+
+
 class LiveAgentReviewBackend:
     """Fetches one real PR diff over the network and runs the diff-only reviewer against it."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, retrieval: RetrievalExecutor | None = None) -> None:
         self._reviews: dict[str, SurfaceReview] = {}
+        self._retrieval: RetrievalExecutor = (
+            retrieval if retrieval is not None else NullRetrievalExecutor()
+        )
 
     def github_connection_state(self) -> GitHubConnectionState:
         if not os.environ.get(GITHUB_TOKEN_ENV):
@@ -121,8 +149,9 @@ class LiveAgentReviewBackend:
 
         budget = context_budget_for_model(model_name)
         packed = pack_diff(snapshot, budget, _count_tokens)
+        context = self._retrieval.retrieve(snapshot, packed)
 
-        outcome = review_pull_request(snapshot, packed, [], model, model_name=model_name)
+        outcome = review_pull_request(snapshot, packed, context, model, model_name=model_name)
 
         findings = tuple(
             SurfaceFinding(
