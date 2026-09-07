@@ -8,6 +8,10 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from pr_reviewer.config import get_settings
+from pr_reviewer.control_plane.app_manifest import (
+    bootstrap_manifest_credentials_into_environment,
+)
+from pr_reviewer.control_plane.app_manifest import router as app_manifest_router
 from pr_reviewer.control_plane.approval_api import router as approval_router
 from pr_reviewer.control_plane.installation_lifecycle import (
     handle_installation_event,
@@ -26,10 +30,13 @@ from pr_reviewer.jobs import cancel_review_job, enqueue_review_job
 
 MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
 
+bootstrap_manifest_credentials_into_environment()
+
 app = FastAPI(title="PR Reviewer")
 app.include_router(ops_router)
 app.include_router(pairing_router)
 app.include_router(oauth_router)
+app.include_router(app_manifest_router)
 app.include_router(approval_router)
 app.include_router(runner_jobs_router)
 app.include_router(reviews_router)
