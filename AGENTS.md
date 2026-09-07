@@ -100,6 +100,37 @@ Every model call is costed and recorded. A stage with no recorded cost is not fi
 per-review target is about four cents; see the active spec for the budget table and where it
 goes. If you add a call, say what it costs.
 
+## Be frugal with tokens
+
+Quota is the scarce resource on this project, not time. Every rule here exists because
+something wasted it before.
+
+**Read narrowly.** `grep -n` to find the line, then `sed -n '120,160p'` to read around it. Do not
+open a 500-line file to change one function, and never dump a directory to see what is in it.
+
+**Do not re-read what you have already read.** Read the spec and the plan once when your track
+starts. On later tasks read only your own task section and `git log --oneline -20` to see what
+has landed. A loop on this repo once re-read a 403-line index, a 91-line requirements file, a
+spec and a plan on every single tick.
+
+**Reuse before you write.** Look for a helper, type or pattern that already exists here before
+adding one. This repo has 1,240 lines of retrieval, a finding matcher, a budget module and a
+sandbox that were all written and then left unused because nobody looked. Re-implementing what
+is three files away is the most expensive mistake available.
+
+**Run tests narrowly while iterating.** `uv run pytest -q tests/test_your_file.py` costs seconds.
+The full suite costs five minutes and a shared lock, and belongs only in the gate.
+
+**Cite, do not paste.** In your report write `models/provider.py:161`, not the function body. The
+person reading it can open the file.
+
+**Smallest change that works.** No abstraction with one implementation, no configuration for a
+value that never changes, no scaffolding for a feature nobody asked for. If the explanation is
+longer than the code, delete the explanation.
+
+**Say when you are stuck.** A blocker reported in one line costs almost nothing. Three attempts
+at guessing around it costs a lot, and usually lands in the wrong place anyway.
+
 ## Reporting
 
 Append one block to the end of `cursor-comm.md`, timestamped from `date -Is`:
