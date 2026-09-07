@@ -2,20 +2,25 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
 from psycopg import Connection
 
 from pr_reviewer.contracts.review_context import ContextBudget, PackedDiff
+from pr_reviewer.retrieval.code_graph import CodeGraph
 from pr_reviewer.retrieval.embed import EmbeddingProvider, embed_texts
 from pr_reviewer.retrieval.rrf import reciprocal_rank_fusion
+from pr_reviewer.retrieval.sensitivity import SensitivityScore
 from pr_reviewer.security.prompt_boundaries import UntrustedText, wrap_untrusted
 
 RETRIEVAL_ENABLED_DEFAULT = False
 _CANDIDATE_MULTIPLIER = 4
+_GRAPH_DEPTH_DEFAULT = 2
+_GRAPH_RANKING_WEIGHT = 2.0
+"""A call-graph connection is verified, not incidental. It outweighs a text match."""
 
 
 @dataclass(frozen=True)
@@ -24,6 +29,7 @@ class RetrievalQuery:
     repository_id: int
     commit_sha: str
     text: str
+    changed_symbols: tuple[str, ...] = field(default=())
 
 
 @dataclass(frozen=True)
@@ -48,6 +54,9 @@ def retrieve_context(
     limit: int = 8,
     record_selection: Callable[[Sequence[str]], None] | None = None,
     enabled: bool | None = None,
+    graph: CodeGraph | None = None,
+    graph_depth: int = _GRAPH_DEPTH_DEFAULT,
+    sensitivity_scores: Mapping[str, SensitivityScore] | None = None,
 ) -> list[RetrievedChunk]:
     if enabled is None:
         enabled = RETRIEVAL_ENABLED_DEFAULT
@@ -75,7 +84,14 @@ def retrieve_context(
         order_params=(query.text,),
         limit=candidate_limit,
     )
-    fused = reciprocal_rank_fusion([vector_ids, lexical_ids])
+    rankings = [vector_ids, lexical_ids]
+    weights = [1.0, 1.0]
+    if graph is not None and query.changed_symbols:
+        graph_ids = _graph_ranked_ids(conn, query, graph, graph_depth, sensitivity_scores)
+        if graph_ids:
+            rankings.append(graph_ids)
+            weights.append(_GRAPH_RANKING_WEIGHT)
+    fused = reciprocal_rank_fusion(rankings, weights=weights)
     chunks = _load_chunks(conn, fused)[:limit]
     if packed is not None and budget is not None:
         if count_tokens is None:
@@ -111,6 +127,61 @@ def wrap_retrieved_chunks(chunks: Sequence[RetrievedChunk]) -> list[str]:
 
 def selection_event_payload(chunk_ids: Sequence[str]) -> dict[str, int | str]:
     return {"chunk_ids": ",".join(chunk_ids), "count": len(chunk_ids)}
+
+
+def _graph_ranked_ids(
+    conn: Connection[Any],
+    query: RetrievalQuery,
+    graph: CodeGraph,
+    depth: int,
+    sensitivity_scores: Mapping[str, SensitivityScore] | None,
+) -> list[str]:
+    """Rank chunk ids from files connected to the changed symbols, not from text.
+
+    A caller or importer of a changed symbol is included even if its own content
+    shares no words with the query. Connected files are ordered by descending
+    sensitivity caller_count when scores are available, so the most-called file
+    among several callers is offered to the model first.
+    """
+    connected_paths: list[str] = []
+    seen: set[str] = set()
+    for symbol in query.changed_symbols:
+        for node_id in graph.blast_radius(symbol, depth):
+            node = graph.nodes.get(node_id)
+            path = node.source_file if node is not None else ""
+            if not path or path in seen:
+                continue
+            seen.add(path)
+            connected_paths.append(path)
+    if sensitivity_scores:
+        connected_paths.sort(key=lambda path: -_caller_count(sensitivity_scores, path))
+    ids: list[str] = []
+    for path in connected_paths:
+        ids.extend(_chunk_ids_for_path(conn, query, path))
+    return ids
+
+
+def _caller_count(scores: Mapping[str, SensitivityScore], path: str) -> int:
+    score = scores.get(path)
+    return score.caller_count if score is not None else 0
+
+
+def _chunk_ids_for_path(conn: Connection[Any], query: RetrievalQuery, path: str) -> list[str]:
+    rows = conn.execute(
+        """
+        select c.id
+        from code_chunks c
+        join embedding_generations g on g.id = c.generation_id
+        where g.installation_id = %s
+          and g.repository_id = %s
+          and g.commit_sha = %s
+          and g.state = 'active'
+          and c.file_path = %s
+        order by c.start_line
+        """,
+        (query.installation_id, query.repository_id, query.commit_sha, path),
+    ).fetchall()
+    return [_id_from_row(row) for row in rows]
 
 
 def _rank_ids(
