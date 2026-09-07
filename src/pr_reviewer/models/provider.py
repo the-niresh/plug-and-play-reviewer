@@ -95,6 +95,7 @@ class ModelResponse(BaseModel):
     prompt_version: str
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
+    prompt_cache_hit_rate: float | None = Field(default=None, ge=0, le=1)
     cost_usd: str
     latency_ms: int = Field(ge=0)
 
@@ -113,7 +114,7 @@ def render_untrusted_user_message(request: ModelRequest) -> str:
 
 def model_call_ledger_fields(response: ModelResponse) -> dict[str, Any]:
     """Aggregates plus identifiers. Never a key, a prompt, or a raw request."""
-    return {
+    fields: dict[str, Any] = {
         "provider": response.provider,
         "model": response.model,
         "input_tokens": response.input_tokens,
@@ -125,6 +126,9 @@ def model_call_ledger_fields(response: ModelResponse) -> dict[str, Any]:
         "prompt_name": response.prompt_name,
         "prompt_version": response.prompt_version,
     }
+    if response.prompt_cache_hit_rate is not None:
+        fields["prompt_cache_hit_rate"] = response.prompt_cache_hit_rate
+    return fields
 
 
 def cost_usd_for(provider: str, model: str, input_tokens: int, output_tokens: int) -> str:
@@ -142,6 +146,15 @@ def cost_usd_for(provider: str, model: str, input_tokens: int, output_tokens: in
     return text if text else "0"
 
 
+def cache_hit_rate_for(input_tokens: int, cached_input_tokens: int | None) -> float | None:
+    if cached_input_tokens is None:
+        return None
+    if input_tokens <= 0:
+        return 0.0
+    clipped = max(0, min(cached_input_tokens, input_tokens))
+    return clipped / input_tokens
+
+
 def finish_completion(
     *,
     vendor: ModelVendor,
@@ -149,6 +162,7 @@ def finish_completion(
     content: str,
     input_tokens: int,
     output_tokens: int,
+    prompt_cache_hit_rate: float | None = None,
     provider_request_id: str | None,
     latency_ms: int,
 ) -> ModelResponse:
@@ -194,6 +208,7 @@ def finish_completion(
         prompt_version=request.prompt_version,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        prompt_cache_hit_rate=prompt_cache_hit_rate,
         cost_usd=cost_usd_for(vendor, request.model, input_tokens, output_tokens),
         latency_ms=latency_ms,
     )

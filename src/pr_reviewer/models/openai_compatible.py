@@ -13,6 +13,7 @@ from pr_reviewer.models.provider import (
     ModelResponse,
     ModelTimeout,
     ModelVendor,
+    cache_hit_rate_for,
     finish_completion,
     raise_for_provider_status,
     render_untrusted_user_message,
@@ -23,10 +24,43 @@ from pr_reviewer.models.provider import (
 class OpenAICompatibleProviderConfig:
     provider_id: str
     base_url: str
+    cache_request_overrides: dict[str, object] | None = None
 
 
 def _auth_headers(api_key: str) -> dict[str, str]:
     return {"authorization": f"Bearer {api_key}"}
+
+
+_RESERVED_BODY_KEYS = frozenset({"model", "max_tokens", "response_format", "messages"})
+
+
+def _coerce_non_negative_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    if isinstance(value, float):
+        if value < 0 or not value.is_integer():
+            return None
+        return int(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            return int(stripped)
+    return None
+
+
+def _cached_input_tokens(usage: dict[str, object]) -> int | None:
+    details = usage.get("prompt_tokens_details")
+    if isinstance(details, dict):
+        parsed = _coerce_non_negative_int(details.get("cached_tokens"))
+        if parsed is not None:
+            return parsed
+    for key in ("cached_input_tokens", "cache_read_input_tokens"):
+        parsed = _coerce_non_negative_int(usage.get(key))
+        if parsed is not None:
+            return parsed
+    return None
 
 
 class OpenAICompatibleProvider:
@@ -58,6 +92,12 @@ class OpenAICompatibleProvider:
                 {"role": "user", "content": render_untrusted_user_message(request)},
             ],
         }
+        overrides = self._config.cache_request_overrides
+        if overrides:
+            for key, value in overrides.items():
+                if key in _RESERVED_BODY_KEYS:
+                    continue
+                body[key] = value
         try:
             response = self._http.post(
                 "/v1/chat/completions",
@@ -73,8 +113,14 @@ class OpenAICompatibleProvider:
         try:
             content = str(payload["choices"][0]["message"]["content"])
             usage = payload.get("usage") or {}
+            if not isinstance(usage, dict):
+                raise TypeError("usage must be an object")
             input_tokens = int(usage.get("prompt_tokens", 0))
             output_tokens = int(usage.get("completion_tokens", 0))
+            prompt_cache_hit_rate = cache_hit_rate_for(
+                input_tokens,
+                _cached_input_tokens(usage),
+            )
             request_id = payload.get("id")
             provider_request_id = str(request_id) if request_id is not None else None
         except (KeyError, IndexError, TypeError, ValueError) as exc:
@@ -85,6 +131,7 @@ class OpenAICompatibleProvider:
             content=content,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            prompt_cache_hit_rate=prompt_cache_hit_rate,
             provider_request_id=provider_request_id,
             latency_ms=latency_ms,
         )
