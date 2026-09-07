@@ -12,18 +12,33 @@ A headless VPS is a normal install target.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import logging
 import os
 import secrets as secrets_lib
 import signal
 import socket
 import sys
+import threading
+import time
 import webbrowser
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
 from pr_reviewer.containers.runtime import ContainerProbe
+from pr_reviewer.context_budget import context_budget_for_model
+from pr_reviewer.contracts.runner import JobAcknowledgement, JobEnvelope, LeaseState
+from pr_reviewer.local_store.sqlite import LocalStore
+from pr_reviewer.models.anthropic_provider import AnthropicProvider
+from pr_reviewer.models.catalogue import default_model_for
+from pr_reviewer.reviewer.diff_budget import pack_diff
+from pr_reviewer.reviewer.review_pull_request import review_pull_request
+from pr_reviewer.runner.client import RunnerClient
+from pr_reviewer.runner.daemon import ReviewExecutor, RunnerDaemon, open_or_recover_local_store
+from pr_reviewer.runner.github_access import fetch_job_snapshot
 from pr_reviewer.runner.modes import RuntimeMode
 from pr_reviewer.runner.secrets import SecretStore, default_config_dir, get_secret_store
 
@@ -31,6 +46,13 @@ LINUX_UNIT_RELATIVE = Path(".config") / "systemd" / "user" / "pr-reviewer.servic
 DARWIN_PLIST_RELATIVE = Path("Library") / "LaunchAgents" / "com.pr-reviewer.plist"
 _DEFAULT_PORT = 8741
 _SESSION_SECRET_NAME = "local_session_secret"
+_RUNNER_CREDENTIAL_SECRET = "runner_credential"
+_LOCAL_STATE_DB_NAME = "local_state.sqlite3"
+_RUNNER_STOP_DEADLINE_SECONDS = 1.0
+_RUNNER_POLL_INTERVAL_SECONDS = 0.1
+_DEFAULT_REVIEW_MODEL_PROVIDER = "anthropic"
+
+logger = logging.getLogger(__name__)
 
 
 class LocalServiceError(RuntimeError):
@@ -96,6 +118,7 @@ def start_local_onboarding(
     secrets: SecretStore | None = None,
     run_server: Callable[..., None] | None = None,
     requested_mode: RuntimeMode = "full",
+    start_runner_daemon: bool = False,
 ) -> None:
     from pr_reviewer.runner.web.local_auth import PendingPairingClient, create_local_onboarding_app
 
@@ -123,10 +146,26 @@ def start_local_onboarding(
     pid_path = _data_dir() / "onboarding.pid"
     pid_path.parent.mkdir(parents=True, exist_ok=True)
     pid_path.write_text(str(os.getpid()), encoding="utf-8")
+    runner_stop_event = threading.Event()
+    runner_thread: threading.Thread | None = None
+    if start_runner_daemon:
+        runner_thread = threading.Thread(
+            target=_run_runner_daemon_until_stopped,
+            kwargs={
+                "hosted_origin": hosted_origin,
+                "secrets": store,
+                "stop_event": runner_stop_event,
+            },
+            daemon=True,
+        )
+        runner_thread.start()
     runner = run_server if run_server is not None else _uvicorn_run
     try:
         runner(app, host=host, port=port)
     finally:
+        if runner_thread is not None:
+            runner_stop_event.set()
+            runner_thread.join(timeout=_RUNNER_STOP_DEADLINE_SECONDS)
         pid_path.unlink(missing_ok=True)
 
 
@@ -203,6 +242,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 port=parsed.port,
                 hosted_origin=parsed.hosted_origin,
                 requested_mode=cast(RuntimeMode, parsed.mode),
+                start_runner_daemon=True,
             )
         except (LocalServiceError, LocalAuthError) as exc:
             print(str(exc), file=sys.stderr)
@@ -243,6 +283,122 @@ def _uvicorn_run(app: object, *, host: str, port: int) -> None:
     if not isinstance(app, FastAPI):
         raise TypeError("onboarding server requires a FastAPI app")
     uvicorn.run(app, host=host, port=port)
+
+
+class DiffOnlyRunnerReviewExecutor:
+    def __init__(self, *, runner_client: RunnerClient, secrets: SecretStore) -> None:
+        self._runner_client = runner_client
+        self._secrets = secrets
+
+    def review(self, job: JobEnvelope) -> JobAcknowledgement:
+        started = time.monotonic()
+        model_key = self._secrets.get("model_key")
+        if not model_key:
+            return _failed_ack(job=job, started=started, error_class="missing_model_key")
+
+        try:
+            token = self._runner_client.issue_job_token(str(job.job_id), job.lease_token)
+            snapshot = fetch_job_snapshot(job, token)
+            model_name = default_model_for(_DEFAULT_REVIEW_MODEL_PROVIDER)
+            packed = pack_diff(snapshot, context_budget_for_model(model_name), _count_tokens)
+            outcome = review_pull_request(
+                snapshot,
+                packed,
+                [],
+                AnthropicProvider(model_key),
+                model_name=model_name,
+                heartbeat=lambda: self._heartbeat(job),
+            )
+            if outcome.cancelled:
+                return _failed_ack(job=job, started=started, error_class="cancelled")
+        except Exception as exc:  # noqa: BLE001
+            return _failed_ack(job=job, started=started, error_class=type(exc).__name__)
+
+        digest = hashlib.sha256(
+            f"{job.job_id}:{job.head_sha}:{len(outcome.candidates)}".encode()
+        ).hexdigest()
+        latency_ms = int((time.monotonic() - started) * 1000)
+        return JobAcknowledgement(
+            terminal_state="succeeded",
+            error_class=None,
+            input_tokens=0,
+            output_tokens=0,
+            cost_usd=Decimal("0"),
+            latency_ms=max(latency_ms, 0),
+            local_result_hash=digest,
+        )
+
+    def _heartbeat(self, job: JobEnvelope) -> LeaseState:
+        return self._runner_client.heartbeat(str(job.job_id), job.lease_token)
+
+
+def build_review_executor(
+    *,
+    local_store: LocalStore,
+    runner_client: RunnerClient,
+    secrets: SecretStore,
+) -> ReviewExecutor:
+    del local_store
+    return DiffOnlyRunnerReviewExecutor(runner_client=runner_client, secrets=secrets)
+
+
+def _build_runner_daemon(*, hosted_origin: str, secrets: SecretStore) -> RunnerDaemon:
+    config_dir = default_config_dir()
+    credential = secrets.get(_RUNNER_CREDENTIAL_SECRET) or ""
+    runner_client = RunnerClient(hosted_origin, credential)
+    local_store = open_or_recover_local_store(config_dir / _LOCAL_STATE_DB_NAME)
+    review = build_review_executor(
+        local_store=local_store, runner_client=runner_client, secrets=secrets
+    )
+    return RunnerDaemon(
+        runner_client=runner_client,
+        local_store=local_store,
+        secret_store=secrets,
+        review=review,
+        poll_interval_seconds=_RUNNER_POLL_INTERVAL_SECONDS,
+    )
+
+
+def _run_runner_daemon_until_stopped(
+    *,
+    hosted_origin: str,
+    secrets: SecretStore,
+    stop_event: threading.Event,
+) -> None:
+    daemon = _build_runner_daemon(hosted_origin=hosted_origin, secrets=secrets)
+    daemon.recover()
+    daemon.replay_pending_acknowledgements()
+    while not stop_event.is_set():
+        try:
+            daemon.process_once()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("runner daemon loop error: %s", exc)
+        stop_event.wait(_RUNNER_POLL_INTERVAL_SECONDS)
+
+
+def _count_tokens(text: str) -> int:
+    return max(1, len(text) // 4)
+
+
+def _failed_ack(
+    *,
+    job: JobEnvelope,
+    started: float,
+    error_class: str,
+) -> JobAcknowledgement:
+    digest = hashlib.sha256(
+        f"{job.job_id}:{job.head_sha}:{error_class}".encode()
+    ).hexdigest()
+    latency_ms = int((time.monotonic() - started) * 1000)
+    return JobAcknowledgement(
+        terminal_state="failed",
+        error_class=error_class,
+        input_tokens=0,
+        output_tokens=0,
+        cost_usd=Decimal("0"),
+        latency_ms=max(latency_ms, 0),
+        local_result_hash=digest,
+    )
 
 
 def _data_dir() -> Path:
