@@ -349,6 +349,44 @@ def test_pretty_screen_has_color_codes_when_tty_and_no_color_is_unset(
     assert "\x1b[" in text
 
 
+def test_pretty_first_page_of_a_multipage_diff_shows_the_key_menu(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: the menu must be visible on EVERY page, including the first,
+    not only after the auditor has paged all the way through the diff. Pressing
+    q on page one must skip the rest of the diff immediately, proving the key
+    worked while paging rather than being ignored until the last page."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    from pr_reviewer.evals.holdout_sheet import review_sheet
+
+    diff = "\n".join(f"+line-{i}" for i in range(30)) + "\n"
+    sheet = tmp_path / "sheet.jsonl"
+    _write_sheet(sheet, [_row("cand-001") | {"diff": diff}])
+    stdout = _TtyStdout()
+    review_sheet(sheet, auditor="niresh", stdin=StringIO("q\n"), stdout=stdout)
+    text = stdout.getvalue()
+    assert "line-9" in text
+    assert "line-29" not in text
+    assert "skip diff" in text
+    assert "quit" in text
+
+
+def test_pretty_paging_accepts_include_immediately_on_the_first_page(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """i/e/s must work immediately while paging, not only after reaching the end."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    from pr_reviewer.evals.holdout_sheet import review_sheet
+
+    diff = "\n".join(f"+line-{i}" for i in range(30)) + "\n"
+    sheet = tmp_path / "sheet.jsonl"
+    _write_sheet(sheet, [_row("cand-001") | {"diff": diff}])
+    stdin = StringIO("i\n2\nnull-check\n1\n14-20\nn\ndev\n")
+    review_sheet(sheet, auditor="niresh", stdin=stdin, stdout=_TtyStdout())
+    rows = _load(sheet)
+    assert rows[0]["verdict"] == "include"
+
+
 def test_plain_stdout_is_unaffected_by_pretty_mode(tmp_path: Path) -> None:
     """Non-tty stdout (the case every other test in this file drives) must be
     byte-for-byte the old compact layout: no blank-line padding, no box rules."""

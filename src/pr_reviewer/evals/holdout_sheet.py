@@ -219,13 +219,19 @@ def _render_row_header_pretty(
     stdout.write("\n")
 
 
-def _render_menu_pretty(stdout: TextIO, *, color: bool) -> None:
+def _render_menu_pretty(
+    stdout: TextIO, *, color: bool, page: int, total: int, has_more: bool
+) -> None:
     width = _terminal_size().columns
     rule = _hrule(width)
-    menu = " i include    e exclude    s skip    enter more    q quit"
+    if has_more:
+        left = " i include   e exclude   s skip   enter more   q skip diff"
+    else:
+        left = " i include   e exclude   s skip   q quit"
+    line = _two_col(left, f"{page}/{total}", width - 1)
     stdout.write("\n")
     stdout.write(rule + "\n")
-    stdout.write(_style(menu, _BOLD, enabled=color) + "\n")
+    stdout.write(_style(line, _BOLD, enabled=color) + "\n")
     stdout.write(rule + "\n")
 
 
@@ -290,34 +296,95 @@ def _render_diff_line(line: _DiffLine, *, number_width: int, color: bool) -> str
     return _style(rendered, _DIM, enabled=color)
 
 
-def _show_diff_pretty(diff: str, *, stdin: TextIO, stdout: TextIO, color: bool) -> None:
-    diff_lines = _parse_diff_lines(diff) or [_DiffLine(kind="context", text="")]
+def _diff_page_size(file_count: int) -> int:
+    # Reserve exactly what _render_row_header_pretty and _render_menu_pretty write,
+    # so header + diff slice + menu always fit in one terminal height together.
+    header_lines = 9 + file_count
+    menu_lines = 4
+    return max(_terminal_size().lines - header_lines - menu_lines, 5)
+
+
+def _run_pretty_row(
+    stdin: TextIO,
+    stdout: TextIO,
+    row: dict[str, object],
+    *,
+    index: int,
+    total: int,
+    include_count: int,
+    exclude_count: int,
+    color: bool,
+) -> str | None:
+    """Render one row (header, diff, menu) and read commands until the auditor
+    picks a real action. The menu (with the page position) is printed after
+    every page, including the first, and i/e/s/q are honoured immediately -
+    the auditor never has to page to the end before acting on a row."""
+    files = row.get("files") or []
+    file_count = len(files) if isinstance(files, list | tuple) else 0
+    _render_row_header_pretty(
+        stdout,
+        row,
+        index=index,
+        total=total,
+        include_count=include_count,
+        exclude_count=exclude_count,
+        color=color,
+    )
+    diff_lines = _parse_diff_lines(str(row.get("diff") or "")) or [
+        _DiffLine(kind="context", text="")
+    ]
     number_width = max((len(dl.number) for dl in diff_lines if dl.kind != "file"), default=3)
     rendered = [_render_diff_line(dl, number_width=number_width, color=color) for dl in diff_lines]
-    tty = _is_pretty(stdin)
-    page = max(_terminal_size().lines - 12, 5)
-    if not tty or len(rendered) <= page:
-        stdout.write("\n".join(rendered) + ("\n" if rendered else ""))
-        return
-    pages = [rendered[start : start + page] for start in range(0, len(rendered), page)]
+    page_size = _diff_page_size(file_count)
+    pages = [rendered[start : start + page_size] for start in range(0, len(rendered), page_size)]
+    if not pages:
+        pages = [[]]
     total_pages = len(pages)
-    for page_index, chunk in enumerate(pages, start=1):
-        stdout.write("\n".join(chunk) + "\n")
-        if page_index >= total_pages:
-            return
-        while True:
-            width = _terminal_size().columns
-            indicator = f"{page_index}/{total_pages}  more"
-            stdout.write("\n" + indicator.rjust(max(width, 10)) + "\n")
-            stdout.flush()
-            raw = _read_line(stdin)
-            if raw is None:
-                return
-            token = raw.strip().lower()
-            if token in {"q", "quit"}:
-                return
-            if token == "":
-                break
+    page_index = 0
+    skipped = False
+    stdout.write("\n".join(pages[page_index]) + "\n")
+    while True:
+        has_more = (not skipped) and page_index < total_pages - 1
+        shown_page = total_pages if skipped else page_index + 1
+        _render_menu_pretty(
+            stdout, color=color, page=shown_page, total=total_pages, has_more=has_more
+        )
+        stdout.flush()
+        raw = _read_line(stdin)
+        if raw is None:
+            return None
+        token = raw.strip().lower()
+        if token in {"i", "include", "e", "exclude", "s", "skip"}:
+            return token
+        if token == "":
+            if has_more:
+                page_index += 1
+                stdout.write("\n".join(pages[page_index]) + "\n")
+            continue
+        if token in {"q", "quit"}:
+            if has_more:
+                # Skip the rest of THIS diff (jump to the final menu state).
+                # A distinct second q, now labelled "quit", exits the review.
+                skipped = True
+                continue
+            return "q"
+        continue
+
+
+def _reprompt_pretty_command(stdin: TextIO, stdout: TextIO, *, color: bool) -> str | None:
+    """Re-ask for a command on a row whose diff was already fully shown, without
+    redrawing it (mirrors the plain path's re-prompt on an invalid or blocked
+    command)."""
+    while True:
+        _render_menu_pretty(stdout, color=color, page=1, total=1, has_more=False)
+        stdout.flush()
+        raw = _read_line(stdin)
+        if raw is None:
+            return None
+        token = raw.strip().lower()
+        if token in {"i", "include", "e", "exclude", "s", "skip", "q", "quit"}:
+            return token
+        continue
 
 
 def _load_sheet_rows(sheet: Path) -> list[dict[str, object]]:
@@ -681,10 +748,11 @@ def review_sheet(
         if str(row.get("verdict") or "").strip():
             index += 1
             continue
-        if shown_index != index:
-            include_count, exclude_count = _verdict_counts(rows)
-            if pretty:
-                _render_row_header_pretty(
+        if pretty:
+            if shown_index != index:
+                include_count, exclude_count = _verdict_counts(rows)
+                command = _run_pretty_row(
+                    stdin,
                     stdout,
                     row,
                     index=index + 1,
@@ -693,10 +761,14 @@ def review_sheet(
                     exclude_count=exclude_count,
                     color=color,
                 )
-                _show_diff_pretty(
-                    str(row.get("diff") or ""), stdin=stdin, stdout=stdout, color=color
-                )
+                shown_index = index
             else:
+                command = _reprompt_pretty_command(stdin, stdout, color=color)
+            if command is None:
+                return 0
+        else:
+            if shown_index != index:
+                include_count, exclude_count = _verdict_counts(rows)
                 stdout.write(
                     f"row {index + 1} of {len(rows)}, "
                     f"{include_count} include, {exclude_count} exclude\n"
@@ -709,15 +781,12 @@ def review_sheet(
                 stdout.write(f"files: {files}\n")
                 stdout.write("diff:\n")
                 _show_diff(str(row.get("diff") or ""), stdin=stdin, stdout=stdout)
-            shown_index = index
-        if pretty:
-            _render_menu_pretty(stdout, color=color)
-        else:
+                shown_index = index
             stdout.write(COMMAND_MENU)
-        stdout.flush()
-        command = _read_line(stdin)
-        if command is None:
-            return 0
+            stdout.flush()
+            command = _read_line(stdin)
+            if command is None:
+                return 0
         token = command.strip().lower()
         if token in {"q", "quit"}:
             return 0
