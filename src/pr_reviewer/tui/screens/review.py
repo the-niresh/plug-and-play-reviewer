@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import time
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any, Literal
 
 from textual.app import ComposeResult
@@ -13,6 +15,7 @@ from textual.widget import Widget
 from textual.widgets import Button, Label, Static
 
 from pr_reviewer.contracts.finding import Finding
+from pr_reviewer.contracts.finding_candidate import FindingCandidate
 from pr_reviewer.contracts.review_context import PackedDiff
 from pr_reviewer.local_store.budget import BudgetStatus
 from pr_reviewer.local_store.review_log import ReviewLogStore
@@ -55,6 +58,12 @@ def default_reasoning_feed() -> tuple[AgentReasoningChunk, ...]:
         AgentReasoningChunk(concern, f"Reviewing the patch for {concern} issues.")
         for concern in SPECIALIST_CONCERNS
     )
+
+
+def _format_token_count(total: int) -> str:
+    if total >= 1000:
+        return f"{total / 1000:.1f}k"
+    return str(total)
 
 
 class ReviewPanel(Widget):
@@ -103,6 +112,16 @@ class ReviewPanel(Widget):
     ReviewPanel .finding-detail {
         color: $text-muted;
     }
+
+    ReviewPanel .finding-row--suppressed {
+        color: $text-muted;
+        text-style: italic;
+    }
+
+    ReviewPanel .review-footer {
+        margin-top: 1;
+        color: $text-muted;
+    }
     """
 
     phase: reactive[ReviewPhase] = reactive("diffs")
@@ -117,6 +136,7 @@ class ReviewPanel(Widget):
         stream_immediately: bool = False,
         reasoning_stream_interval: float = 0.05,
         summary_client: ReviewSummaryClient | None = None,
+        clock: Callable[[], float] | None = None,
         id: str | None = None,
     ) -> None:
         super().__init__(id=id)
@@ -132,6 +152,13 @@ class ReviewPanel(Widget):
         self._reasoning_timer: Any = None
         self._remediation_prompts: dict[str, str] = {}
         self._last_push_result: PushReviewSummaryResult | None = None
+        # Injectable so tests can prove the footer's elapsed figure without sleeping.
+        self._clock = clock or time.monotonic
+        self._started_at: float | None = None
+        self._findings_count = 0
+        self._suppressed_count = 0
+        self._total_tokens = 0
+        self._total_cost = Decimal("0")
 
     def compose(self) -> ComposeResult:
         diff_rows: list[Widget] = [
@@ -165,9 +192,14 @@ class ReviewPanel(Widget):
             classes="review-agents",
             id="review-agents",
         )
+        # Always visible, unlike review-diffs-panel/review-agents: a running summary of
+        # the review, not a phase-specific block, so it can carry a true count from the
+        # first finding through the last, not just a total revealed at the end.
+        yield Static("", classes="review-footer", id="review-footer")
 
     def on_mount(self) -> None:
         self._sync_phase_visibility()
+        self._refresh_footer()
 
     def watch_phase(self, _phase: ReviewPhase) -> None:
         self._sync_phase_visibility()
@@ -188,6 +220,8 @@ class ReviewPanel(Widget):
         chunks: Iterable[AgentReasoningChunk] | None = None,
     ) -> None:
         self.phase = "agents"
+        self._started_at = self._clock()
+        self._refresh_footer()
         self._pending_chunks = list(chunks or self._reasoning_feed)
         if self._stream_immediately:
             self._flush_pending_reasoning()
@@ -319,6 +353,51 @@ class ReviewPanel(Widget):
                 classes="finding-row",
                 id=f"finding-{finding.id}",
             )
+        )
+        self._findings_count += 1
+        # Summed from the two plain int fields, not the .total_tokens computed_field:
+        # that field is declared without @property in reviewer/receipt.py (outside this
+        # track), so pydantic resolves it to a real int at runtime but mypy sees it as
+        # an unbound method and flags arithmetic on it.
+        self._total_tokens += model_call.tokens.input_tokens + model_call.tokens.output_tokens
+        self._total_cost += Decimal(model_call.cost_usd)
+        self._refresh_footer()
+
+    def add_suppressed_finding(self, candidate: FindingCandidate, reason: str) -> None:
+        """Dimmed, with the judge's own reason attached -- seeing what the judge threw
+        away, and why, is how the user learns whether the judge is right. Rendered into
+        the same stream as accepted findings, in the order each arrives, not collected
+        into a separate summary shown only once the review is done.
+        """
+        container = self.query_one("#review-findings-stream", Vertical)
+        self._suppressed_count += 1
+        location = f"{candidate.file_path}:{candidate.line_start}"
+        container.mount(
+            Vertical(
+                Static(
+                    f"{location} - {candidate.title}",
+                    classes="finding-detail finding-row--suppressed",
+                ),
+                Static(
+                    f"suppressed by judge: {reason}",
+                    classes="finding-detail finding-row--suppressed",
+                ),
+                classes="finding-row finding-row--suppressed",
+                id=f"suppressed-{self._suppressed_count}",
+            )
+        )
+        self._refresh_footer()
+
+    def _refresh_footer(self) -> None:
+        elapsed = 0.0 if self._started_at is None else max(self._clock() - self._started_at, 0.0)
+        findings_word = "finding" if self._findings_count == 1 else "findings"
+        footer = self.query_one("#review-footer", Static)
+        footer.update(
+            f"{self._findings_count} {findings_word} . "
+            f"{self._suppressed_count} suppressed . "
+            f"{_format_token_count(self._total_tokens)} tokens . "
+            f"${self._total_cost:.3f} . "
+            f"{elapsed:.1f}s"
         )
 
     def _stop_reasoning_stream(self) -> None:
