@@ -52,7 +52,7 @@ def make_harness(
     *,
     pairing_client: FakePairingClient,
     browser_opener: Callable[[str], object],
-    pairing_deadline_seconds: float = 300.0,
+    pairing_deadline_seconds: float = 0.1,
 ):
     from textual.app import App, ComposeResult
 
@@ -65,6 +65,7 @@ def make_harness(
                 ),
                 pairing_client=pairing_client,
                 browser_opener=browser_opener,
+                pairing_poll_interval=0.01,
                 pairing_deadline_seconds=pairing_deadline_seconds,
             )
 
