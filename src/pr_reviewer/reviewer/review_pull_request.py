@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from decimal import Decimal
 
 from pydantic import ValidationError
 
@@ -16,13 +17,21 @@ from pr_reviewer.contracts.finding_candidate import (
 from pr_reviewer.contracts.review_context import PackedDiff, ReviewContextItem, ReviewOutcome
 from pr_reviewer.contracts.runner import LeaseState
 from pr_reviewer.github.pull_request import PullRequestSnapshot
-from pr_reviewer.models.provider import ModelProvider, ModelRequest
+from pr_reviewer.models.catalogue import list_providers
+from pr_reviewer.models.provider import (
+    ModelProvider,
+    ModelProviderFailure,
+    ModelRequest,
+    cost_usd_for,
+)
 from pr_reviewer.prompts.diff_only import DIFF_ONLY_PROMPT
+from pr_reviewer.reliability.budget import BudgetLimit, CostEstimate, require_within_budget
 from pr_reviewer.reviewer.diff_budget import omission_prompt_section
 from pr_reviewer.reviewer.reflect import reflect_findings
 from pr_reviewer.security.prompt_boundaries import UntrustedText, wrap_untrusted_review_inputs
 
 MAX_FINDING_DRAFTS = 32
+MAX_OUTPUT_TOKENS = 2048
 DIFF_ONLY_PROMPT_NAME = DIFF_ONLY_PROMPT.name
 DIFF_ONLY_PROMPT_VERSION = DIFF_ONLY_PROMPT.version
 _NEW_LINE = re.compile(r"^(\d+)\| ")
@@ -45,6 +54,7 @@ def review_pull_request(
     *,
     model_name: str,
     heartbeat: Callable[[], LeaseState] | None = None,
+    budget: BudgetLimit | None = None,
 ) -> ReviewOutcome:
     if heartbeat is not None:
         lease = heartbeat()
@@ -75,6 +85,8 @@ def review_pull_request(
         + "\n\n"
         + "\n\n".join(sections)
     )
+    if budget is not None:
+        require_within_budget(budget, estimate_review_cost(prompt_content, model_name))
     response = model.complete_json(
         ModelRequest(
             model=model_name,
@@ -84,7 +96,7 @@ def review_pull_request(
             schema_name="ReviewFindingsDraft",
             untrusted_inputs=[],
             timeout_seconds=60.0,
-            max_output_tokens=2048,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
         )
     )
     parsed_candidates = _candidates_from_parsed(response.parsed, packed)
@@ -105,6 +117,32 @@ def review_pull_request(
         grounding_rejected_findings=parsed_candidates.grounding_rejected_findings,
         duplicate_rejected_findings=parsed_candidates.duplicate_rejected_findings,
     )
+
+
+def estimate_review_cost(prompt_content: str, model_name: str) -> CostEstimate:
+    """Estimate cost before spending, on the exact text that would be sent.
+
+    Uses the same 4-chars-per-token heuristic agent_surfaces/backend.py already uses to
+    decide what fits in the packer, not a second tokenizer. Output is estimated at the
+    worst case, MAX_OUTPUT_TOKENS, so the estimate never understates what the call could
+    cost. An unpriced model fails closed, matching cost_usd_for's own rule that cost can
+    never go uncounted.
+    """
+    input_tokens = max(1, len(prompt_content) // 4)
+    vendor = _vendor_for_model(model_name)
+    if vendor is None:
+        raise ModelProviderFailure(f"unknown model {model_name}")
+    cost_usd = Decimal(cost_usd_for(vendor, model_name, input_tokens, MAX_OUTPUT_TOKENS))
+    return CostEstimate(
+        input_tokens=input_tokens, output_tokens=MAX_OUTPUT_TOKENS, cost_usd=cost_usd
+    )
+
+
+def _vendor_for_model(model_name: str) -> str | None:
+    for provider in list_providers():
+        if any(entry.model_id == model_name for entry in provider.models):
+            return provider.provider_id
+    return None
 
 
 def _candidates_from_parsed(parsed: object, packed: PackedDiff) -> ParsedCandidates:

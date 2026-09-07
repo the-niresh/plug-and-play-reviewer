@@ -42,3 +42,30 @@ def require_configured(limit: BudgetLimit | None) -> BudgetLimit:
         raise BudgetDenied("unset")
     assert limit is not None
     return limit
+
+
+@dataclass(frozen=True)
+class CostEstimate:
+    """What a call is expected to cost before it is made, not after."""
+
+    input_tokens: int
+    output_tokens: int
+    cost_usd: Decimal
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+
+def exceeds_limit(limit: BudgetLimit, estimate: CostEstimate) -> bool:
+    if limit.max_tokens is not None and estimate.total_tokens > limit.max_tokens:
+        return True
+    return limit.max_cost_usd is not None and estimate.cost_usd > limit.max_cost_usd
+
+
+def require_within_budget(limit: BudgetLimit | None, estimate: CostEstimate) -> BudgetLimit:
+    """Refuse before spending, not after. Unset still means deny, per require_configured."""
+    configured = require_configured(limit)
+    if exceeds_limit(configured, estimate):
+        raise BudgetDenied("insufficient")
+    return configured
