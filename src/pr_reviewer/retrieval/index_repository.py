@@ -53,7 +53,20 @@ def index_repository(
         generated_paths=generated_paths,
         ignored_paths=ignored_paths,
     )
-    vectors = embed_texts(embedder, [chunk.content for chunk in chunks])
+    previous = _previous_chunk_embeddings(conn, installation_id, repository_id)
+    to_embed = [
+        index
+        for index, chunk in enumerate(chunks)
+        if previous.get(chunk.identity, (None, ""))[0] != chunk.content_hash
+    ]
+    texts_to_embed = [chunks[index].content for index in to_embed]
+    embedded = embed_texts(embedder, texts_to_embed) if to_embed else []
+    vector_literals: dict[int, str] = {
+        index: _vector_literal(vector) for index, vector in zip(to_embed, embedded, strict=True)
+    }
+    for index, chunk in enumerate(chunks):
+        if index not in vector_literals:
+            vector_literals[index] = previous[chunk.identity][1]
     try:
         inserted = conn.execute(
             """
@@ -71,7 +84,7 @@ def index_repository(
             ),
         ).fetchone()
         generation_id = str(_value(inserted, "id", 0))
-        for chunk, vector in zip(chunks, vectors, strict=True):
+        for index, chunk in enumerate(chunks):
             conn.execute(
                 """
                 insert into code_chunks (
@@ -92,7 +105,7 @@ def index_repository(
                     chunk.identity,
                     chunk.strategy.value,
                     chunk.symbol_name,
-                    _vector_literal(vector),
+                    vector_literals[index],
                 ),
             )
         conn.execute(
@@ -127,6 +140,34 @@ def index_repository(
         dimensions=V1_EMBEDDING_DIMENSIONS,
         state="active",
     )
+
+
+def _previous_chunk_embeddings(
+    conn: Connection[Any],
+    installation_id: int,
+    repository_id: int,
+) -> dict[str, tuple[str, str]]:
+    """Map chunk identity to (content_hash, embedding literal) for the active generation.
+
+    Read once per index_repository call so an unchanged chunk can carry its embedding
+    forward without a new call to the embedder.
+    """
+    rows = conn.execute(
+        """
+        select c.identity, c.content_hash, c.embedding::text as embedding
+        from code_chunks c
+        join embedding_generations g on g.id = c.generation_id
+        where g.installation_id = %s
+          and g.repository_id = %s
+          and g.state = 'active'
+        """,
+        (installation_id, repository_id),
+    ).fetchall()
+    previous: dict[str, tuple[str, str]] = {}
+    for row in rows:
+        values = _row_map(row, ("identity", "content_hash", "embedding"))
+        previous[str(values["identity"])] = (str(values["content_hash"]), str(values["embedding"]))
+    return previous
 
 
 def queryable_chunks(
