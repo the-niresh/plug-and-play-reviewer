@@ -40,12 +40,17 @@ def _log_shas(
     until: date | None,
     max_count: int | None,
     reverse: bool,
+    grep: str | None = None,
 ) -> list[str]:
     args = ["log", "--format=%H"]
     if since is not None:
         args.append(f"--since={since.isoformat()}")
     if until is not None:
         args.append(f"--until={until.isoformat()}")
+    if grep is not None:
+        args.append(f"--grep={grep}")
+        args.append("--extended-regexp")
+        args.append("--regexp-ignore-case")
     if reverse:
         args.append("--reverse")
     if max_count is not None:
@@ -65,17 +70,30 @@ def mine_eval_candidates(
     since: date | None = None,
     until: date | None = None,
     per_window: int | None = None,
+    message_grep: str | None = None,
 ) -> MineResult:
     if not (repo / ".git").exists():
         return MineResult(candidates=[], skipped=())
     if per_window is not None:
         shas = _even_sample(
-            _log_shas(repo, since=since, until=until, max_count=None, reverse=True),
+            _log_shas(
+                repo,
+                since=since,
+                until=until,
+                max_count=None,
+                reverse=True,
+                grep=message_grep,
+            ),
             per_window,
         )
     else:
         shas = _log_shas(
-            repo, since=since, until=until, max_count=max_cases, reverse=False
+            repo,
+            since=since,
+            until=until,
+            max_count=max_cases,
+            reverse=False,
+            grep=message_grep,
         )
     budget = context_budget_for_model(model)
     candidates: list[EvalCandidate] = []

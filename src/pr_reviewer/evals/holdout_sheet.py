@@ -47,6 +47,7 @@ def write_candidate_sheet(
     since: date | None = None,
     until: date | None = None,
     per_window: int | None = None,
+    message_grep: str | None = None,
 ) -> SheetStats:
     mined = mine_eval_candidates(
         repo,
@@ -54,6 +55,7 @@ def write_candidate_sheet(
         since=since,
         until=until,
         per_window=per_window,
+        message_grep=message_grep,
     )
     dest.parent.mkdir(parents=True, exist_ok=True)
     lines: list[str] = []
@@ -511,6 +513,11 @@ def main(argv: list[str] | None = None) -> int:
     write.add_argument("--since", type=date.fromisoformat, default=None)
     write.add_argument("--until", type=date.fromisoformat, default=None)
     write.add_argument("--per-window", type=int, default=None)
+    write.add_argument(
+        "--grep",
+        default=None,
+        help="only mine commits whose message matches this extended regex (case-insensitive)",
+    )
     build = sub.add_parser(
         "build-holdout", help="write judged include rows to an EvalCase JSONL"
     )
@@ -531,6 +538,7 @@ def main(argv: list[str] | None = None) -> int:
                 since=args.since,
                 until=args.until,
                 per_window=args.per_window,
+                message_grep=args.grep,
             )
             months = ",".join(
                 f"{month}:{count}" for month, count in sorted(stats.per_month.items())
