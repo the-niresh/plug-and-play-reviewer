@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import argparse
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from pr_reviewer.evals.types import EvalRun
+from pr_reviewer.contracts.finding_candidate import FindingCandidate
+from pr_reviewer.evals.run_eval import (
+    BaselineBlocked,
+    load_public_eval_cases,
+    run_diff_only_baseline,
+)
+from pr_reviewer.evals.types import EvalCase, EvalRun, ReviewerCallable
 
 
 class EvalThresholds(BaseModel):
@@ -125,3 +133,103 @@ def detect_drift(current: DriftSnapshot, baseline: DriftSnapshot) -> tuple[str, 
     if current.retrieval_miss_rate > baseline.retrieval_miss_rate:
         alerts.append("retrieval_miss_rate")
     return tuple(alerts)
+
+
+class BaselineReportMissing(Exception):
+    """Holdout has cases but no frozen baseline report exists to compare against."""
+
+
+@dataclass(frozen=True)
+class GateOutcome:
+    """skipped=True means the holdout is empty: a deliberate, visible non-result.
+
+    It is never a pass and never a fake number. result is only set when a real
+    comparison ran.
+    """
+
+    skipped: bool
+    reason: str | None
+    result: GateResult | None
+
+
+DEFAULT_BASELINE_REPORT = (
+    Path(__file__).resolve().parents[3] / "datasets" / "public" / "regression_baseline.json"
+)
+
+DEFAULT_THRESHOLDS = EvalThresholds(
+    min_precision_per_finding=0.6,
+    max_false_findings_per_pr=1.0,
+    min_high_value_recall=0.5,
+    max_cost_usd=1.0,
+    max_latency_ms=120_000,
+)
+
+
+def _unreachable_reviewer(_case: EvalCase) -> Sequence[FindingCandidate]:
+    # run_diff_only_gate checks the holdout before ever calling the reviewer, so while
+    # the holdout stays empty this is never invoked. Task 35.F2 wires a real diff-only
+    # reviewer here once a judged holdout exists to measure and compare against.
+    raise AssertionError("reviewer called despite an empty holdout")
+
+
+def run_diff_only_gate(
+    cases: Sequence[EvalCase],
+    reviewer: ReviewerCallable,
+    baseline_report: Path,
+    thresholds: EvalThresholds,
+    repeats: int = 3,
+) -> GateOutcome:
+    """Run the diff-only baseline and compare it to a frozen report.
+
+    An empty holdout is a clear, visible skip (BaselineBlocked), never a silent pass.
+    A holdout with cases but no baseline report on disk is an error, not a skip: there
+    is nothing honest to compare against, so this refuses rather than reporting green.
+    """
+    try:
+        candidate = run_diff_only_baseline(cases, reviewer, repeats=repeats)
+    except BaselineBlocked as exc:
+        return GateOutcome(skipped=True, reason=str(exc), result=None)
+    if not baseline_report.exists():
+        raise BaselineReportMissing(
+            f"holdout has cases but no baseline report exists at {baseline_report}; "
+            "Task 35.F2 must measure and commit the diff-only baseline before this "
+            "gate can compare against it"
+        )
+    baseline = EvalRun.model_validate_json(baseline_report.read_text(encoding="utf-8"))
+    result = compare_eval_reports(candidate, baseline, thresholds)
+    return GateOutcome(skipped=False, reason=None, result=result)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="pr-reviewer-regression-gate")
+    parser.add_argument("--cases", type=Path, default=None)
+    parser.add_argument("--baseline-report", type=Path, default=DEFAULT_BASELINE_REPORT)
+    args = parser.parse_args(argv)
+
+    cases = load_public_eval_cases(args.cases)
+    try:
+        outcome = run_diff_only_gate(
+            cases, _unreachable_reviewer, args.baseline_report, DEFAULT_THRESHOLDS
+        )
+    except BaselineReportMissing as exc:
+        print(f"ERROR: {exc}")
+        return 1
+
+    if outcome.skipped:
+        message = f"SKIP: {outcome.reason}"
+        print(message)
+        print(f"::warning title=Eval regression gate skipped::{message}")
+        return 0
+
+    assert outcome.result is not None
+    if not outcome.result.passed:
+        blocked = ", ".join(outcome.result.blocked_metrics)
+        print(f"REGRESSION: blocked on {blocked}")
+        return 1
+
+    print("PASS: no regression against the baseline or thresholds")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

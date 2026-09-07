@@ -23,6 +23,8 @@ jobs:
         run: uv run mypy src
       - name: pytest
         run: flock -w 3600 /tmp/pr-reviewer-pytest.lock uv run pytest -q
+      - name: eval regression gate
+        run: uv run python -m pr_reviewer.evals.regression_gate
       - name: migration-from-empty
         run: uv run pr-reviewer-db-migrate
       - name: migration-upgrade
