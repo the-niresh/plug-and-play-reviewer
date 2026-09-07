@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Protocol
 
 SERVICE_NAME = "pr-reviewer"
+SECRET_FILES_DIR_ENV = "PR_REVIEWER_SECRET_FILES_DIR"
+DEFAULT_MOUNTED_SECRET_FILES_DIR = Path("/run/secrets/pr-reviewer")
 
 
 class SecretStore(Protocol):
@@ -62,7 +64,8 @@ class FileSecretStore:
     def __init__(self, directory: str | Path) -> None:
         self._directory = Path(directory)
         self._directory.mkdir(parents=True, exist_ok=True)
-        os.chmod(self._directory, 0o700)
+        with contextlib.suppress(PermissionError):
+            os.chmod(self._directory, 0o700)
 
     def _path_for(self, name: str) -> Path:
         safe_name = name.replace("/", "_").replace("\\", "_")
@@ -112,9 +115,27 @@ def get_secret_store(
     A probe read (never a write) against a name this process never sets is enough to surface
     "no secret service reachable" before any real secret is at stake.
     """
+    mounted_directory = _mounted_secret_files_directory()
+    if mounted_directory is not None:
+        return FileSecretStore(mounted_directory)
+
+    file_store_directory = Path(file_fallback_directory)
+
     backend = keyring_backend if keyring_backend is not None else _real_keyring_backend()
     try:
         backend.get_password(SERVICE_NAME, "__pr_reviewer_probe__")
     except Exception:
-        return FileSecretStore(file_fallback_directory)
+        return FileSecretStore(file_store_directory)
     return KeyringSecretStore(backend=backend)
+
+
+def _mounted_secret_files_directory() -> Path | None:
+    mounted = os.environ.get(SECRET_FILES_DIR_ENV, "").strip()
+    if mounted:
+        path = Path(mounted).expanduser()
+        if not path.is_dir():
+            raise RuntimeError(f"{SECRET_FILES_DIR_ENV} must point to an existing directory")
+        return path
+    if DEFAULT_MOUNTED_SECRET_FILES_DIR.is_dir():
+        return DEFAULT_MOUNTED_SECRET_FILES_DIR
+    return None

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "service": {
+    "name": "reviewer",
+    "startCommand": "/app/.venv/bin/pr-reviewer-api",
+    "healthcheckPath": "/health",
+    "environment": {
+      "DATABASE_URL": "${{ DATABASE_URL }}",
+      "GITHUB_APP_ID": "${{ GITHUB_APP_ID }}",
+      "GITHUB_APP_PRIVATE_KEY": "${{ GITHUB_APP_PRIVATE_KEY }}",
+      "GITHUB_OAUTH_CLIENT_ID": "${{ GITHUB_OAUTH_CLIENT_ID }}",
+      "GITHUB_OAUTH_CLIENT_SECRET": "${{ GITHUB_OAUTH_CLIENT_SECRET }}",
+      "GITHUB_WEBHOOK_SECRET": "${{ GITHUB_WEBHOOK_SECRET }}",
+      "PR_REVIEWER_HOSTED_ORIGIN": "${{ PR_REVIEWER_HOSTED_ORIGIN }}",
+      "PR_REVIEWER_SECRET_FILES_DIR": "/run/secrets/pr-reviewer"
+    }
+  },
+  "volumes": [
+    {
+      "name": "reviewer-secrets",
+      "mountPath": "/run/secrets/pr-reviewer"
+    }
+  ]
+}

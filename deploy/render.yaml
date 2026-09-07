@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: reviewer
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./Dockerfile
+    dockerCommand: /app/.venv/bin/pr-reviewer-api
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: reviewer-secrets
+      mountPath: /run/secrets/pr-reviewer
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GITHUB_APP_ID
+        sync: false
+      - key: GITHUB_APP_PRIVATE_KEY
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: PR_REVIEWER_HOSTED_ORIGIN
+        sync: false
+      - key: PR_REVIEWER_SECRET_FILES_DIR
+        value: /run/secrets/pr-reviewer
