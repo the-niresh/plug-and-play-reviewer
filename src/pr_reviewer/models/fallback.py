@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 
 from pr_reviewer.context_budget import context_budget_for_model
 from pr_reviewer.models.provider_errors import ProviderErrorKind, ProviderFailure
@@ -86,7 +87,7 @@ def fallback_across_models[Result](
     current = candidates[0]
 
     while True:
-        result = retry_provider_call(lambda c=current: attempt(c), policy=retry_policy)
+        result = retry_provider_call(partial(attempt, current), policy=retry_policy)
         if result.value is not None:
             return RetryResult(value=result.value)
         failure = result.failure
