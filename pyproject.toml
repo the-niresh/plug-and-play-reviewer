@@ -1,7 +1,7 @@
 [project]
-name = "pr-reviewer"
+name = "plug-and-play-reviewer"
 version = "0.1.0"
-description = "AI PR reviewer backend for FoodSpector"
+description = "Plug and play AI pull request reviewer"
 requires-python = ">=3.12"
 dependencies = [
   "certifi>=2026.7.22",

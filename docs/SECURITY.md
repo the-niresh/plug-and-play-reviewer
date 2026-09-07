@@ -125,7 +125,7 @@ Resolved 74 packages in 0.95ms
 lock: uv.lock matches the project
 secret scan: no refused hits in tracked files
 container scan: digest-pinned images in Dockerfile, compose.release.yml, docker-compose.ci.yml, .github/workflows/ci.yml
-/srv/claude/projects/pr-reviewer/docs/DATA_BOUNDARIES.md is up to date.
+/srv/claude/projects/plug-and-play-reviewer/docs/DATA_BOUNDARIES.md is up to date.
 ```
 
 That is a digest-pin scan of the tracked image refs, not a hosted vulnerability
