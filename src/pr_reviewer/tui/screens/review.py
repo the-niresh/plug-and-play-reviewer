@@ -85,7 +85,6 @@ class ReviewPanel(Widget):
 
     ReviewPanel .finding-row {
         margin-bottom: 1;
-        border-left: thick $panel;
         padding: 0 1;
     }
 

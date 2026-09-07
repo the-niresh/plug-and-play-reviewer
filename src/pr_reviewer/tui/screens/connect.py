@@ -22,7 +22,7 @@ from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Label, Static
+from textual.widgets import Label, Static
 
 from pr_reviewer.tui.github_connect import (
     HostedOriginError,
@@ -35,6 +35,7 @@ from pr_reviewer.tui.pairing_wait import (
     PairingWaitDeadlineExceeded,
     wait_for_pairing,
 )
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 # Bounded wait: the poll worker gives up and says so rather than spinning forever.
 PAIRING_DEADLINE_SECONDS = 300.0
@@ -118,6 +119,9 @@ class ConnectPanel(Widget):
         ("c", "copy_link", "Copy link"),
     ]
 
+    # No border property anywhere below, on purpose (see test_tui_is_a_transcript.py): a
+    # transcript scrolls, it does not sit inside a box. One accent colour marks the thing
+    # you can act on; grey ($text-muted) carries everything else.
     DEFAULT_CSS = """
     ConnectPanel {
         padding: 1 2;
@@ -131,13 +135,26 @@ class ConnectPanel(Widget):
 
     ConnectPanel #sign-in-url {
         text-style: bold;
-        color: $primary;
+        color: $accent;
         margin-top: 1;
     }
 
     ConnectPanel #pairing-code {
-        color: $secondary;
+        color: $text-muted;
         margin-bottom: 1;
+    }
+
+    ConnectPanel .connect-prompt {
+        color: $accent;
+        margin-top: 1;
+    }
+
+    ConnectPanel .connect-prompt:hover {
+        text-style: underline;
+    }
+
+    ConnectPanel .connect-prompt:focus {
+        text-style: bold underline;
     }
 
     ConnectPanel .pairing-status--exchangeable {
@@ -180,13 +197,13 @@ class ConnectPanel(Widget):
         yield Vertical(
             Label("GitHub is not connected", classes="connect-heading", id="connect-heading"),
             Static("No GitHub connection means no review.", id="connect-refusal"),
-            Button("Sign in", id="connect-sign-in", variant="primary"),
+            PromptAction("> sign in", id="connect-sign-in", classes="connect-prompt"),
             Static("not started", id="pairing-status"),
             id="connect-panel",
         )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "connect-sign-in":
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        if event.prompt_action.id == "connect-sign-in":
             self._start_sign_in()
 
     def watch_pairing_status(self, status: str) -> None:

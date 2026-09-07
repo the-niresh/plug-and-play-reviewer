@@ -1,10 +1,16 @@
-"""Connect screen offers exactly one action: sign in."""
+"""Connect screen offers exactly one action: sign in.
+
+That action used to be a Button. It is a PromptAction now (see
+tests/test_tui_is_a_transcript.py) -- a transcript line, not a bordered widget -- but the
+"exactly one action, and it says sign in" contract this test pins down has not changed.
+"""
 
 from __future__ import annotations
 
 import asyncio
 
 from pr_reviewer.tui.screens.connect import ConnectConfig, ConnectPanel
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 
 class FakePairingClient:
@@ -31,9 +37,10 @@ def test_connect_screen_offers_only_sign_in() -> None:
                 )
 
         async with Harness().run_test() as pilot:
-            buttons = pilot.app.query(Button)
-            assert len(buttons) == 1
-            assert "sign in" in str(buttons[0].render()).lower()
+            assert not pilot.app.query(Button)
+            actions = pilot.app.query(PromptAction)
+            assert len(actions) == 1
+            assert "sign in" in str(actions[0].render()).lower()
             assert len(pilot.app.query("#install-url")) == 0
             assert len(pilot.app.query("#sign-in-url")) == 0
             assert len(pilot.app.query("#pairing-code")) == 0
