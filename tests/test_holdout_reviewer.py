@@ -61,6 +61,11 @@ class _TtyStdin(StringIO):
         return True
 
 
+class _TtyStdout(StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
 def test_exclude_needs_no_auditor_split_or_labels(tmp_path: Path) -> None:
     from pr_reviewer.evals.holdout_sheet import review_sheet
 
@@ -292,3 +297,68 @@ def test_unrecognised_key_reprompts_without_redrawing_the_diff(tmp_path: Path) -
     assert text.count("e/exclude  i/include  s/skip  q/quit") == 2
     rows = _load(sheet)
     assert rows[0]["verdict"] == ""
+
+
+def test_pretty_screen_places_the_key_menu_last(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When stdout is a tty, the key menu (and nothing else) is the last thing on
+    screen before the prompt for input, never buried mid-screen."""
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    from pr_reviewer.evals.holdout_sheet import review_sheet
+
+    sheet = tmp_path / "sheet.jsonl"
+    _write_sheet(sheet, [_row("cand-001")])
+    stdout = _TtyStdout()
+    review_sheet(sheet, auditor="niresh", stdin=StringIO("q\n"), stdout=stdout)
+    text = stdout.getvalue()
+    lines = [line for line in text.splitlines() if line.strip()]
+    assert lines
+    # The menu block is: rule, menu text, rule. The last line is the closing
+    # rule of that block, so the key menu text must be the second-to-last line,
+    # and nothing (diff, metadata) is printed after it.
+    assert "quit" in lines[-2].lower()
+    assert "diff" not in "\n".join(lines[-3:]).lower()
+
+
+def test_pretty_screen_has_no_color_codes_when_no_color_is_set(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NO_COLOR", "1")
+    from pr_reviewer.evals.holdout_sheet import review_sheet
+
+    sheet = tmp_path / "sheet.jsonl"
+    _write_sheet(sheet, [_row("cand-001") | {"diff": "@@ -1 +1 @@\n-old\n+new\n"}])
+    stdout = _TtyStdout()
+    review_sheet(sheet, auditor="niresh", stdin=StringIO("q\n"), stdout=stdout)
+    text = stdout.getvalue()
+    assert "\x1b[" not in text
+
+
+def test_pretty_screen_has_color_codes_when_tty_and_no_color_is_unset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    from pr_reviewer.evals.holdout_sheet import review_sheet
+
+    sheet = tmp_path / "sheet.jsonl"
+    _write_sheet(sheet, [_row("cand-001") | {"diff": "@@ -1 +1 @@\n-old\n+new\n"}])
+    stdout = _TtyStdout()
+    review_sheet(sheet, auditor="niresh", stdin=StringIO("q\n"), stdout=stdout)
+    text = stdout.getvalue()
+    assert "\x1b[" in text
+
+
+def test_plain_stdout_is_unaffected_by_pretty_mode(tmp_path: Path) -> None:
+    """Non-tty stdout (the case every other test in this file drives) must be
+    byte-for-byte the old compact layout: no blank-line padding, no box rules."""
+    from pr_reviewer.evals.holdout_sheet import review_sheet
+
+    sheet = tmp_path / "sheet.jsonl"
+    _write_sheet(sheet, [_row("cand-001")])
+    stdout = StringIO()
+    review_sheet(sheet, auditor="niresh", stdin=StringIO("q\n"), stdout=stdout)
+    text = stdout.getvalue()
+    assert "\x1b[" not in text
+    assert "\u2500" not in text
+    assert "row 1 of 1, 0 include, 0 exclude\n" in text

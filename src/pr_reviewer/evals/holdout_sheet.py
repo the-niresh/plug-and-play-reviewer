@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
+import shutil
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -149,6 +152,173 @@ DIFF_PAGE_LINES = 40
 MORE_PROMPT = "-- more -- (enter=more, q=skip rest)\n"
 COMMAND_MENU = "e/exclude  i/include  s/skip  q/quit\n"
 
+# Pretty mode: the readable screen for a real terminal. Every existing test drives
+# review_sheet through a plain StringIO, which is never a tty, so the plain code
+# above stays byte-compatible. Pretty rendering only fires when stdout is a tty.
+_RESET = "\x1b[0m"
+_BOLD = "\x1b[1m"
+_DIM = "\x1b[2m"
+_GREEN = "\x1b[32m"
+_RED = "\x1b[31m"
+
+
+def _is_pretty(stream: TextIO) -> bool:
+    return bool(getattr(stream, "isatty", lambda: False)())
+
+
+def _color_enabled(stdout: TextIO) -> bool:
+    return _is_pretty(stdout) and "NO_COLOR" not in os.environ
+
+
+def _style(text: str, *codes: str, enabled: bool) -> str:
+    if not enabled or not codes:
+        return text
+    return "".join(codes) + text + _RESET
+
+
+def _terminal_size() -> os.terminal_size:
+    return shutil.get_terminal_size(fallback=(80, 24))
+
+
+def _hrule(width: int) -> str:
+    return "\u2500" * max(width, 10)
+
+
+def _two_col(left: str, right: str, width: int, *, gap: int = 3) -> str:
+    space = max(width - len(left) - len(right), gap)
+    return f"{left}{' ' * space}{right}"
+
+
+def _render_row_header_pretty(
+    stdout: TextIO,
+    row: dict[str, object],
+    *,
+    index: int,
+    total: int,
+    include_count: int,
+    exclude_count: int,
+    color: bool,
+) -> None:
+    width = _terminal_size().columns
+    rule = _hrule(width)
+    counts = f"{include_count} include   {exclude_count} exclude"
+    stdout.write("\n")
+    stdout.write(rule + "\n")
+    stdout.write(" " + _two_col(f"row {index}/{total}", counts, width - 1) + "\n")
+    stdout.write(rule + "\n")
+    stdout.write("\n")
+    committed_at = str(row.get("committed_at") or "")
+    stdout.write(" " + _two_col(str(row.get("id") or ""), committed_at, width - 1) + "\n")
+    subject = str(row.get("subject") or "")
+    stdout.write(" " + _style(subject, _BOLD, enabled=color) + "\n")
+    stdout.write("\n")
+    files = row.get("files") or []
+    if isinstance(files, list | tuple):
+        for path in files:
+            stdout.write(f" {path}\n")
+    stdout.write("\n")
+
+
+def _render_menu_pretty(stdout: TextIO, *, color: bool) -> None:
+    width = _terminal_size().columns
+    rule = _hrule(width)
+    menu = " i include    e exclude    s skip    enter more    q quit"
+    stdout.write("\n")
+    stdout.write(rule + "\n")
+    stdout.write(_style(menu, _BOLD, enabled=color) + "\n")
+    stdout.write(rule + "\n")
+
+
+@dataclass(frozen=True)
+class _DiffLine:
+    kind: str  # "file", "context", "add", "remove"
+    text: str
+    number: str = ""
+
+
+_HUNK_HEADER_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
+
+
+def _parse_diff_lines(diff: str) -> list[_DiffLine]:
+    parsed: list[_DiffLine] = []
+    old_line = 0
+    new_line = 0
+    current_file: str | None = None
+    for raw in diff.splitlines():
+        if raw.startswith("diff --git") or raw.startswith("index "):
+            continue
+        if raw.startswith("--- "):
+            continue
+        if raw.startswith("+++ "):
+            path = raw[4:]
+            if path.startswith("b/"):
+                path = path[2:]
+            if path not in ("/dev/null", current_file):
+                current_file = path
+                parsed.append(_DiffLine(kind="file", text=current_file))
+            continue
+        match = _HUNK_HEADER_RE.match(raw)
+        if match:
+            old_line = int(match.group(1))
+            new_line = int(match.group(2))
+            continue
+        if raw.startswith("+"):
+            parsed.append(_DiffLine(kind="add", text=raw[1:], number=str(new_line)))
+            new_line += 1
+        elif raw.startswith("-"):
+            parsed.append(_DiffLine(kind="remove", text=raw[1:], number=str(old_line)))
+            old_line += 1
+        else:
+            content = raw[1:] if raw.startswith(" ") else raw
+            parsed.append(_DiffLine(kind="context", text=content, number=str(new_line)))
+            old_line += 1
+            new_line += 1
+    return parsed
+
+
+def _render_diff_line(line: _DiffLine, *, number_width: int, color: bool) -> str:
+    if line.kind == "file":
+        header = f"\u2500\u2500 {line.text} " + "\u2500" * 10
+        return _style(header, _BOLD, enabled=color)
+    marker = {"add": "+", "remove": "-", "context": ""}[line.kind]
+    label = (marker or line.number).rjust(number_width)
+    rendered = f" {label}   {line.text}"
+    if line.kind == "add":
+        return _style(rendered, _GREEN, enabled=color)
+    if line.kind == "remove":
+        return _style(rendered, _RED, enabled=color)
+    return _style(rendered, _DIM, enabled=color)
+
+
+def _show_diff_pretty(diff: str, *, stdin: TextIO, stdout: TextIO, color: bool) -> None:
+    diff_lines = _parse_diff_lines(diff) or [_DiffLine(kind="context", text="")]
+    number_width = max((len(dl.number) for dl in diff_lines if dl.kind != "file"), default=3)
+    rendered = [_render_diff_line(dl, number_width=number_width, color=color) for dl in diff_lines]
+    tty = _is_pretty(stdin)
+    page = max(_terminal_size().lines - 12, 5)
+    if not tty or len(rendered) <= page:
+        stdout.write("\n".join(rendered) + ("\n" if rendered else ""))
+        return
+    pages = [rendered[start : start + page] for start in range(0, len(rendered), page)]
+    total_pages = len(pages)
+    for page_index, chunk in enumerate(pages, start=1):
+        stdout.write("\n".join(chunk) + "\n")
+        if page_index >= total_pages:
+            return
+        while True:
+            width = _terminal_size().columns
+            indicator = f"{page_index}/{total_pages}  more"
+            stdout.write("\n" + indicator.rjust(max(width, 10)) + "\n")
+            stdout.flush()
+            raw = _read_line(stdin)
+            if raw is None:
+                return
+            token = raw.strip().lower()
+            if token in {"q", "quit"}:
+                return
+            if token == "":
+                break
+
 
 def _load_sheet_rows(sheet: Path) -> list[dict[str, object]]:
     return [
@@ -255,12 +425,23 @@ def _parse_json_labels(raw: str) -> list[dict[str, object]] | None:
 
 
 def _prompt_concern(
-    stdin: TextIO, stdout: TextIO, *, allow_json: bool
+    stdin: TextIO,
+    stdout: TextIO,
+    *,
+    allow_json: bool,
+    pretty: bool = False,
+    color: bool = False,
 ) -> str | list[dict[str, object]] | None:
     while True:
-        stdout.write("concern (1-5, or a labels JSON array starting with [):\n")
-        for index, name in enumerate(CONCERN_CHOICES, start=1):
-            stdout.write(f"{index}. {name}\n")
+        if pretty:
+            stdout.write("\n" + _style("concern", _BOLD, enabled=color) + "\n\n")
+            for index, name in enumerate(CONCERN_CHOICES, start=1):
+                stdout.write(f"  {index}. {name}\n")
+            stdout.write("\n")
+        else:
+            stdout.write("concern (1-5, or a labels JSON array starting with [):\n")
+            for index, name in enumerate(CONCERN_CHOICES, start=1):
+                stdout.write(f"{index}. {name}\n")
         stdout.flush()
         raw = _read_line(stdin)
         if raw is None:
@@ -277,9 +458,14 @@ def _prompt_concern(
         return picked
 
 
-def _prompt_category(stdin: TextIO, stdout: TextIO) -> str | None:
+def _prompt_category(
+    stdin: TextIO, stdout: TextIO, *, pretty: bool = False, color: bool = False
+) -> str | None:
     while True:
-        stdout.write("category:\n")
+        if pretty:
+            stdout.write("\n" + _style("category", _BOLD, enabled=color) + "\n\n")
+        else:
+            stdout.write("category:\n")
         stdout.flush()
         raw = _read_line(stdin)
         if raw is None:
@@ -290,13 +476,24 @@ def _prompt_category(stdin: TextIO, stdout: TextIO) -> str | None:
 
 
 def _prompt_file_path(
-    stdin: TextIO, stdout: TextIO, *, files: Sequence[str]
+    stdin: TextIO,
+    stdout: TextIO,
+    *,
+    files: Sequence[str],
+    pretty: bool = False,
+    color: bool = False,
 ) -> str | None:
     paths = tuple(path for path in files if path.strip())
     while True:
-        stdout.write("file:\n")
-        for index, path in enumerate(paths, start=1):
-            stdout.write(f"{index}. {path}\n")
+        if pretty:
+            stdout.write("\n" + _style("file", _BOLD, enabled=color) + "\n\n")
+            for index, path in enumerate(paths, start=1):
+                stdout.write(f"  {index}. {path}\n")
+            stdout.write("\n")
+        else:
+            stdout.write("file:\n")
+            for index, path in enumerate(paths, start=1):
+                stdout.write(f"{index}. {path}\n")
         stdout.flush()
         raw = _read_line(stdin)
         if raw is None:
@@ -309,9 +506,14 @@ def _prompt_file_path(
         return picked
 
 
-def _prompt_line_range(stdin: TextIO, stdout: TextIO) -> tuple[int, int] | None:
+def _prompt_line_range(
+    stdin: TextIO, stdout: TextIO, *, pretty: bool = False, color: bool = False
+) -> tuple[int, int] | None:
     while True:
-        stdout.write("line (14 or 14-20):\n")
+        if pretty:
+            stdout.write("\n" + _style("line", _BOLD, enabled=color) + " (14 or 14-20)\n\n")
+        else:
+            stdout.write("line (14 or 14-20):\n")
         stdout.flush()
         raw = _read_line(stdin)
         if raw is None:
@@ -328,19 +530,26 @@ def _prompt_one_label(
     *,
     files: Sequence[str],
     allow_json: bool,
+    pretty: bool = False,
+    color: bool = False,
+    existing: Sequence[str] = (),
 ) -> dict[str, object] | list[dict[str, object]] | None:
-    concern = _prompt_concern(stdin, stdout, allow_json=allow_json)
+    if pretty and existing:
+        stdout.write("\n" + _style("labels so far:", _BOLD, enabled=color) + "\n")
+        for summary in existing:
+            stdout.write(f"  - {summary}\n")
+    concern = _prompt_concern(stdin, stdout, allow_json=allow_json, pretty=pretty, color=color)
     if concern is None:
         return None
     if isinstance(concern, list):
         return concern
-    category = _prompt_category(stdin, stdout)
+    category = _prompt_category(stdin, stdout, pretty=pretty, color=color)
     if category is None:
         return None
-    file_path = _prompt_file_path(stdin, stdout, files=files)
+    file_path = _prompt_file_path(stdin, stdout, files=files, pretty=pretty, color=color)
     if file_path is None:
         return None
-    lines = _prompt_line_range(stdin, stdout)
+    lines = _prompt_line_range(stdin, stdout, pretty=pretty, color=color)
     if lines is None:
         return None
     label = EvalLabel(
@@ -353,9 +562,14 @@ def _prompt_one_label(
     return label.model_dump()
 
 
-def _prompt_add_another(stdin: TextIO, stdout: TextIO) -> bool | None:
+def _prompt_add_another(
+    stdin: TextIO, stdout: TextIO, *, pretty: bool = False, color: bool = False
+) -> bool | None:
     while True:
-        stdout.write("add another label? (y/n):\n")
+        if pretty:
+            stdout.write("\n" + _style("add another label?", _BOLD, enabled=color) + " (y/n)\n\n")
+        else:
+            stdout.write("add another label? (y/n):\n")
         stdout.flush()
         raw = _read_line(stdin)
         if raw is None:
@@ -368,31 +582,59 @@ def _prompt_add_another(stdin: TextIO, stdout: TextIO) -> bool | None:
 
 
 def _prompt_labels(
-    stdin: TextIO, stdout: TextIO, *, files: Sequence[str]
+    stdin: TextIO,
+    stdout: TextIO,
+    *,
+    files: Sequence[str],
+    pretty: bool = False,
+    color: bool = False,
 ) -> list[dict[str, object]] | None:
     labels: list[dict[str, object]] = []
+    summaries: list[str] = []
     while True:
-        one = _prompt_one_label(stdin, stdout, files=files, allow_json=not labels)
+        one = _prompt_one_label(
+            stdin,
+            stdout,
+            files=files,
+            allow_json=not labels,
+            pretty=pretty,
+            color=color,
+            existing=tuple(summaries),
+        )
         if one is None:
             return None
         if isinstance(one, list):
             return one
         labels.append(one)
-        add_another = _prompt_add_another(stdin, stdout)
+        summaries.append(
+            f"{one['concern']}/{one['category']} "
+            f"{one['file_path']}:{one['line_start']}-{one['line_end']}"
+        )
+        add_another = _prompt_add_another(stdin, stdout, pretty=pretty, color=color)
         if add_another is None:
             return None
         if not add_another:
             return labels
 
 
-def _prompt_split(stdin: TextIO, stdout: TextIO) -> EvalSplit | None:
+def _prompt_split(
+    stdin: TextIO, stdout: TextIO, *, pretty: bool = False, color: bool = False
+) -> EvalSplit | None:
     while True:
-        stdout.write("split (dev|holdout):\n")
+        if pretty:
+            stdout.write("\n" + _style("split", _BOLD, enabled=color) + "\n\n")
+            stdout.write("  1. dev\n  2. holdout\n\n")
+        else:
+            stdout.write("split (dev|holdout):\n")
         stdout.flush()
         raw = _read_line(stdin)
         if raw is None:
             return None
         value = raw.strip()
+        if pretty:
+            picked = _pick_numbered(value, ("dev", "holdout"))
+            if picked is not None:
+                return picked  # type: ignore[return-value]
         if value in {"dev", "holdout"}:
             return value  # type: ignore[return-value]
         # Empty and unknown values are rejected. No default.
@@ -430,6 +672,8 @@ def review_sheet(
     if not auditor.strip():
         raise ValueError("auditor is required")
     rows = _load_sheet_rows(sheet)
+    pretty = _is_pretty(stdout)
+    color = _color_enabled(stdout)
     index = 0
     shown_index: int | None = None
     while index < len(rows):
@@ -439,20 +683,37 @@ def review_sheet(
             continue
         if shown_index != index:
             include_count, exclude_count = _verdict_counts(rows)
-            stdout.write(
-                f"row {index + 1} of {len(rows)}, "
-                f"{include_count} include, {exclude_count} exclude\n"
-            )
-            stdout.write(f"id: {row.get('id')}\n")
-            stdout.write(f"sha: {row.get('sha')}\n")
-            stdout.write(f"committed_at: {row.get('committed_at')}\n")
-            stdout.write(f"subject: {row.get('subject')}\n")
-            files = row.get("files") or []
-            stdout.write(f"files: {files}\n")
-            stdout.write("diff:\n")
-            _show_diff(str(row.get("diff") or ""), stdin=stdin, stdout=stdout)
+            if pretty:
+                _render_row_header_pretty(
+                    stdout,
+                    row,
+                    index=index + 1,
+                    total=len(rows),
+                    include_count=include_count,
+                    exclude_count=exclude_count,
+                    color=color,
+                )
+                _show_diff_pretty(
+                    str(row.get("diff") or ""), stdin=stdin, stdout=stdout, color=color
+                )
+            else:
+                stdout.write(
+                    f"row {index + 1} of {len(rows)}, "
+                    f"{include_count} include, {exclude_count} exclude\n"
+                )
+                stdout.write(f"id: {row.get('id')}\n")
+                stdout.write(f"sha: {row.get('sha')}\n")
+                stdout.write(f"committed_at: {row.get('committed_at')}\n")
+                stdout.write(f"subject: {row.get('subject')}\n")
+                files = row.get("files") or []
+                stdout.write(f"files: {files}\n")
+                stdout.write("diff:\n")
+                _show_diff(str(row.get("diff") or ""), stdin=stdin, stdout=stdout)
             shown_index = index
-        stdout.write(COMMAND_MENU)
+        if pretty:
+            _render_menu_pretty(stdout, color=color)
+        else:
+            stdout.write(COMMAND_MENU)
         stdout.flush()
         command = _read_line(stdin)
         if command is None:
@@ -475,7 +736,7 @@ def review_sheet(
                 if isinstance(files_raw, list | tuple)
                 else ()
             )
-            labels = _prompt_labels(stdin, stdout, files=file_paths)
+            labels = _prompt_labels(stdin, stdout, files=file_paths, pretty=pretty, color=color)
             if labels is None:
                 return 0
             if split_after is not None:
@@ -487,7 +748,7 @@ def review_sheet(
                     date.fromisoformat(committed_raw), split_after
                 )
             else:
-                prompted_split = _prompt_split(stdin, stdout)
+                prompted_split = _prompt_split(stdin, stdout, pretty=pretty, color=color)
                 if prompted_split is None:
                     return 0
                 chosen_split = prompted_split
