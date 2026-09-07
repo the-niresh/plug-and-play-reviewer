@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 
@@ -62,6 +62,84 @@ class PostedReview:
     comments: tuple[ReviewComment, ...]
     summary_only: bool = False
     idempotency_key: str = ""
+
+
+def submit_review_to_github(
+    ref: PullRequestRef,
+    submission: ReviewSubmission,
+    token: str,
+    *,
+    client: httpx.Client | None = None,
+    api_base_url: str = "https://api.github.com",
+    timeout_seconds: float = 10.0,
+) -> PostedReview:
+    http_client = client if client is not None else httpx.Client()
+    response = http_client.post(
+        f"{api_base_url}/repos/{ref.owner}/{ref.repository}/pulls/{ref.number}/reviews",
+        headers={
+            "accept": "application/vnd.github+json",
+            "authorization": f"Bearer {token}",
+            "x-github-api-version": "2022-11-28",
+        },
+        json={
+            "commit_id": submission.commit_id,
+            "event": "COMMENT",
+            "body": submission.body,
+            "comments": [
+                {
+                    "path": comment.path,
+                    "line": comment.line,
+                    "side": comment.side,
+                    "body": comment.body,
+                }
+                for comment in submission.comments
+            ],
+        },
+        timeout=timeout_seconds,
+    )
+    response.raise_for_status()
+    payload = _json_object(response)
+    comment_ids = tuple(str(item.get("id", "")) for item in _json_list(payload.get("comments")))
+    return PostedReview(
+        github_review_id=str(payload.get("id", "")),
+        comment_ids=comment_ids,
+        response_status=response.status_code,
+        body=str(payload.get("body", submission.body)),
+        comments=submission.comments,
+    )
+
+
+def list_pull_request_reviews(
+    ref: PullRequestRef,
+    token: str,
+    *,
+    client: httpx.Client | None = None,
+    api_base_url: str = "https://api.github.com",
+    timeout_seconds: float = 10.0,
+) -> tuple[PostedReview, ...]:
+    http_client = client if client is not None else httpx.Client()
+    response = http_client.get(
+        f"{api_base_url}/repos/{ref.owner}/{ref.repository}/pulls/{ref.number}/reviews",
+        headers={
+            "accept": "application/vnd.github+json",
+            "authorization": f"Bearer {token}",
+            "x-github-api-version": "2022-11-28",
+        },
+        timeout=timeout_seconds,
+    )
+    response.raise_for_status()
+    posted: list[PostedReview] = []
+    for item in _json_list(response.json()):
+        posted.append(
+            PostedReview(
+                github_review_id=str(item.get("id", "")),
+                comment_ids=(),
+                response_status=response.status_code,
+                body=str(item.get("body", "")),
+                comments=(),
+            )
+        )
+    return tuple(posted)
 
 
 def posting_idempotency_key(ref: PullRequestRef, head_sha: str, policy_version: str) -> str:
@@ -196,6 +274,19 @@ def _existing(
 
 def _marker(key: str) -> str:
     return f"{_MARKER_PREFIX}{key} -->"
+
+
+def _json_object(response: httpx.Response) -> dict[str, Any]:
+    payload = response.json()
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
+def _json_list(value: object) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict)]
+    return []
 
 
 def _emit(

@@ -26,15 +26,29 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from pr_reviewer.containers.runtime import ContainerProbe
 from pr_reviewer.context_budget import context_budget_for_model
+from pr_reviewer.contracts.finding import Finding
+from pr_reviewer.contracts.github import PullRequestRef
+from pr_reviewer.contracts.review_context import FilePatch, ReviewOutcome
 from pr_reviewer.contracts.runner import JobAcknowledgement, JobEnvelope, LeaseState
+from pr_reviewer.github.post_review import (
+    PostedReview,
+    RouteDecision,
+    StalePullRequestHead,
+    list_pull_request_reviews,
+    post_review,
+    posting_idempotency_key,
+    submit_review_to_github,
+)
+from pr_reviewer.github.pull_request import PullRequestSnapshot
 from pr_reviewer.local_store.sqlite import LocalStore
 from pr_reviewer.models.anthropic_provider import AnthropicProvider
 from pr_reviewer.models.catalogue import default_model_for
 from pr_reviewer.reviewer.diff_budget import pack_diff
+from pr_reviewer.reviewer.hunk_format import render_hunks
 from pr_reviewer.reviewer.review_pull_request import review_pull_request
 from pr_reviewer.runner.client import RunnerClient
 from pr_reviewer.runner.daemon import ReviewExecutor, RunnerDaemon, open_or_recover_local_store
@@ -289,6 +303,7 @@ class DiffOnlyRunnerReviewExecutor:
     def __init__(self, *, runner_client: RunnerClient, secrets: SecretStore) -> None:
         self._runner_client = runner_client
         self._secrets = secrets
+        self._posted_reviews: dict[str, PostedReview] = {}
 
     def review(self, job: JobEnvelope) -> JobAcknowledgement:
         started = time.monotonic()
@@ -311,6 +326,12 @@ class DiffOnlyRunnerReviewExecutor:
             )
             if outcome.cancelled:
                 return _failed_ack(job=job, started=started, error_class="cancelled")
+            self._post_review_outcome(
+                job=job,
+                snapshot=snapshot,
+                token=token.token,
+                outcome=outcome,
+            )
         except Exception as exc:  # noqa: BLE001
             return _failed_ack(job=job, started=started, error_class=type(exc).__name__)
 
@@ -330,6 +351,49 @@ class DiffOnlyRunnerReviewExecutor:
 
     def _heartbeat(self, job: JobEnvelope) -> LeaseState:
         return self._runner_client.heartbeat(str(job.job_id), job.lease_token)
+
+    def _post_review_outcome(
+        self,
+        *,
+        job: JobEnvelope,
+        snapshot: PullRequestSnapshot,
+        token: str,
+        outcome: ReviewOutcome,
+    ) -> None:
+        findings = _findings_with_route_decisions(job=job, outcome=outcome)
+        if not findings:
+            return
+        ref = PullRequestRef(
+            owner=snapshot.repo_owner,
+            repository=snapshot.repo_name,
+            number=snapshot.number,
+        )
+        idempotency_key = posting_idempotency_key(ref, snapshot.head_sha, job.policy_version)
+        patches = tuple(
+            FilePatch(path=file.path, patch=file.patch or "", previous_path=file.previous_path)
+            for file in snapshot.files
+        )
+        try:
+            post_review(
+                ref,
+                snapshot.head_sha,
+                findings,
+                idempotency_key,
+                patches=patches,
+                current_head_sha=lambda: fetch_job_snapshot(
+                    job,
+                    self._runner_client.issue_job_token(str(job.job_id), job.lease_token),
+                ).head_sha,
+                submit=lambda submission: submit_review_to_github(ref, submission, token),
+                list_reviews=lambda target_ref: list_pull_request_reviews(target_ref, token),
+                render_hunks=render_hunks,
+                lookup=self._posted_reviews.get,
+                record_post=lambda posted: self._posted_reviews.__setitem__(
+                    posted.idempotency_key, posted
+                ),
+            )
+        except StalePullRequestHead:
+            return
 
 
 def build_review_executor(
@@ -399,6 +463,47 @@ def _failed_ack(
         latency_ms=max(latency_ms, 0),
         local_result_hash=digest,
     )
+
+
+def _findings_with_route_decisions(
+    *,
+    job: JobEnvelope,
+    outcome: ReviewOutcome,
+) -> tuple[tuple[Finding, RouteDecision], ...]:
+    mapped: list[tuple[Finding, RouteDecision]] = []
+    for index, candidate in enumerate(outcome.candidates):
+        allow_public_post = candidate.concern != "security"
+        confidentiality: Literal["ordinary", "restricted"] = (
+            "ordinary" if allow_public_post else "restricted"
+        )
+        finding = Finding(
+            id=f"{job.job_id}:{index + 1}",
+            review_job_id=str(job.job_id),
+            concern=candidate.concern,
+            severity=candidate.severity,
+            category=candidate.category,
+            file_path=candidate.file_path,
+            line_start=candidate.line_start,
+            line_end=candidate.line_end,
+            title=candidate.title,
+            rationale=candidate.rationale,
+            evidence=list(candidate.evidence),
+            confidence=candidate.confidence,
+            verified=True,
+            verification_method="static",
+            public_safe=allow_public_post,
+            status="draft",
+        )
+        mapped.append(
+            (
+                finding,
+                RouteDecision(
+                    allow_public_post=allow_public_post,
+                    confidentiality=confidentiality,
+                ),
+            )
+        )
+    return tuple(mapped)
 
 
 def _data_dir() -> Path:
