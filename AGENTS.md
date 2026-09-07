@@ -68,6 +68,23 @@ Never stage `docs/phases/` or `datasets/private/`.
 
 Do not mark a task done before its commit exists.
 
+## Cheap guards you must run before reporting ready
+
+The full suite is Claude's job, not yours. But two checks cost seconds, need no lock, and catch
+the mistakes that waste a whole round trip. Run both before you report:
+
+```bash
+uv run pytest -q tests/test_package_boundaries.py    # ~2s
+uv run pytest -q tests/test_hosted_boundary_enforcement.py
+```
+
+`control_plane/` must never import `runner/`. The hosted plane owns GitHub App secrets and job
+metadata; the runner owns model keys and runs reviews. Wiring a RunnerDaemon into
+`control_plane/app.py` puts model keys and review execution in the hosted process and breaks the
+one boundary this product is built on. It has already been tried once in this phase and the
+guard caught it.
+
+
 ## Writing style, in code and in docs
 
 No em dash and no en dash anywhere. U+2014 and U+2013 are banned in code, comments, commits and
@@ -118,8 +135,17 @@ adding one. This repo has 1,240 lines of retrieval, a finding matcher, a budget 
 sandbox that were all written and then left unused because nobody looked. Re-implementing what
 is three files away is the most expensive mistake available.
 
-**Run tests narrowly while iterating.** `uv run pytest -q tests/test_your_file.py` costs seconds.
-The full suite costs five minutes and a shared lock, and belongs only in the gate.
+**Run tests narrowly while iterating**, but always under the lock:
+
+```bash
+flock -w 1800 /tmp/pr-reviewer-pytest.lock uv run pytest -q tests/test_your_file.py
+```
+
+Every agent on this machine shares one Postgres. A targeted run without the lock collides with
+someone else's run and produces `ForeignKeyViolation` or `DeadlockDetected` in tests that have
+nothing to do with either change. That has already happened once and cost a full gate. The lock
+is cheap for a targeted run, which finishes in seconds. The full suite still belongs only in the
+gate, which is Claude's job.
 
 **Cite, do not paste.** In your report write `models/provider.py:161`, not the function body. The
 person reading it can open the file.
