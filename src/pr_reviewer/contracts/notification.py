@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Confidentiality = Literal["restricted", "ordinary"]
 ChannelPurpose = Literal["security_alert", "review_ping"]
-TransportName = Literal["slack", "telegram", "discord"]
+TransportName = Literal["slack", "telegram", "discord", "email"]
 
 
 class NotificationChannel(BaseModel):
