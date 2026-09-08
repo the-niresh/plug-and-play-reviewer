@@ -46,6 +46,21 @@ TWO_HUNK_PATCH = """\
 +changed late
  more
 """
+# Modeled on flask-py-001 (dev): definition hunk, then a later call-site hunk.
+BLUEPRINT_DEF_AND_CALL_PATCH = """\
+@@ -453,5 +453,6 @@ class Blueprint(Scaffold):
+     def register(self, app, options):
+         for blueprint, bp_options in self._blueprints:
+-            bp_options = bp_options.copy()
++            bp_subdomain = bp_options.get("subdomain")
++            bp_options = bp_options.copy()
+             if bp_url_prefix is None:
+@@ -598,3 +600,3 @@
+ later
+-old
++            state = register(app, options)
+ more
+"""
 FORBIDDEN_FIELDS = (
     "id",
     "review_job_id",
@@ -303,6 +318,27 @@ def test_finding_does_not_expand_into_a_distant_hunk() -> None:
     )
     assert len(outcome.candidates) == 1
     assert (outcome.candidates[0].line_start, outcome.candidates[0].line_end) == (605, 607)
+
+
+def test_finding_on_a_call_site_moves_to_the_named_definition_hunk() -> None:
+    packed = _packed([_file("src/flask/blueprints.py", patch=BLUEPRINT_DEF_AND_CALL_PATCH)])
+    outcome, _model = _review(
+        packed,
+        {
+            "findings": [
+                _draft_dict(
+                    file_path="src/flask/blueprints.py",
+                    line_start=601,
+                    line_end=601,
+                    title="register copies options too late",
+                    category="register",
+                    rationale="The change in how register is used could drop subdomain.",
+                )
+            ]
+        },
+    )
+    assert len(outcome.candidates) == 1
+    assert (outcome.candidates[0].line_start, outcome.candidates[0].line_end) == (453, 457)
 
 
 def test_empty_evidence_is_dropped() -> None:
