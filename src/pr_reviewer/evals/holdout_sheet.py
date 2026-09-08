@@ -888,6 +888,10 @@ def main(argv: list[str] | None = None) -> int:
     except HoldoutUnjudged as exc:
         print(f"HoldoutUnjudged: {exc}", file=sys.stderr)
         return 2
+    except KeyboardInterrupt:
+        # Every verdict is written to the sheet as it is made, so nothing is lost here.
+        print("\nstopped. progress is saved, rerun the same command to continue.")
+        return 130
 
 
 if __name__ == "__main__":

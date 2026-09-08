@@ -400,3 +400,22 @@ def test_plain_stdout_is_unaffected_by_pretty_mode(tmp_path: Path) -> None:
     assert "\x1b[" not in text
     assert "\u2500" not in text
     assert "row 1 of 1, 0 include, 0 exclude\n" in text
+
+
+def test_ctrl_c_exits_cleanly_instead_of_dumping_a_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from pr_reviewer.evals import holdout_sheet
+
+    sheet = tmp_path / "sheet.jsonl"
+    _write_sheet(sheet, [_row("cand-001")])
+
+    def _interrupt(*args: object, **kwargs: object) -> int:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(holdout_sheet, "review_sheet", _interrupt)
+    code = holdout_sheet.main(
+        ["review", "--sheet", str(sheet), "--auditor", "niresh"]
+    )
+    assert code == 130
+    assert "Traceback" not in capsys.readouterr().err
