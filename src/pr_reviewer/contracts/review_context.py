@@ -90,6 +90,8 @@ class ReviewOutcome(BaseModel):
     schema_rejected_findings: int = Field(default=0, ge=0)
     grounding_rejected_findings: int = Field(default=0, ge=0)
     duplicate_rejected_findings: int = Field(default=0, ge=0)
+    cost_usd: float = Field(default=0.0, ge=0)
+    latency_ms: int = Field(default=0, ge=0)
 
     def is_complete(self) -> bool:
         return not self.cancelled and self.covers_all_changed_files

@@ -265,6 +265,8 @@ def test_specialist_comparison_runs_both_paths_on_a_synthetic_holdout() -> None:
         source_evidence=["fix null check"],
         human_auditor="niresh",
         committed_at=date(2024, 6, 1),
+        repository="pallets/flask",
+        sha="d" * 40,
     )
     one_agent, specialists = run_specialist_comparison(
         [case],

@@ -65,7 +65,7 @@ def test_build_holdout_refuses_an_unjudged_row(tmp_path: Path) -> None:
     sheet.write_text(
         json.dumps(
             {
-                "id": "cand-001",
+                "id": "flask-py-099",
                 "sha": "a" * 40,
                 "committed_at": "2026-01-02",
                 "subject": "fix widget",
@@ -94,7 +94,7 @@ def test_build_holdout_writes_included_judged_rows(tmp_path: Path) -> None:
 
     sheet = tmp_path / "sheet.jsonl"
     include = {
-        "id": "cand-001",
+        "id": "flask-py-099",
         "sha": "a" * 40,
         "committed_at": "2026-01-02",
         "subject": "fix widget",
@@ -124,9 +124,11 @@ def test_build_holdout_writes_included_judged_rows(tmp_path: Path) -> None:
     written = build_holdout(sheet, out)
     assert written == 1
     case = EvalCase.model_validate_json(out.read_text(encoding="utf-8").splitlines()[0])
-    assert case.id == "cand-001"
+    assert case.id == "flask-py-099"
     assert case.split == "holdout"
     assert case.human_auditor == "niresh"
+    assert case.repository == "pallets/flask"
+    assert case.sha == "a" * 40
 
 
 def test_build_holdout_refuses_include_without_split_or_auditor(tmp_path: Path) -> None:
@@ -134,7 +136,7 @@ def test_build_holdout_refuses_include_without_split_or_auditor(tmp_path: Path) 
 
     sheet = tmp_path / "sheet.jsonl"
     row = {
-        "id": "cand-001",
+        "id": "flask-py-099",
         "sha": "a" * 40,
         "committed_at": "2026-01-02",
         "subject": "fix widget",
@@ -169,7 +171,7 @@ def test_cli_build_holdout_refuses_unjudged_rows(
     sheet.write_text(
         json.dumps(
             {
-                "id": "cand-001",
+                "id": "flask-py-099",
                 "sha": "a" * 40,
                 "committed_at": "2026-01-02",
                 "subject": "fix widget",

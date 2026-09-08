@@ -5,11 +5,13 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
+from pr_reviewer.contracts.finding_candidate import FindingCandidate
 from pr_reviewer.evals.match_findings import MatchResult, match_findings
 from pr_reviewer.evals.metrics import compute_metrics
 from pr_reviewer.evals.types import (
     EvalCase,
     EvalConfig,
+    EvalReviewResult,
     EvalRun,
     RetrievalAblationResult,
     ReviewerCallable,
@@ -33,13 +35,30 @@ def load_public_eval_cases(path: Path | None = None) -> list[EvalCase]:
     return cases
 
 
+def _normalize_reviewer_output(
+    raw: EvalReviewResult | Sequence[FindingCandidate],
+) -> EvalReviewResult:
+    if isinstance(raw, EvalReviewResult):
+        return raw
+    return EvalReviewResult(findings=tuple(raw))
+
+
 def run_eval(config: EvalConfig, reviewer: ReviewerCallable) -> EvalRun:
     results: list[MatchResult] = []
+    total_cost_usd = 0.0
+    total_latency_ms = 0
     for _ in range(config.repeats):
         for case in config.cases:
-            actual = list(reviewer(case))
-            results.append(match_findings(case.expected_labels, actual))
-    metrics = compute_metrics(results, reviewed_pr_count=len(results))
+            review = _normalize_reviewer_output(reviewer(case))
+            total_cost_usd += review.cost_usd
+            total_latency_ms += review.latency_ms
+            results.append(match_findings(case.expected_labels, list(review.findings)))
+    metrics = compute_metrics(
+        results,
+        reviewed_pr_count=len(results),
+        latency_ms=total_latency_ms,
+        cost_usd=total_cost_usd,
+    )
     return EvalRun(metrics=metrics)
 
 

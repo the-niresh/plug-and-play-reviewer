@@ -37,6 +37,8 @@ def _case(*, case_id: str = "case-1") -> Any:
         source_evidence=["fix null check"],
         human_auditor="niresh",
         committed_at=date(2024, 1, 1),
+        repository="acme/widgets",
+        sha="c" * 40,
     )
 
 

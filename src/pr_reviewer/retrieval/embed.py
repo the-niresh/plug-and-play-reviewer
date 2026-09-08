@@ -8,11 +8,44 @@ vector(1536); this module fails closed if the live column drifts.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any, Protocol
 
 from psycopg import Connection
 
 V1_EMBEDDING_DIMENSIONS = 1536
+OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+DETERMINISTIC_EMBEDDING_MODEL = "deterministic-sha256-v1"
+_EMBEDDING_PRICE_PER_MILLION: dict[str, Decimal] = {
+    OPENAI_EMBEDDING_MODEL: Decimal("0.02"),
+}
+DEFAULT_ESTIMATED_SHA_INDEX_TOKENS = 250_000
+
+
+@dataclass
+class EmbeddingCostLedger:
+    total_tokens: int = 0
+    total_cost_usd: Decimal = field(default_factory=lambda: Decimal(0))
+
+    def record(self, token_count: int, cost_usd: Decimal) -> None:
+        self.total_tokens += token_count
+        self.total_cost_usd += cost_usd
+
+
+def estimate_embedding_tokens(text: str) -> int:
+    return max(1, len(text) // 4)
+
+
+def embedding_cost_usd_for(token_count: int, model_name: str) -> Decimal:
+    if model_name == DETERMINISTIC_EMBEDDING_MODEL:
+        return Decimal(0)
+    price = _EMBEDDING_PRICE_PER_MILLION.get(model_name)
+    if price is None:
+        raise ValueError(f"unknown embedding model {model_name!r}")
+    million = Decimal("1000000")
+    return (Decimal(token_count) / million) * price
+
 _VECTOR_TYPE = f"vector({V1_EMBEDDING_DIMENSIONS})"
 
 

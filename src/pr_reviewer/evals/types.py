@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
@@ -12,7 +13,30 @@ from pr_reviewer.contracts.finding_candidate import FindingCandidate
 
 EvalSplit = Literal["dev", "holdout"]
 Concern = Literal["security", "correctness", "tests", "docs", "maintainability"]
-ReviewerCallable = Callable[["EvalCase"], Sequence[FindingCandidate]]
+EVAL_REPOSITORY_BY_PREFIX: dict[str, str] = {
+    "flask-py": "pallets/flask",
+    "zod-ts": "colinhacks/zod",
+}
+
+
+def repository_for_eval_case_id(case_id: str) -> str:
+    prefix = case_id.rsplit("-", 1)[0]
+    try:
+        return EVAL_REPOSITORY_BY_PREFIX[prefix]
+    except KeyError as exc:
+        raise ValueError(
+            f"unknown eval case repository prefix for {case_id!r}"
+        ) from exc
+
+
+@dataclass(frozen=True)
+class EvalReviewResult:
+    findings: tuple[FindingCandidate, ...]
+    cost_usd: float = 0.0
+    latency_ms: int = 0
+
+
+ReviewerCallable = Callable[["EvalCase"], EvalReviewResult | Sequence[FindingCandidate]]
 
 
 class EvalLabel(BaseModel):
@@ -72,6 +96,8 @@ class EvalCase(BaseModel):
     source_evidence: list[str] = Field(min_length=1)
     human_auditor: str | None
     committed_at: date
+    repository: str = Field(min_length=1)
+    sha: str = Field(min_length=40, max_length=40)
 
     @model_validator(mode="after")
     def holdout_requires_a_human_auditor(self) -> EvalCase:

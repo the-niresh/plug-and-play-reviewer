@@ -25,6 +25,7 @@ from pr_reviewer.evals.types import (
     EvalLabel,
     EvalSplit,
     assign_time_split,
+    repository_for_eval_case_id,
 )
 
 CONCERN_CHOICES: tuple[str, ...] = get_args(Concern)
@@ -127,6 +128,10 @@ def build_holdout(sheet: Path, dest: Path) -> int:
             )
         if not committed_raw or not diff or not evidence:
             raise HoldoutUnjudged(f"row {row_id} is include but missing case fields")
+        sha = str(row.get("sha") or "").strip()
+        if not sha:
+            raise HoldoutUnjudged(f"row {row_id} is include but missing sha")
+        repository = repository_for_eval_case_id(row_id)
         split: EvalSplit = "holdout" if split_raw == "holdout" else "dev"
         labels = [EvalLabel.model_validate(item) for item in labels_raw]
         cases.append(
@@ -138,6 +143,8 @@ def build_holdout(sheet: Path, dest: Path) -> int:
                 source_evidence=list(evidence),
                 human_auditor=auditor,
                 committed_at=_parse_committed_at(committed_raw),
+                repository=repository,
+                sha=sha,
             )
         )
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -724,6 +731,8 @@ def _split_from_committed_at(committed_at: date, holdout_after: date) -> EvalSpl
         source_evidence=["derive"],
         human_auditor="derive",
         committed_at=committed_at,
+        repository="pallets/flask",
+        sha="0" * 40,
     )
     return assign_time_split([stub], holdout_after=holdout_after)[0].split
 

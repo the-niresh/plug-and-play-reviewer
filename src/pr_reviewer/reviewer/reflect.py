@@ -48,6 +48,8 @@ class ReflectionResult(BaseModel):
 
     accepted: tuple[FindingCandidate, ...]
     suppressed: tuple[FindingCandidate, ...]
+    cost_usd: float = Field(default=0.0, ge=0)
+    latency_ms: int = Field(default=0, ge=0)
 
 
 def reflect_findings(
@@ -59,7 +61,7 @@ def reflect_findings(
     drop_threshold: float = REFLECTION_DROP_THRESHOLD,
 ) -> ReflectionResult:
     if not candidates:
-        return ReflectionResult(accepted=(), suppressed=())
+        return ReflectionResult(accepted=(), suppressed=(), cost_usd=0.0, latency_ms=0)
 
     response = model.complete_json(
         ModelRequest(
@@ -109,4 +111,9 @@ def reflect_findings(
             )
         )
 
-    return ReflectionResult(accepted=tuple(accepted), suppressed=tuple(suppressed))
+    return ReflectionResult(
+        accepted=tuple(accepted),
+        suppressed=tuple(suppressed),
+        cost_usd=float(response.cost_usd),
+        latency_ms=response.latency_ms,
+    )

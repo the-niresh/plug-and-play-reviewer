@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pr_reviewer.contracts.finding_candidate import FindingCandidate
-from pr_reviewer.evals.types import EvalCase
+from pr_reviewer.evals.types import EvalCase, EvalReviewResult
 
 
 def _candidate_for(
@@ -25,9 +25,10 @@ def _candidate_for(
 
 
 class FixtureReviewer:
-    def __init__(self, mode: str, *, seed: int = 0) -> None:
+    def __init__(self, mode: str, *, seed: int = 0, cost_usd: float = 0.0) -> None:
         self._mode = mode
         self._step = seed
+        self._cost_usd = cost_usd
 
     @classmethod
     def perfect(cls) -> FixtureReviewer:
@@ -45,7 +46,11 @@ class FixtureReviewer:
     def flaky(cls, seed: int = 1) -> FixtureReviewer:
         return cls("flaky", seed=seed)
 
-    def __call__(self, case: EvalCase) -> list[FindingCandidate]:
+    @classmethod
+    def with_cost(cls, cost_usd: float, mode: str = "silent") -> FixtureReviewer:
+        return cls(mode, cost_usd=cost_usd)
+
+    def __call__(self, case: EvalCase) -> EvalReviewResult | list[FindingCandidate]:
         mode = self._mode
         if mode == "flaky":
             cycle = self._step % 4
@@ -59,13 +64,17 @@ class FixtureReviewer:
             else:
                 mode = "perfect"
         if mode == "silent":
-            return []
-        matched = _candidate_for(case)
-        if mode == "noisy":
+            findings: list[FindingCandidate] = []
+        elif mode == "noisy":
+            matched = _candidate_for(case)
             extra = _candidate_for(
                 case,
                 file_path="src/other.py",
                 title="unrelated style nit",
             )
-            return [matched, extra]
-        return [matched]
+            findings = [matched, extra]
+        else:
+            findings = [_candidate_for(case)]
+        if self._cost_usd > 0:
+            return EvalReviewResult(findings=tuple(findings), cost_usd=self._cost_usd)
+        return findings

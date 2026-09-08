@@ -29,6 +29,8 @@ def dev_only_cases() -> list[EvalCase]:
             source_evidence=["dev fixture"],
             human_auditor=None,
             committed_at=date(2026, 1, 1),
+            repository="pallets/flask",
+            sha="d7b6c1f6703df405c69da45e7e0ba3d1aed512ce",
         )
     ]
 
@@ -50,4 +52,6 @@ def single_holdout_case() -> EvalCase:
         source_evidence=["fix null check"],
         human_auditor="niresh",
         committed_at=date(2024, 6, 1),
+        repository="pallets/flask",
+        sha="d7b6c1f6703df405c69da45e7e0ba3d1aed512ce",
     )

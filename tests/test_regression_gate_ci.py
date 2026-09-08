@@ -33,6 +33,8 @@ def _holdout_case(case_id: str = "case-1") -> dict[str, object]:
         "source_evidence": ["fix null check"],
         "human_auditor": "niresh",
         "committed_at": date(2026, 1, 1).isoformat(),
+        "repository": "acme/widgets",
+        "sha": "a" * 40,
     }
 
 

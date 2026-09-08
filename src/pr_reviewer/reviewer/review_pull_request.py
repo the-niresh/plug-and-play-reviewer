@@ -106,6 +106,8 @@ def review_pull_request(
         packed=packed,
         candidates=parsed_candidates.candidates,
     )
+    total_cost_usd = float(response.cost_usd) + reflected.cost_usd
+    total_latency_ms = response.latency_ms + reflected.latency_ms
     return ReviewOutcome(
         candidates=reflected.accepted,
         suppressed_candidates=reflected.suppressed,
@@ -116,6 +118,8 @@ def review_pull_request(
         schema_rejected_findings=parsed_candidates.schema_rejected_findings,
         grounding_rejected_findings=parsed_candidates.grounding_rejected_findings,
         duplicate_rejected_findings=parsed_candidates.duplicate_rejected_findings,
+        cost_usd=total_cost_usd,
+        latency_ms=total_latency_ms,
     )
 
 

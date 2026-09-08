@@ -293,6 +293,8 @@ def test_holdout_case_without_a_human_auditor_is_rejected() -> None:
             source_evidence=["fix null check"],
             human_auditor=None,
             committed_at=date(2026, 1, 1),
+            repository="pallets/flask",
+            sha="g" * 40,
         )
 
 
@@ -314,6 +316,8 @@ def test_split_is_time_based_not_random() -> None:
         source_evidence=["older commit"],
         human_auditor="niresh",
         committed_at=date(2024, 1, 1),
+        repository="pallets/flask",
+        sha="e" * 40,
     )
     newer = EvalCase(
         id="new",
@@ -323,6 +327,8 @@ def test_split_is_time_based_not_random() -> None:
         source_evidence=["newer commit"],
         human_auditor="niresh",
         committed_at=date(2026, 1, 1),
+        repository="pallets/flask",
+        sha="f" * 40,
     )
     split = assign_time_split([newer, older], holdout_after=date(2025, 6, 1))
     by_id = {case.id: case.split for case in split}
