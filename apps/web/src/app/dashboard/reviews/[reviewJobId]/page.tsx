@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { FindingCard } from "@/components/FindingCard";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
+import { ReviewBehaviorPanels } from "@/components/ReviewBehaviorPanels";
 import { fetchReview } from "@/lib/reviews";
 
 export const metadata = {

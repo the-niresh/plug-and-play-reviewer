@@ -107,6 +107,11 @@ def test_review_detail_page_renders_behavior_panels() -> None:
     assert 'data-testid="review-behavior-panels"' in text
 
 
+def test_review_detail_page_imports_behavior_panels() -> None:
+    text = REVIEW_DETAIL_PAGE.read_text(encoding="utf-8")
+    assert 'from "@/components/ReviewBehaviorPanels"' in text
+
+
 def test_panel_builder_says_no_data_when_metrics_are_missing() -> None:
     panels = _run_panel_builder(
         {
