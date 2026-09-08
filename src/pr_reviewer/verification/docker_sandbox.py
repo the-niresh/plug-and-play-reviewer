@@ -36,6 +36,9 @@ DEFAULT_COMMANDS: dict[str, tuple[str, ...]] = {
     "true": ("true",),
     "false": ("false",),
     "id_user": ("id", "-u"),
+    "run_pytest": ("pytest", "-q"),
+    "run_tsc": ("tsc", "--noEmit"),
+    "run_ruff": ("ruff", "check", "."),
 }
 
 _CLEANUP_SECONDS = 10.0
