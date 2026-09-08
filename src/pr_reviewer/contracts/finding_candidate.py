@@ -56,6 +56,23 @@ class FindingCandidate(BaseModel):
         return self
 
 
+class ModelReasoning(BaseModel):
+    """One model's rationale. Never merged with another model's voice."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+
+
+class ConsensusFinding(FindingCandidate):
+    """Generate-stage finding with cross-model agreement metadata."""
+
+    agreement_count: int = Field(ge=1)
+    model_reasoning: tuple[ModelReasoning, ...] = Field(min_length=1)
+    needs_human_match: bool = False
+
+
 def candidate_from_draft(draft: FindingDraft) -> FindingCandidate:
     return FindingCandidate(
         concern=draft.concern,
