@@ -73,9 +73,19 @@ class ConsensusFinding(FindingCandidate):
     needs_human_match: bool = False
 
 
+_SECURITY_TEXT_MARKERS = ("prototype pollution", "prototype-pollution", "__proto__")
+
+
+def _concern_for_draft(draft: FindingDraft) -> Concern:
+    text = " ".join((draft.category, draft.title, draft.rationale, *draft.evidence)).lower()
+    if any(marker in text for marker in _SECURITY_TEXT_MARKERS):
+        return "security"
+    return draft.concern
+
+
 def candidate_from_draft(draft: FindingDraft) -> FindingCandidate:
     return FindingCandidate(
-        concern=draft.concern,
+        concern=_concern_for_draft(draft),
         severity=draft.severity,
         category=draft.category,
         file_path=draft.file_path,

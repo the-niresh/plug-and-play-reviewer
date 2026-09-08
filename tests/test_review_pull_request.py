@@ -156,6 +156,30 @@ def test_finding_draft_has_none_of_the_system_owned_fields() -> None:
         assert field not in type(candidate).model_fields
 
 
+def test_prototype_pollution_draft_is_security_even_when_model_says_correctness() -> None:
+    from pr_reviewer.contracts.finding_candidate import FindingDraft, candidate_from_draft
+
+    draft = FindingDraft.model_validate(
+        _draft_dict(
+            concern="correctness",
+            category="prototype-pollution",
+            title="Path key writes through to Object.prototype",
+            rationale="A path segment can assign an inherited object key.",
+            evidence=['12| curr["__proto__"] = value'],
+        )
+    )
+    candidate = candidate_from_draft(draft)
+    assert candidate.concern == "security"
+
+
+def test_ordinary_correctness_draft_keeps_correctness() -> None:
+    from pr_reviewer.contracts.finding_candidate import FindingDraft, candidate_from_draft
+
+    draft = FindingDraft.model_validate(_draft_dict())
+    candidate = candidate_from_draft(draft)
+    assert candidate.concern == "correctness"
+
+
 def test_model_output_with_system_owned_fields_is_dropped() -> None:
     packed = _packed([_file("app.py")])
     outcome, _model = _review(
