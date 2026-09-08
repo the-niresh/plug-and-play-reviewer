@@ -58,6 +58,10 @@ class ModelRateLimit(Exception):
 class ModelProviderFailure(Exception):
     """Any other provider HTTP or protocol failure."""
 
+    def __init__(self, message: str = "", *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
 
 class ModelKeyInvalid(Exception):
     """The provider rejected the API key before any review ran."""
@@ -238,7 +242,19 @@ def verify_provider_api_key(
     if response.status_code in {401, 403}:
         raise ModelKeyInvalid()
     if response.status_code != 200:
-        raise ModelProviderFailure()
+        raise ModelProviderFailure(
+            f"provider returned {response.status_code}",
+            status_code=response.status_code,
+        )
+
+
+def _provider_error_message(payload: Any) -> str:
+    error = payload.get("error") if isinstance(payload, dict) else None
+    if isinstance(error, dict):
+        message = error.get("message")
+        if message is not None:
+            return str(message)
+    return ""
 
 
 def raise_for_provider_status(response: httpx.Response) -> None:
@@ -253,12 +269,18 @@ def raise_for_provider_status(response: httpx.Response) -> None:
         payload = {}
     error = payload.get("error") if isinstance(payload, dict) else None
     code = ""
-    message = ""
+    message_lower = ""
     if isinstance(error, dict):
         code = str(error.get("code") or "")
-        message = str(error.get("message") or "").lower()
+        message_lower = str(error.get("message") or "").lower()
     if response.status_code == 400 and (
-        code == "context_length_exceeded" or "too long" in message
+        code == "context_length_exceeded" or "too long" in message_lower
     ):
         raise ModelContextLimit()
-    raise ModelProviderFailure()
+    provider_message = _provider_error_message(payload)
+    if provider_message:
+        raise ModelProviderFailure(provider_message, status_code=response.status_code)
+    raise ModelProviderFailure(
+        f"provider returned {response.status_code}",
+        status_code=response.status_code,
+    )

@@ -136,3 +136,52 @@ def test_binary_generated_ignored_and_symlink_files_are_not_chunked(tmp_path: Pa
     paths = {chunk.file_path for chunk in chunks}
     assert paths == {"ok.py"}
     assert all(chunk.symbol_name == "keep" for chunk in chunks)
+
+
+def test_chunk_tree_splits_oversized_single_line_under_input_limit(tmp_path: Path) -> None:
+    from pr_reviewer.retrieval.chunk_code import chunk_tree
+    from pr_reviewer.retrieval.embed import estimate_embedding_tokens
+    from pr_reviewer.retrieval.openai_embeddings import MAX_EMBEDDING_TOKENS_PER_INPUT
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "bundle.js").write_text("x" * 45000, encoding="utf-8")
+
+    chunks = chunk_tree(root)
+    assert chunks
+    assert all(
+        estimate_embedding_tokens(chunk.content) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+        for chunk in chunks
+    )
+
+
+def test_chunk_tree_indexes_markdown_but_skips_svg(tmp_path: Path) -> None:
+    from pr_reviewer.retrieval.chunk_code import chunk_tree
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "README.md").write_text(
+        "# Hello\n\nDocs are useful retrieval context.\n",
+        encoding="utf-8",
+    )
+    (root / "logo.svg").write_text("<svg></svg>", encoding="utf-8")
+
+    chunks = chunk_tree(root)
+    paths = {chunk.file_path for chunk in chunks}
+    assert "README.md" in paths
+    assert "logo.svg" not in paths
+
+
+def test_chunk_tree_skips_svg_and_image_assets(tmp_path: Path) -> None:
+    from pr_reviewer.retrieval.chunk_code import chunk_tree
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "src").mkdir()
+    (root / "src" / "app.py").write_text("def main():\n    return 1\n", encoding="utf-8")
+    (root / "logo.svg").write_text("<svg>" + ("x" * 1000) + "</svg>", encoding="utf-8")
+    (root / "photo.png").write_bytes(b"\x89PNG\r\n\x1a\n" + b"pixels")
+
+    chunks = chunk_tree(root)
+    paths = {chunk.file_path for chunk in chunks}
+    assert paths == {"src/app.py"}

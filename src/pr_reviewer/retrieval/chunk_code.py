@@ -16,6 +16,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from pr_reviewer.retrieval.embed import MAX_EMBEDDING_INPUT_CHARS
+from pr_reviewer.reviewer.triage import is_unembeddable_path
+
 WINDOW_SIZE_LINES = 40
 WINDOW_OVERLAP_LINES = 10
 _SKIP_DIRECTORIES = frozenset({".git", "__pycache__"})
@@ -78,6 +81,8 @@ def chunk_tree(
             relative = path.relative_to(root_resolved).as_posix()
             if relative in generated or relative in ignored:
                 continue
+            if is_unembeddable_path(relative):
+                continue
             data = path.read_bytes()
             if b"\x00" in data:
                 continue
@@ -110,7 +115,7 @@ def _walk_python(
             qualified = f"{prefix}.{child.name}" if prefix else child.name
             start, end = _node_line_range(child)
             content = _slice_lines(lines, start, end)
-            chunks.append(
+            chunks.extend(
                 _make_chunk(
                     file_path=file_path,
                     start_line=start,
@@ -147,7 +152,7 @@ def _chunk_windows(file_path: str, source: str) -> tuple[CodeChunk, ...]:
     while start <= total:
         end = min(start + WINDOW_SIZE_LINES - 1, total)
         content = _slice_lines(lines, start, end)
-        chunks.append(
+        chunks.extend(
             _make_chunk(
                 file_path=file_path,
                 start_line=start,
@@ -165,6 +170,47 @@ def _chunk_windows(file_path: str, source: str) -> tuple[CodeChunk, ...]:
 
 
 def _make_chunk(
+    *,
+    file_path: str,
+    start_line: int,
+    end_line: int,
+    content: str,
+    strategy: ChunkingStrategy,
+    identity: str,
+    symbol_name: str | None,
+) -> tuple[CodeChunk, ...]:
+    pieces = _split_oversized_content(content, MAX_EMBEDDING_INPUT_CHARS)
+    if len(pieces) == 1:
+        return (_build_chunk(
+            file_path=file_path,
+            start_line=start_line,
+            end_line=end_line,
+            content=pieces[0],
+            strategy=strategy,
+            identity=identity,
+            symbol_name=symbol_name,
+        ),)
+    return tuple(
+        _build_chunk(
+            file_path=file_path,
+            start_line=start_line,
+            end_line=end_line,
+            content=piece,
+            strategy=strategy,
+            identity=f"{identity}:part:{part_index}",
+            symbol_name=symbol_name,
+        )
+        for part_index, piece in enumerate(pieces)
+    )
+
+
+def _split_oversized_content(content: str, max_chars: int) -> list[str]:
+    if len(content) <= max_chars:
+        return [content]
+    return [content[offset : offset + max_chars] for offset in range(0, len(content), max_chars)]
+
+
+def _build_chunk(
     *,
     file_path: str,
     start_line: int,

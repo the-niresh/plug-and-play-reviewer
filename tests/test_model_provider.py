@@ -195,8 +195,35 @@ def test_provider_error_raises(kind: str) -> None:
 
     provider = _provider(kind, handler)
     model = "gpt-4o-mini" if kind == "openai" else "claude-3-5-haiku-latest"
-    with pytest.raises(ModelProviderFailure):
+    with pytest.raises(ModelProviderFailure) as exc_info:
         provider.complete_json(_request(model=model))
+    err = exc_info.value
+    assert err.status_code == 500
+    assert "upstream failed" in str(err)
+
+
+def test_raise_for_provider_status_carries_code_and_message_not_request_body() -> None:
+    from pr_reviewer.models.provider import ModelProviderFailure, raise_for_provider_status
+
+    response = httpx.Response(
+        400,
+        json={
+            "error": {
+                "message": "Invalid 'input[0]': maximum input length is 8192 tokens.",
+            }
+        },
+        request=httpx.Request(
+            "POST",
+            "https://api.openai.com/v1/embeddings",
+            json={"input": ["definitely not logged source code"]},
+        ),
+    )
+    with pytest.raises(ModelProviderFailure) as exc_info:
+        raise_for_provider_status(response)
+    err = exc_info.value
+    assert err.status_code == 400
+    assert "8192 tokens" in str(err)
+    assert "definitely not logged source code" not in str(err)
 
 
 @pytest.mark.parametrize(

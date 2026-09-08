@@ -9,6 +9,7 @@ import httpx
 
 from pr_reviewer.models.provider import ModelProviderFailure, raise_for_provider_status
 from pr_reviewer.retrieval.embed import (
+    MAX_EMBEDDING_TOKENS_PER_INPUT,
     OPENAI_EMBEDDING_MODEL,
     V1_EMBEDDING_DIMENSIONS,
     EmbeddingCostLedger,
@@ -21,12 +22,12 @@ MAX_EMBEDDING_TOKENS_PER_REQUEST = 300_000
 
 
 class EmbeddingInputTooLargeError(RuntimeError):
-    """One input alone exceeds the provider per-request token cap."""
+    """One input alone exceeds the provider per-input token cap."""
 
     def __init__(self, text_index: int, token_count: int) -> None:
         super().__init__(
             f"embedding input at index {text_index} has {token_count} tokens, "
-            f"above the {MAX_EMBEDDING_TOKENS_PER_REQUEST} token limit per request"
+            f"above the {MAX_EMBEDDING_TOKENS_PER_INPUT} token limit per input"
         )
         self.text_index = text_index
         self.token_count = token_count
@@ -100,7 +101,7 @@ def _embedding_batches(texts: Sequence[str]) -> list[list[str]]:
     current_tokens = 0
     for index, text in enumerate(texts):
         tokens = estimate_embedding_tokens(text)
-        if tokens > MAX_EMBEDDING_TOKENS_PER_REQUEST:
+        if tokens > MAX_EMBEDDING_TOKENS_PER_INPUT:
             raise EmbeddingInputTooLargeError(index, tokens)
         if current and (
             len(current) >= MAX_EMBEDDING_INPUTS_PER_REQUEST

@@ -44,6 +44,39 @@ _LOCKFILE_NAMES = frozenset(
 )
 _GENERATED_PATH_MARKERS = ("dist/", "build/", "generated/", "vendor/", "node_modules/")
 _GENERATED_SUFFIXES = (".min.js", ".min.css", ".map")
+_NON_SOURCE_ASSET_SUFFIXES = (
+    ".svg",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".ico",
+    ".bmp",
+    ".tif",
+    ".tiff",
+    ".avif",
+    ".heic",
+    ".heif",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+    ".eot",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".bz2",
+    ".7z",
+    ".rar",
+    ".mp3",
+    ".mp4",
+    ".wav",
+    ".webm",
+    ".mov",
+    ".avi",
+    ".mkv",
+)
 _DOC_SUFFIXES = (".md", ".rst")
 _DOC_PATH_MARKERS = ("docs/",)
 _DOC_BASENAMES = frozenset({"license", "changelog", "notice", "readme.md", "contributing.md"})
@@ -79,19 +112,27 @@ class TriagedReview:
     outcome: ReviewOutcome
 
 
-def classify_trivial_file(file: PullRequestFile) -> OmissionReason | None:
-    """Return why a file needs no deep review, or None if it might."""
-    basename = file.path.rsplit("/", 1)[-1]
-    lower_path = file.path.lower()
+def is_unembeddable_path(path: str) -> bool:
+    """True when a path cannot be usefully embedded for retrieval context."""
+    basename = path.rsplit("/", 1)[-1]
+    lower_path = path.lower()
 
     if basename in _LOCKFILE_NAMES:
-        return OmissionReason.GENERATED
+        return True
     if any(marker in lower_path for marker in _GENERATED_PATH_MARKERS):
-        return OmissionReason.GENERATED
+        return True
     if lower_path.endswith(_GENERATED_SUFFIXES):
+        return True
+    return lower_path.endswith(_NON_SOURCE_ASSET_SUFFIXES)
+
+
+def classify_trivial_path(path: str) -> OmissionReason | None:
+    """Return why a diff path needs no deep review, or None if it might."""
+    if is_unembeddable_path(path):
         return OmissionReason.GENERATED
-    if basename in _DEPENDENCY_MANIFESTS and _is_dependency_bump_only(file.patch):
-        return OmissionReason.GENERATED
+
+    basename = path.rsplit("/", 1)[-1]
+    lower_path = path.lower()
 
     if lower_path.endswith(_DOC_SUFFIXES):
         return OmissionReason.IGNORED_PATH
@@ -102,6 +143,19 @@ def classify_trivial_file(file: PullRequestFile) -> OmissionReason | None:
         return OmissionReason.IGNORED_PATH
     if basename.lower() in _DOC_BASENAMES:
         return OmissionReason.IGNORED_PATH
+
+    return None
+
+
+def classify_trivial_file(file: PullRequestFile) -> OmissionReason | None:
+    """Return why a file needs no deep review, or None if it might."""
+    path_reason = classify_trivial_path(file.path)
+    if path_reason is not None:
+        return path_reason
+
+    basename = file.path.rsplit("/", 1)[-1]
+    if basename in _DEPENDENCY_MANIFESTS and _is_dependency_bump_only(file.patch):
+        return OmissionReason.GENERATED
 
     return None
 

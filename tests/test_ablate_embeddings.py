@@ -204,6 +204,39 @@ def test_local_retrieval_connection_wraps_genuine_connection_failure(
         pass
 
 
+def test_embed_rejects_single_input_over_per_input_token_limit() -> None:
+    from pr_reviewer.retrieval.embed import estimate_embedding_tokens
+    from pr_reviewer.retrieval.openai_embeddings import (
+        MAX_EMBEDDING_TOKENS_PER_INPUT,
+        EmbeddingInputTooLargeError,
+        OpenAIEmbeddingProvider,
+    )
+
+    huge = "x" * (MAX_EMBEDDING_TOKENS_PER_INPUT * 4 + 4)
+    assert estimate_embedding_tokens(huge) > MAX_EMBEDDING_TOKENS_PER_INPUT
+    http = _BatchRecordingEmbeddingHttp()
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", http=http)
+    with pytest.raises(EmbeddingInputTooLargeError):
+        provider.embed([huge])
+    assert http.requests == []
+
+
+def test_embed_never_sends_one_api_item_over_per_input_token_limit() -> None:
+    from pr_reviewer.retrieval.embed import estimate_embedding_tokens
+    from pr_reviewer.retrieval.openai_embeddings import (
+        MAX_EMBEDDING_TOKENS_PER_INPUT,
+        OpenAIEmbeddingProvider,
+    )
+
+    texts = [f"chunk-{index}" for index in range(10)]
+    http = _BatchRecordingEmbeddingHttp()
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", http=http)
+    provider.embed(texts)
+    for batch in http.requests:
+        for text in batch:
+            assert estimate_embedding_tokens(text) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+
+
 class _BatchRecordingEmbeddingHttp:
     def __init__(self, *, tokens_per_input: int = 4, tokens_per_request: int | None = None) -> None:
         self.requests: list[list[str]] = []
