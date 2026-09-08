@@ -100,3 +100,152 @@ class _FakeEmbeddingResponse:
     @property
     def status_code(self) -> int:
         return 200
+
+
+def test_embed_batches_large_inputs_preserving_order() -> None:
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    texts = [f"chunk-{index}" for index in range(5000)]
+    http = _BatchRecordingEmbeddingHttp()
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", http=http)
+    vectors = provider.embed(texts)
+
+    assert len(http.requests) > 1
+    assert all(len(batch) <= 2048 for batch in http.requests)
+    assert len(vectors) == len(texts)
+    for index, vector in enumerate(vectors):
+        assert vector[0] == float(index)
+
+
+def test_embed_ledger_sums_tokens_across_batches() -> None:
+    from pr_reviewer.retrieval.embed import EmbeddingCostLedger, embedding_cost_usd_for
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    ledger = EmbeddingCostLedger()
+    http = _BatchRecordingEmbeddingHttp(tokens_per_request=1000)
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", ledger=ledger, http=http)
+    provider.embed([f"chunk-{index}" for index in range(5000)])
+
+    assert len(http.requests) > 1
+    expected_tokens = len(http.requests) * 1000
+    assert ledger.total_tokens == expected_tokens
+    assert ledger.total_cost_usd == embedding_cost_usd_for(
+        expected_tokens, OPENAI_EMBEDDING_MODEL
+    )
+
+
+def test_local_retrieval_connection_body_exception_propagates_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pr_reviewer.runner.eval_ablation import local_retrieval_connection
+
+    class _HealthyStore:
+        def health(self) -> object:
+            return type("Status", (), {"healthy": True})()
+
+        def migrate(self) -> None:
+            return None
+
+        def connection_url(self) -> str:
+            return "postgresql://u:p@127.0.0.1:55432/db"
+
+    monkeypatch.setattr(
+        "pr_reviewer.local_store.postgres.LocalVectorStore",
+        lambda **kwargs: _HealthyStore(),
+    )
+    class _FakeConn:
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(
+        "pr_reviewer.runner.eval_ablation.psycopg.connect",
+        lambda *args, **kwargs: _FakeConn(),
+    )
+
+    with (
+        pytest.raises(ValueError, match="embedding request failed"),
+        local_retrieval_connection(),
+    ):
+        raise ValueError("embedding request failed")
+
+
+def test_local_retrieval_connection_wraps_genuine_connection_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pr_reviewer.runner.eval_ablation import (
+        EvalAblationConfigurationError,
+        local_retrieval_connection,
+    )
+
+    class _HealthyStore:
+        def health(self) -> object:
+            return type("Status", (), {"healthy": True})()
+
+        def migrate(self) -> None:
+            return None
+
+        def connection_url(self) -> str:
+            return "postgresql://u:p@127.0.0.1:55432/db"
+
+    monkeypatch.setattr(
+        "pr_reviewer.local_store.postgres.LocalVectorStore",
+        lambda **kwargs: _HealthyStore(),
+    )
+
+    def _fail_connect(*args: object, **kwargs: object) -> object:
+        raise OSError("connection refused")
+
+    monkeypatch.setattr("pr_reviewer.runner.eval_ablation.psycopg.connect", _fail_connect)
+
+    with (
+        pytest.raises(EvalAblationConfigurationError, match="connection failed"),
+        local_retrieval_connection(),
+    ):
+        pass
+
+
+class _BatchRecordingEmbeddingHttp:
+    def __init__(self, *, tokens_per_input: int = 4, tokens_per_request: int | None = None) -> None:
+        self.requests: list[list[str]] = []
+        self._tokens_per_input = tokens_per_input
+        self._tokens_per_request = tokens_per_request
+        self._next_index = 0
+
+    def post(self, path: str, *, json: object, headers: object, timeout: float) -> object:
+        assert path == "/v1/embeddings"
+        inputs = json["input"] if isinstance(json, dict) else []
+        batch = list(inputs) if isinstance(inputs, list) else [str(inputs)]
+        self.requests.append(batch)
+        start = self._next_index
+        self._next_index += len(batch)
+        if self._tokens_per_request is not None:
+            tokens = self._tokens_per_request
+        else:
+            tokens = len(batch) * self._tokens_per_input
+        return _OrderedEmbeddingResponse(start, len(batch), tokens)
+
+
+class _OrderedEmbeddingResponse:
+    def __init__(self, start_index: int, count: int, prompt_tokens: int) -> None:
+        self._start_index = start_index
+        self._count = count
+        self._prompt_tokens = prompt_tokens
+
+    def json(self) -> dict[str, object]:
+        return {
+            "data": [
+                {
+                    "embedding": [float(self._start_index + offset)] + [0.0] * 1535,
+                    "index": offset,
+                }
+                for offset in range(self._count)
+            ],
+            "usage": {
+                "prompt_tokens": self._prompt_tokens,
+                "total_tokens": self._prompt_tokens,
+            },
+        }
+
+    @property
+    def status_code(self) -> int:
+        return 200

@@ -108,12 +108,15 @@ def local_retrieval_connection() -> Iterator[psycopg.Connection[Any]]:
             f"Local pgvector migrations failed: {exc}"
         ) from exc
     try:
-        with psycopg.connect(store.connection_url()) as conn:
-            yield conn
+        conn = psycopg.connect(store.connection_url())
     except Exception as exc:
         raise EvalAblationConfigurationError(
             f"Local pgvector connection failed: {exc}"
         ) from exc
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 class EvalRepositoryCache:
