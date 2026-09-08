@@ -19,10 +19,6 @@ class MatchResult(BaseModel):
     needs_human_match: bool
 
 
-def _normalise_category(value: str) -> str:
-    return value.strip().lower().replace("_", "-").replace(" ", "-")
-
-
 def _lines_overlap(left: EvalLabel, right: FindingCandidate) -> bool:
     return not (left.line_end < right.line_start or right.line_end < left.line_start)
 
@@ -32,7 +28,6 @@ def _structural_match(label: EvalLabel, candidate: FindingCandidate) -> bool:
         label.concern == candidate.concern
         and label.file_path == candidate.file_path
         and _lines_overlap(label, candidate)
-        and _normalise_category(label.category) == _normalise_category(candidate.category)
     )
 
 
@@ -41,7 +36,6 @@ def _near_miss(label: EvalLabel, candidate: FindingCandidate) -> bool:
         return False
     return (
         label.concern == candidate.concern
-        and _normalise_category(label.category) == _normalise_category(candidate.category)
         and label.file_path != candidate.file_path
     )
 

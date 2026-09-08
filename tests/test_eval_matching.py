@@ -1,6 +1,6 @@
 """Failing tests for deterministic eval matching (master Task 9).
 
-Match on concern, file, overlapping line range, and normalised category.
+Match on concern, file, and overlapping line range. Category text is descriptive.
 A semantic near-miss is needs_human_match, never a silent pass. An LLM does not
 set ground truth.
 """
@@ -43,11 +43,37 @@ def _label(**overrides: Any) -> Any:
     return EvalLabel(**fields)
 
 
-def test_match_on_concern_file_overlap_and_normalised_category() -> None:
+def test_match_on_concern_file_and_line_overlap() -> None:
     from pr_reviewer.evals.match_findings import match_findings
 
     expected = [_label(category="null_check")]
     actual = [_candidate(category="null-check", line_start=11, line_end=14)]
+    result = match_findings(expected, actual)
+    assert result.matched
+    assert not result.unmatched_expected
+    assert not result.unmatched_actual
+    assert not result.needs_human_match
+
+
+def test_overlapping_lines_match_when_category_wording_differs() -> None:
+    from pr_reviewer.evals.match_findings import match_findings
+
+    expected = [
+        _label(
+            category="shallowClone skips arrays so defaults get shared",
+            file_path="src/widget.py",
+            line_start=396,
+            line_end=398,
+        )
+    ]
+    actual = [
+        _candidate(
+            category="shallow-cloning",
+            file_path="src/widget.py",
+            line_start=396,
+            line_end=399,
+        )
+    ]
     result = match_findings(expected, actual)
     assert result.matched
     assert not result.unmatched_expected
