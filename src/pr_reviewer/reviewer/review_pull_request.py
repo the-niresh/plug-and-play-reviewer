@@ -156,6 +156,7 @@ def _candidates_from_parsed(parsed: object, packed: PackedDiff) -> ParsedCandida
     if not isinstance(raw_findings, list):
         return ParsedCandidates(candidates=())
     lines_by_path = {item.file_path: _new_side_lines(item.content) for item in packed.items}
+    packed_has_implementation = any(not _is_test_path(item.file_path) for item in packed.items)
     accepted: list[FindingCandidate] = []
     seen: set[tuple[str, int, int, str]] = set()
     schema_rejected = 0
@@ -168,6 +169,9 @@ def _candidates_from_parsed(parsed: object, packed: PackedDiff) -> ParsedCandida
             schema_rejected += 1
             continue
         if not _in_changed_diff(draft, lines_by_path):
+            grounding_rejected += 1
+            continue
+        if packed_has_implementation and _is_test_path(draft.file_path):
             grounding_rejected += 1
             continue
         key = (draft.file_path, draft.line_start, draft.line_end, draft.title)
@@ -209,3 +213,13 @@ def _in_changed_diff(draft: FindingDraft, lines_by_path: dict[str, set[int]]) ->
     if not numbers:
         return False
     return all(line in numbers for line in range(draft.line_start, draft.line_end + 1))
+
+
+def _is_test_path(path: str) -> bool:
+    parts = path.replace("\\", "/").split("/")
+    name = parts[-1].casefold()
+    if name.startswith("test_") or name.endswith("_test.py") or name.endswith("_test.ts"):
+        return True
+    if ".test." in name or ".spec." in name:
+        return True
+    return any(part.casefold() in {"test", "tests", "__tests__"} for part in parts[:-1])

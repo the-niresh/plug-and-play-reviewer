@@ -213,6 +213,36 @@ def test_lines_outside_the_changed_diff_are_dropped() -> None:
     assert outcome.candidates == ()
 
 
+def test_test_file_finding_is_dropped_when_implementation_file_is_packed() -> None:
+    packed = _packed([_file("src/flask/cli.py"), _file("tests/test_cli.py")])
+    outcome, _model = _review(
+        packed,
+        {
+            "findings": [
+                _draft_dict(
+                    file_path="tests/test_cli.py",
+                    title="test-only finding",
+                ),
+                _draft_dict(
+                    file_path="src/flask/cli.py",
+                    title="implementation finding",
+                ),
+            ]
+        },
+    )
+    assert [item.title for item in outcome.candidates] == ["implementation finding"]
+    assert outcome.grounding_rejected_findings == 1
+
+
+def test_test_file_finding_is_kept_when_only_tests_changed() -> None:
+    packed = _packed([_file("tests/test_cli.py")])
+    outcome, _model = _review(
+        packed,
+        {"findings": [_draft_dict(file_path="tests/test_cli.py", title="test-only pr")]},
+    )
+    assert [item.title for item in outcome.candidates] == ["test-only pr"]
+
+
 def test_empty_evidence_is_dropped() -> None:
     packed = _packed([_file("app.py")])
     outcome, _model = _review(
