@@ -25,3 +25,4 @@ docs/phases/
 datasets/private/
 graphify-out/
 apps/web/tsconfig.tsbuildinfo
+HANDOFF.md
