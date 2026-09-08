@@ -97,6 +97,10 @@ export default async function ReviewDetailPage({ params }: PageProps) {
         </p>
       ) : null}
 
+      <div data-testid="review-behavior-panels">
+        <ReviewBehaviorPanels review={review} />
+      </div>
+
       <div className="mt-8 overflow-hidden rounded-lg border">
         {review.findings.length === 0 ? (
           <p className="text-muted-foreground px-4 py-4 text-sm">

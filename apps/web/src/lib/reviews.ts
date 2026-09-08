@@ -14,6 +14,59 @@ export const CONTROL_PLANE_ORIGIN =
   process.env.NEXT_PUBLIC_CONTROL_PLANE_ORIGIN ??
   "http://127.0.0.1:8000";
 
+
+/** Mirrors model_call_ledger_fields in models/provider.py */
+export type ModelCallLedger = {
+  provider: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: string;
+  latency_ms: number;
+  prompt_cache_hit_rate?: number;
+};
+
+/** Mirrors OmissionReason in contracts/github.py */
+export const OMISSION_REASONS = [
+  "token_budget",
+  "patch_omitted_by_github",
+  "patch_truncated_by_github",
+  "binary",
+  "generated",
+  "ignored_path",
+  "file_size_limit",
+  "clone_timeout",
+] as const;
+
+export type OmissionReason = (typeof OMISSION_REASONS)[number];
+
+export type OmittedFile = {
+  path: string;
+  reason: OmissionReason;
+  change_size: number;
+};
+
+export type SuppressedCandidate = {
+  title: string;
+  reflection_reason: string | null;
+};
+
+/** Mirrors ReviewOutcome guardrail fields in contracts/review_context.py */
+export type ReviewBehavior = {
+  ledger?: ModelCallLedger | null;
+  schema_rejected_findings?: number;
+  grounding_rejected_findings?: number;
+  duplicate_rejected_findings?: number;
+  suppressed_candidates?: SuppressedCandidate[];
+  covers_all_changed_files?: boolean;
+  omitted_files?: OmittedFile[];
+  retrieval_hit_rate?: number | null;
+  budget_remaining_usd?: string | null;
+  eval_scores?: Record<string, number | string> | null;
+  models_consulted?: Array<{ provider: string; model: string }>;
+  models_agreed?: boolean | null;
+};
+
 export type ReceiptContextSource = {
   kind: string;
   name: string;
@@ -23,10 +76,13 @@ export type ReceiptContextSource = {
 export type FindingReceipt = {
   provider: string | null;
   model: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
   cost_usd: string | null;
   verification_status: "verified" | "asserted";
   verification_reason: string | null;
   sandbox_run_id: string | null;
+  command_id: string | null;
   verification_detail: string | null;
   context_sources: ReceiptContextSource[];
 };
@@ -55,6 +111,8 @@ export type ReviewSummary = {
   stopped_early_message: string | null;
   created_at: string;
   findings: ReviewFinding[];
+  /** Runner-side behavior metrics when the API exposes them; absent until then. */
+  behavior?: ReviewBehavior | null;
 };
 
 export type RepositoryReviews = {
