@@ -219,6 +219,47 @@ def test_ordinary_correctness_draft_keeps_correctness() -> None:
     assert candidate.concern == "correctness"
 
 
+def test_signing_key_order_draft_is_security_even_when_model_says_correctness() -> None:
+    # Modeled on flask-py-020 (dev): the live gpt-4.1 draft named a signing key.
+    from pr_reviewer.contracts.finding_candidate import FindingDraft, candidate_from_draft
+
+    draft = FindingDraft.model_validate(
+        _draft_dict(
+            concern="correctness",
+            category="incorrect key order",
+            title="Signing key selection order was incorrect; now fixed",
+            rationale=(
+                "The changed lines correct the order of keys so that the current "
+                "secret key is in the expected position, ensuring that new sessions "
+                "are signed with the current key."
+            ),
+            evidence=["326|         keys.append(app.secret_key)"],
+        )
+    )
+    candidate = candidate_from_draft(draft)
+    assert candidate.concern == "security"
+
+
+def test_regex_hyphen_draft_stays_correctness_without_a_security_class_name() -> None:
+    # Modeled on zod-ts-005 (dev): hyphen / character-class text is not a security class.
+    from pr_reviewer.contracts.finding_candidate import FindingDraft, candidate_from_draft
+
+    draft = FindingDraft.model_validate(
+        _draft_dict(
+            concern="correctness",
+            category="regex-escape",
+            title="Potential regex escape issue for hyphen",
+            rationale=(
+                "Hyphens are unescaped in the regex character class which may "
+                "lead to unexpected matching behavior."
+            ),
+            evidence=["595|   [A-Z0-9_'+\\-\\.] [A-Z0-9_+-]"],
+        )
+    )
+    candidate = candidate_from_draft(draft)
+    assert candidate.concern == "correctness"
+
+
 def test_model_output_with_system_owned_fields_is_dropped() -> None:
     packed = _packed([_file("app.py")])
     outcome, _model = _review(

@@ -73,7 +73,12 @@ class ConsensusFinding(FindingCandidate):
     needs_human_match: bool = False
 
 
-_SECURITY_TEXT_MARKERS = ("prototype pollution", "prototype-pollution", "__proto__")
+_SECURITY_TEXT_MARKERS = (
+    "prototype pollution",
+    "prototype-pollution",
+    "__proto__",
+    "signing key",
+)
 
 
 def _concern_for_draft(draft: FindingDraft) -> Concern:
