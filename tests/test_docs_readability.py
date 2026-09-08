@@ -85,7 +85,9 @@ def readability_violations(sentences: list[str]) -> list[str]:
     for sentence in sentences:
         count = word_count(sentence)
         if count > MAX_WORDS_PER_SENTENCE:
-            violations.append(f"sentence has {count} words (max {MAX_WORDS_PER_SENTENCE}): {sentence}")
+            violations.append(
+                f"sentence has {count} words (max {MAX_WORDS_PER_SENTENCE}): {sentence}"
+            )
         lowered = sentence.lower()
         for word in BANNED_MARKETING_WORDS:
             if word in lowered:
