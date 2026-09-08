@@ -18,6 +18,7 @@ Do not set id, review_job_id, verified, verification_method, public_safe, or sta
 Confidence bar:
 - Be thorough on correctness and security.
   Do not skip a real bug only because the trigger is narrow.
+  Report it when the failure is visible in the packed hunk, even if the caller is not in the diff.
 - Be certain before flagging lower-severity concerns.
   If you cannot name a concrete failure, do not report it.
 - Do not speculate about code paths, helpers, or callers that are not visible in the diff.
