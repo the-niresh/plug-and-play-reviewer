@@ -135,6 +135,10 @@ def detect_drift(current: DriftSnapshot, baseline: DriftSnapshot) -> tuple[str, 
     return tuple(alerts)
 
 
+class NoReviewerConfigured(Exception):
+    """The regression gate has no reviewer wired in for measurement."""
+
+
 class BaselineReportMissing(Exception):
     """Holdout has cases but no frozen baseline report exists to compare against."""
 
@@ -156,6 +160,10 @@ DEFAULT_BASELINE_REPORT = (
     Path(__file__).resolve().parents[3] / "datasets" / "public" / "regression_baseline.json"
 )
 
+NO_REVIEWER_CONFIGURED_REFUSAL = (
+    "no reviewer configured; refusing to measure without a configured reviewer"
+)
+
 DEFAULT_THRESHOLDS = EvalThresholds(
     min_precision_per_finding=0.6,
     max_false_findings_per_pr=1.0,
@@ -165,11 +173,8 @@ DEFAULT_THRESHOLDS = EvalThresholds(
 )
 
 
-def _unreachable_reviewer(_case: EvalCase) -> Sequence[FindingCandidate]:
-    # run_diff_only_gate checks the holdout before ever calling the reviewer, so while
-    # the holdout stays empty this is never invoked. Task 35.F2 wires a real diff-only
-    # reviewer here once a judged holdout exists to measure and compare against.
-    raise AssertionError("reviewer called despite an empty holdout")
+def _unconfigured_reviewer(_case: EvalCase) -> Sequence[FindingCandidate]:
+    raise NoReviewerConfigured()
 
 
 def run_diff_only_gate(
@@ -209,7 +214,13 @@ def main(argv: list[str] | None = None) -> int:
     cases = load_public_eval_cases(args.cases)
     try:
         outcome = run_diff_only_gate(
-            cases, _unreachable_reviewer, args.baseline_report, DEFAULT_THRESHOLDS
+            cases, _unconfigured_reviewer, args.baseline_report, DEFAULT_THRESHOLDS
+        )
+    except NoReviewerConfigured:
+        outcome = GateOutcome(
+            skipped=True,
+            reason=NO_REVIEWER_CONFIGURED_REFUSAL,
+            result=None,
         )
     except BaselineReportMissing as exc:
         print(f"ERROR: {exc}")

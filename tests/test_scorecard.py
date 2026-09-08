@@ -1,45 +1,31 @@
-"""Scorecard generator (Task 31.1): a real eval run, or the verbatim refusal, never hand-edited."""
+"""Scorecard generator (Task 31.1, phase 35 F1): real eval run or verbatim refusal."""
 
 from __future__ import annotations
 
-from datetime import date
+from eval_holdout_fixtures import dev_only_cases, single_holdout_case
 
 from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
-from pr_reviewer.evals.scorecard import generate_scorecard
-from pr_reviewer.evals.types import EvalCase, EvalLabel
+from pr_reviewer.evals.scorecard import ZERO_COST_SCORECARD_REFUSAL, generate_scorecard
 
 
-def _holdout_case() -> EvalCase:
-    return EvalCase(
-        id="holdout-1",
-        split="holdout",
-        diff="--- a/widget.py\n+++ b/widget.py\n@@ -1 +1 @@\n-old\n+new\n",
-        expected_labels=[
-            EvalLabel(
-                concern="correctness",
-                category="null-check",
-                file_path="widget.py",
-                line_start=1,
-                line_end=1,
-            )
-        ],
-        source_evidence=["widget.py:1"],
-        human_auditor="niresh",
-        committed_at=date(2026, 1, 1),
+def test_scorecard_is_the_refusal_on_a_synthetic_empty_holdout() -> None:
+    scorecard = generate_scorecard(
+        FixtureReviewer.perfect(), cases=dev_only_cases(), repeats=3
     )
-
-
-def test_scorecard_is_the_refusal_against_the_real_public_dataset() -> None:
-    # datasets/public/eval_cases.jsonl has one dev case and zero holdout, so this is a real
-    # eval run hitting the real, currently-empty holdout, not a fabricated scenario.
-    scorecard = generate_scorecard(FixtureReviewer.perfect())
     assert scorecard.precision_per_finding == "holdout is empty; refusing to report a baseline"
     assert scorecard.reviewed_pr_count == "holdout is empty; refusing to report a baseline"
 
 
-def test_scorecard_reports_real_numbers_once_a_holdout_exists() -> None:
-    scorecard = generate_scorecard(FixtureReviewer.perfect(), cases=[_holdout_case()], repeats=3)
-    assert scorecard.precision_per_finding == 1.0
-    assert scorecard.recall_per_finding == 1.0
-    assert scorecard.false_findings_per_pr == 0.0
-    assert scorecard.reviewed_pr_count == 3
+def test_scorecard_refuses_a_zero_cost_run_on_the_public_holdout() -> None:
+    scorecard = generate_scorecard(FixtureReviewer.perfect())
+    assert scorecard.precision_per_finding == ZERO_COST_SCORECARD_REFUSAL
+    assert scorecard.cost_usd == ZERO_COST_SCORECARD_REFUSAL
+    assert scorecard.reviewed_pr_count == ZERO_COST_SCORECARD_REFUSAL
+
+
+def test_scorecard_refuses_a_zero_cost_run_on_a_synthetic_non_empty_holdout() -> None:
+    scorecard = generate_scorecard(
+        FixtureReviewer.perfect(), cases=[single_holdout_case()], repeats=3
+    )
+    assert scorecard.recall_per_finding == ZERO_COST_SCORECARD_REFUSAL
+    assert scorecard.false_findings_per_pr == ZERO_COST_SCORECARD_REFUSAL

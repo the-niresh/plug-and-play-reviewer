@@ -7,7 +7,13 @@ from pathlib import Path
 
 from pr_reviewer.evals.match_findings import MatchResult, match_findings
 from pr_reviewer.evals.metrics import compute_metrics
-from pr_reviewer.evals.types import EvalCase, EvalConfig, EvalRun, ReviewerCallable
+from pr_reviewer.evals.types import (
+    EvalCase,
+    EvalConfig,
+    EvalRun,
+    RetrievalAblationResult,
+    ReviewerCallable,
+)
 
 _PUBLIC_CASES = (
     Path(__file__).resolve().parents[3] / "datasets" / "public" / "eval_cases.jsonl"
@@ -96,6 +102,49 @@ def run_specialist_comparison(
         )
     config = EvalConfig(cases=list(holdout), repeats=repeats)
     return run_eval(config, one_agent), run_eval(config, specialists)
+
+
+
+
+def run_retrieval_ablation(
+    cases: Sequence[EvalCase],
+    diff_only: ReviewerCallable,
+    retrieval_backed: ReviewerCallable,
+    repeats: int = 3,
+) -> RetrievalAblationResult:
+    """Same holdout cases, retrieval off then on. Reports both arms and the deltas."""
+    diff_run, retrieval_run = run_retrieval_comparison(
+        cases, diff_only, retrieval_backed, repeats=repeats
+    )
+    diff_metrics = diff_run.metrics
+    retrieval_metrics = retrieval_run.metrics
+    return RetrievalAblationResult(
+        diff_only=diff_run,
+        retrieval_backed=retrieval_run,
+        precision_delta=(
+            retrieval_metrics.precision_per_finding - diff_metrics.precision_per_finding
+        ),
+        recall_delta=retrieval_metrics.recall_per_finding - diff_metrics.recall_per_finding,
+        false_findings_per_pr_delta=(
+            retrieval_metrics.false_findings_per_pr - diff_metrics.false_findings_per_pr
+        ),
+    )
+
+
+def format_retrieval_ablation(result: RetrievalAblationResult) -> str:
+    diff = result.diff_only.metrics
+    retrieval = result.retrieval_backed.metrics
+    return (
+        "diff-only precision="
+        f"{diff.precision_per_finding:.3f}, recall={diff.recall_per_finding:.3f}, "
+        f"false/pr={diff.false_findings_per_pr:.3f}; "
+        "retrieval precision="
+        f"{retrieval.precision_per_finding:.3f}, recall={retrieval.recall_per_finding:.3f}, "
+        f"false/pr={retrieval.false_findings_per_pr:.3f}; "
+        "delta precision="
+        f"{result.precision_delta:+.3f}, recall={result.recall_delta:+.3f}, "
+        f"false/pr={result.false_findings_per_pr_delta:+.3f}"
+    )
 
 
 def useful_findings_per_dollar(run: EvalRun) -> float:

@@ -286,20 +286,32 @@ def test_profile_event_is_injected_not_imported() -> None:
 
 
 def test_context_source_comparison_is_blocked_on_empty_holdout() -> None:
+    from eval_holdout_fixtures import dev_only_cases
+
     from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
-    from pr_reviewer.evals.run_eval import (
-        BaselineBlocked,
-        load_public_eval_cases,
-        run_context_source_comparison,
-    )
+    from pr_reviewer.evals.run_eval import BaselineBlocked, run_context_source_comparison
 
     with pytest.raises(BaselineBlocked, match="holdout"):
         run_context_source_comparison(
-            load_public_eval_cases(),
+            dev_only_cases(),
             FixtureReviewer.perfect(),
             FixtureReviewer.perfect(),
             FixtureReviewer.perfect(),
         )
+
+
+def test_context_source_comparison_runs_on_the_real_holdout() -> None:
+    from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
+    from pr_reviewer.evals.run_eval import load_public_eval_cases, run_context_source_comparison
+
+    profile, graph, both = run_context_source_comparison(
+        load_public_eval_cases(),
+        FixtureReviewer.perfect(),
+        FixtureReviewer.perfect(),
+        FixtureReviewer.perfect(),
+    )
+    assert profile.metrics.reviewed_pr_count == 21
+    assert both.metrics.precision_per_finding == 1.0
 
 
 def _profile_migration() -> Path:

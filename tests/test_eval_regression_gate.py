@@ -107,16 +107,22 @@ def test_latency_regression_is_blocked() -> None:
     assert "latency_ms" in result.blocked_metrics
 
 
-def test_public_holdout_baseline_is_still_blocked() -> None:
+def test_public_holdout_baseline_is_still_blocked_on_a_synthetic_empty_holdout() -> None:
+    from eval_holdout_fixtures import dev_only_cases
+
     from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
-    from pr_reviewer.evals.run_eval import (
-        BaselineBlocked,
-        load_public_eval_cases,
-        run_diff_only_baseline,
-    )
+    from pr_reviewer.evals.run_eval import BaselineBlocked, run_diff_only_baseline
 
     with pytest.raises(BaselineBlocked, match="holdout"):
-        run_diff_only_baseline(load_public_eval_cases(), FixtureReviewer.perfect())
+        run_diff_only_baseline(dev_only_cases(), FixtureReviewer.perfect())
+
+
+def test_public_holdout_baseline_runs_on_the_real_dataset() -> None:
+    from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
+    from pr_reviewer.evals.run_eval import load_public_eval_cases, run_diff_only_baseline
+
+    run = run_diff_only_baseline(load_public_eval_cases(), FixtureReviewer.perfect())
+    assert run.metrics.reviewed_pr_count == 21
 
 
 def test_brier_score_and_calibration_buckets_are_reported() -> None:
@@ -192,3 +198,40 @@ def test_write_eval_report_is_machine_readable_json(tmp_path: Path) -> None:
     assert '"precision_per_finding"' in text
     assert '"false_findings_per_pr"' in text
     assert '"cost_usd"' in text
+
+def test_regression_gate_main_refuses_without_a_configured_reviewer(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from pr_reviewer.evals.regression_gate import NO_REVIEWER_CONFIGURED_REFUSAL, main
+
+    code = main([])
+    captured = capsys.readouterr()
+    assert code == 0
+    assert "SKIP:" in captured.out
+    assert NO_REVIEWER_CONFIGURED_REFUSAL in captured.out
+    assert "AssertionError" not in (captured.out + captured.err)
+
+def test_regression_gate_main_routes_through_run_diff_only_gate_before_skipping(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import pr_reviewer.evals.regression_gate as regression_gate_module
+    from pr_reviewer.evals.regression_gate import NO_REVIEWER_CONFIGURED_REFUSAL, main
+
+    reached = False
+    real_gate = regression_gate_module.run_diff_only_gate
+
+    def _spy_gate(*args: object, **kwargs: object) -> object:
+        nonlocal reached
+        reached = True
+        return real_gate(*args, **kwargs)
+
+    monkeypatch.setattr(regression_gate_module, "run_diff_only_gate", _spy_gate)
+
+    code = main([])
+    captured = capsys.readouterr()
+    assert reached is True
+    assert code == 0
+    assert "SKIP:" in captured.out
+    assert NO_REVIEWER_CONFIGURED_REFUSAL in captured.out
+

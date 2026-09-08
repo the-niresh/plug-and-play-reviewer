@@ -5,10 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from pr_reviewer.contracts.finding_candidate import FindingCandidate
 from pr_reviewer.evals.feature_flags import generate_feature_flags
+from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
 from pr_reviewer.evals.scorecard import generate_scorecard
-from pr_reviewer.evals.types import EvalCase
 
 REPO = Path(__file__).resolve().parent.parent
 PAGE = REPO / "apps" / "web" / "src" / "app" / "scorecard" / "page.tsx"
@@ -16,13 +15,9 @@ SCORECARD_JSON = REPO / "docs" / "reports" / "scorecard.json"
 FEATURE_FLAGS_JSON = REPO / "docs" / "reports" / "feature_flags.json"
 
 
-def _unreachable_reviewer(_case: EvalCase) -> list[FindingCandidate]:
-    raise AssertionError("reviewer called despite an empty holdout")
-
-
 def test_scorecard_json_matches_a_fresh_real_generation() -> None:
     on_disk = json.loads(SCORECARD_JSON.read_text(encoding="utf-8"))
-    fresh = generate_scorecard(_unreachable_reviewer).model_dump()
+    fresh = generate_scorecard(FixtureReviewer.perfect()).model_dump()
     assert on_disk == fresh
 
 

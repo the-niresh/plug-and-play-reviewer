@@ -111,6 +111,16 @@ class EvalRun(BaseModel):
     metrics: EvalMetrics
 
 
+class RetrievalAblationResult(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    diff_only: EvalRun
+    retrieval_backed: EvalRun
+    precision_delta: float
+    recall_delta: float
+    false_findings_per_pr_delta: float
+
+
 def assign_time_split(cases: Sequence[EvalCase], *, holdout_after: date) -> list[EvalCase]:
     assigned: list[EvalCase] = []
     for case in cases:

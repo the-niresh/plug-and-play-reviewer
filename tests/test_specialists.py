@@ -213,20 +213,31 @@ def test_duplicate_specialist_findings_merge() -> None:
     assert len(result.candidates) == 1
 
 
-def test_specialist_comparison_is_blocked_on_the_public_dataset() -> None:
+def test_specialist_comparison_is_blocked_on_a_synthetic_empty_holdout() -> None:
+    from eval_holdout_fixtures import dev_only_cases
+
     from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
-    from pr_reviewer.evals.run_eval import (
-        BaselineBlocked,
-        load_public_eval_cases,
-        run_specialist_comparison,
-    )
+    from pr_reviewer.evals.run_eval import BaselineBlocked, run_specialist_comparison
 
     with pytest.raises(BaselineBlocked, match="holdout"):
         run_specialist_comparison(
-            load_public_eval_cases(),
+            dev_only_cases(),
             FixtureReviewer.perfect(),
             FixtureReviewer.perfect(),
         )
+
+
+def test_specialist_comparison_runs_on_the_real_holdout() -> None:
+    from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
+    from pr_reviewer.evals.run_eval import load_public_eval_cases, run_specialist_comparison
+
+    one_agent, specialists = run_specialist_comparison(
+        load_public_eval_cases(),
+        FixtureReviewer.perfect(),
+        FixtureReviewer.perfect(),
+    )
+    assert one_agent.metrics.reviewed_pr_count == 21
+    assert specialists.metrics.precision_per_finding == 1.0
 
 
 def test_specialist_comparison_runs_both_paths_on_a_synthetic_holdout() -> None:

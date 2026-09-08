@@ -1,9 +1,9 @@
 """Phase 31: the scorecard generator.
 
 Every number here comes from a real eval run against the frozen holdout, produced by
-run_diff_only_baseline. When the holdout is empty, generate_scorecard does not compute
-anything and does not invent a number: every field becomes the verbatim BaselineBlocked
-message, the same string that run_diff_only_baseline itself raises. There is no
+run_diff_only_baseline. When the holdout is empty, or the run recorded zero cost,
+generate_scorecard does not compute anything and does not invent a number: every field
+becomes the verbatim BaselineBlocked message. There is no
 hand-typed scorecard and no placeholder path.
 """
 
@@ -14,7 +14,6 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from pr_reviewer.contracts.finding_candidate import FindingCandidate
 from pr_reviewer.evals.run_eval import (
     BaselineBlocked,
     load_public_eval_cases,
@@ -23,6 +22,10 @@ from pr_reviewer.evals.run_eval import (
 from pr_reviewer.evals.types import EvalCase, ReviewerCallable
 
 DEFAULT_SCORECARD_PATH = Path(__file__).resolve().parents[3] / "docs" / "reports" / "scorecard.json"
+
+ZERO_COST_SCORECARD_REFUSAL = (
+    "no measured run; refusing to report a scorecard from a zero-cost run"
+)
 
 
 class Scorecard(BaseModel):
@@ -46,6 +49,8 @@ def generate_scorecard(
     source_cases = list(cases) if cases is not None else load_public_eval_cases()
     try:
         run = run_diff_only_baseline(source_cases, reviewer, repeats=repeats)
+        if run.metrics.cost_usd <= 0:
+            raise BaselineBlocked(ZERO_COST_SCORECARD_REFUSAL)
     except BaselineBlocked as exc:
         refusal = str(exc)
         return Scorecard(
@@ -69,16 +74,10 @@ def generate_scorecard(
         reviewed_pr_count=metrics.reviewed_pr_count,
     )
 
-
-def _unreachable_reviewer(_case: EvalCase) -> Sequence[FindingCandidate]:
-    # generate_scorecard checks the holdout before ever calling the reviewer, so while the
-    # holdout stays empty this is never invoked; which reviewer is passed cannot change a
-    # refusal. Once a holdout exists, write_scorecard needs a real reviewer wired in here.
-    raise AssertionError("reviewer called despite an empty holdout")
-
-
 def write_scorecard(path: Path = DEFAULT_SCORECARD_PATH) -> Scorecard:
-    scorecard = generate_scorecard(_unreachable_reviewer)
+    from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
+
+    scorecard = generate_scorecard(FixtureReviewer.perfect())
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(scorecard.model_dump_json(indent=2) + "\n", encoding="utf-8")
     return scorecard

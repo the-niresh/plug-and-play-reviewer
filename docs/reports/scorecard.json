@@ -1,9 +1,9 @@
 {
-  "precision_per_finding": "holdout is empty; refusing to report a baseline",
-  "precision_per_case": "holdout is empty; refusing to report a baseline",
-  "recall_per_finding": "holdout is empty; refusing to report a baseline",
-  "recall_per_case": "holdout is empty; refusing to report a baseline",
-  "false_findings_per_pr": "holdout is empty; refusing to report a baseline",
-  "cost_usd": "holdout is empty; refusing to report a baseline",
-  "reviewed_pr_count": "holdout is empty; refusing to report a baseline"
+  "precision_per_finding": "no measured run; refusing to report a scorecard from a zero-cost run",
+  "precision_per_case": "no measured run; refusing to report a scorecard from a zero-cost run",
+  "recall_per_finding": "no measured run; refusing to report a scorecard from a zero-cost run",
+  "recall_per_case": "no measured run; refusing to report a scorecard from a zero-cost run",
+  "false_findings_per_pr": "no measured run; refusing to report a scorecard from a zero-cost run",
+  "cost_usd": "no measured run; refusing to report a scorecard from a zero-cost run",
+  "reviewed_pr_count": "no measured run; refusing to report a scorecard from a zero-cost run"
 }

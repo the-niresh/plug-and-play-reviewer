@@ -291,16 +291,17 @@ def test_indexed_injection_cannot_change_policy(
 
 
 def test_retrieval_comparison_is_blocked_on_empty_holdout() -> None:
+    from eval_holdout_fixtures import dev_only_cases
+
     from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
     from pr_reviewer.evals.run_eval import (
         BaselineBlocked,
-        load_public_eval_cases,
         run_eval,
         run_retrieval_comparison,
     )
     from pr_reviewer.evals.types import EvalConfig
 
-    cases = load_public_eval_cases()
+    cases = dev_only_cases()
     harness = run_eval(EvalConfig(cases=cases, repeats=3), FixtureReviewer.perfect())
     assert harness.metrics.precision_per_finding == 1.0
     with pytest.raises(BaselineBlocked, match="holdout"):
@@ -309,3 +310,16 @@ def test_retrieval_comparison_is_blocked_on_empty_holdout() -> None:
             FixtureReviewer.perfect(),
             FixtureReviewer.perfect(),
         )
+
+
+def test_retrieval_comparison_runs_on_the_real_holdout() -> None:
+    from pr_reviewer.evals.fixture_reviewer import FixtureReviewer
+    from pr_reviewer.evals.run_eval import load_public_eval_cases, run_retrieval_comparison
+
+    without, with_retrieval = run_retrieval_comparison(
+        load_public_eval_cases(),
+        FixtureReviewer.perfect(),
+        FixtureReviewer.perfect(),
+    )
+    assert without.metrics.reviewed_pr_count == 21
+    assert with_retrieval.metrics.precision_per_finding == 1.0
