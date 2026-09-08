@@ -12,7 +12,7 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Label, Static
+from textual.widgets import Label, Static
 
 from pr_reviewer.contracts.finding import Finding
 from pr_reviewer.contracts.finding_candidate import FindingCandidate
@@ -31,6 +31,7 @@ from pr_reviewer.tui.push_review_summary import (
     push_review_summary,
 )
 from pr_reviewer.tui.widgets.cost_meter import CostMeter
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 ReviewPhase = Literal["diffs", "agents"]
 
@@ -122,6 +123,12 @@ class ReviewPanel(Widget):
         margin-top: 1;
         color: $text-muted;
     }
+
+    ReviewPanel .review-prompt,
+    ReviewPanel .finding-remediation-prompt {
+        color: $accent;
+        margin-top: 1;
+    }
     """
 
     phase: reactive[ReviewPhase] = reactive("diffs")
@@ -175,7 +182,7 @@ class ReviewPanel(Widget):
                 )
             )
         diff_rows.append(
-            Button("Continue to agents", id="review-continue", variant="primary")
+            PromptAction("> continue to agents", id="review-continue", classes="review-prompt")
         )
         yield Vertical(*diff_rows, id="review-diffs-panel")
         yield Vertical(
@@ -204,8 +211,8 @@ class ReviewPanel(Widget):
     def watch_phase(self, _phase: ReviewPhase) -> None:
         self._sync_phase_visibility()
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id or ""
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        button_id = event.prompt_action.id or ""
         if button_id == "review-continue":
             self.start_agent_reasoning()
             return
@@ -341,10 +348,10 @@ class ReviewPanel(Widget):
         if remediation_prompt is not None:
             self._remediation_prompts[finding.id] = remediation_prompt.prompt
             row_children.append(
-                Button(
-                    "Copy remediation prompt",
+                PromptAction(
+                    f"> copy remediation for {finding.id}",
                     id=f"copy-remediation-{finding.id}",
-                    classes="finding-remediation-button",
+                    classes="finding-remediation-prompt",
                 )
             )
         container.mount(
@@ -408,7 +415,7 @@ class ReviewPanel(Widget):
     def _sync_phase_visibility(self) -> None:
         showing_diffs = self.phase == "diffs"
         self.query_one("#review-diffs-panel").display = True
-        self.query_one("#review-continue", Button).display = showing_diffs
+        self.query_one("#review-continue", PromptAction).display = showing_diffs
         self.query_one("#review-agents").display = not showing_diffs
 
     @property

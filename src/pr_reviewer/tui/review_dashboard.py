@@ -11,10 +11,11 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Label, Static
+from textual.widgets import Label, Static
 
 from pr_reviewer.local_store.review_log import ReviewLogStore
 from pr_reviewer.tui.installation_snapshot import InstallationSnapshot
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
 SEVERITY_ORDER = ("critical", "high", "medium", "low", "info")
@@ -69,29 +70,21 @@ class ReviewDashboardPanel(Widget):
 
     ReviewDashboardPanel .dashboard-overview {
         color: $text;
-        border: solid $panel;
-        padding: 1;
         margin-bottom: 1;
     }
 
-    ReviewDashboardPanel Button.review-row {
+    ReviewDashboardPanel .review-row {
         width: 100%;
-        text-align: left;
-        border: none;
-        border-left: thick transparent;
-        background: transparent;
         color: $text;
+        margin-bottom: 1;
     }
 
-    ReviewDashboardPanel Button.review-row:focus {
+    ReviewDashboardPanel .review-row:focus {
         background: $accent 25%;
-        border-left: thick $accent;
         text-style: bold;
     }
 
     ReviewDashboardPanel .review-detail {
-        border: solid $panel;
-        padding: 1;
         margin-top: 1;
     }
 
@@ -153,8 +146,8 @@ class ReviewDashboardPanel(Widget):
     def watch_selected_review_id(self, _review_id: str | None) -> None:
         self._render_detail()
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id or ""
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        button_id = event.prompt_action.id or ""
         if button_id.startswith("review-row-"):
             self.selected_review_id = button_id.removeprefix("review-row-")
             return
@@ -165,7 +158,7 @@ class ReviewDashboardPanel(Widget):
         if self.selected_review_id is None:
             return False
         self.selected_review_id = None
-        first_row = self.query("Button.review-row").first()
+        first_row = self.query(".review-row").first()
         if first_row is not None:
             first_row.focus()
         return True
@@ -185,18 +178,18 @@ class ReviewDashboardPanel(Widget):
             f"Medium: {counts['medium']}  Low: {counts['low']}  Info: {counts['info']}"
         )
 
-    def _row_buttons(self) -> list[Button | Static]:
+    def _row_buttons(self) -> list[PromptAction | Static]:
         if not self._reviews:
             return [Static("No reviews yet. Run a review and it will appear here.")]
-        rows: list[Button | Static] = []
+        rows: list[PromptAction | Static] = []
         for repository, review in sorted(
             self._reviews,
             key=lambda item: item[1].created_at,
             reverse=True,
         ):
             rows.append(
-                Button(
-                    self._row_label(repository, review),
+                PromptAction(
+                    f"> {self._row_label(repository, review)}",
                     id=f"review-row-{_safe_id(review.review_job_id)}",
                     classes=f"review-row severity-{_worst_severity(review) or 'info'}",
                 )
@@ -229,7 +222,7 @@ class ReviewDashboardPanel(Widget):
             detail.mount(Static("Review not found."))
             return
         repository, review = match
-        detail.mount(Button("Back to reviews", id="review-detail-back"))
+        detail.mount(PromptAction("> back to reviews", id="review-detail-back"))
         pr = (
             f"PR #{review.pull_request_number}"
             if review.pull_request_number is not None

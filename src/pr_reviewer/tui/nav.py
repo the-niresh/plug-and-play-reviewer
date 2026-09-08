@@ -6,7 +6,8 @@ from textual.app import ComposeResult
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button
+
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 SECTIONS: tuple[str, ...] = ("repositories", "agent-prompts", "profile", "reviews")
 
@@ -20,55 +21,41 @@ class SectionSelected(Message):
 
 
 class SectionNav(Widget):
-    """Persistent sidebar with a always-visible current section.
-
-    Three states, three treatments, kept distinct even in combination: a plain unselected
-    item, a keyboard-focused item (temporary, moves with tab/up/down), and the current
-    section (persistent, set by selection, independent of focus). The pane itself also
-    shows a heavy accent border while it holds focus, so which of the two panes is "live"
-    is never only a hover effect.
-    """
+    """Persistent sidebar with a always-visible current section."""
 
     DEFAULT_CSS = """
     SectionNav {
         width: 22;
         height: 100%;
-        border-right: solid $primary;
         padding: 1 0;
     }
 
     SectionNav:focus-within {
-        border-right: heavy $accent;
+        background: $surface;
     }
 
-    SectionNav Button.nav-item {
+    SectionNav .nav-item {
         width: 100%;
-        border: none;
-        border-left: thick transparent;
-        background: transparent;
         color: $text;
-        text-align: left;
         padding: 0 1;
         margin: 0;
     }
 
-    SectionNav Button.nav-item--current {
+    SectionNav .nav-item--current {
         background: $panel;
         color: $primary;
         text-style: bold;
-        border-left: thick $primary;
     }
 
-    SectionNav Button.nav-item:focus {
+    SectionNav .nav-item:focus {
         background: $accent 25%;
         text-style: bold;
     }
 
-    SectionNav Button.nav-item--current:focus {
+    SectionNav .nav-item--current:focus {
         background: $panel;
         color: $primary;
         text-style: bold;
-        border-left: thick $accent;
     }
     """
 
@@ -80,8 +67,8 @@ class SectionNav(Widget):
 
     def compose(self) -> ComposeResult:
         for section_id in SECTIONS:
-            yield Button(
-                section_id,
+            yield PromptAction(
+                f"> {section_id}",
                 id=f"nav-{section_id}",
                 classes="nav-item",
             )
@@ -98,16 +85,16 @@ class SectionNav(Widget):
         self.current_section = section_id
         self.post_message(SectionSelected(section_id))
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id
-        if button_id is None:
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        prompt_id = event.prompt_action.id
+        if prompt_id is None:
             return
-        section_id = button_id.removeprefix("nav-")
+        section_id = prompt_id.removeprefix("nav-")
         if section_id not in SECTIONS:
             return
         self.select_section(section_id)
 
     def _sync_current_classes(self) -> None:
         for section_id in SECTIONS:
-            button = self.query_one(f"#nav-{section_id}", Button)
-            button.set_class(section_id == self.current_section, "nav-item--current")
+            item = self.query_one(f"#nav-{section_id}", PromptAction)
+            item.set_class(section_id == self.current_section, "nav-item--current")

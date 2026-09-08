@@ -8,13 +8,19 @@ the footer's own "Log out" hint must not be enough to trigger it on its own.
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.binding import Binding
+from textual.containers import Vertical
 from textual.events import Key
 from textual.screen import ModalScreen
-from textual.widgets import Button, Label
+from textual.widgets import Label, Static
 
 
 class ConfirmScreen(ModalScreen[bool]):
+    BINDINGS = [
+        Binding("y", "confirm", "Yes", show=True),
+        Binding("n", "cancel", "No", show=True),
+    ]
+
     DEFAULT_CSS = """
     ConfirmScreen {
         align: center middle;
@@ -24,7 +30,6 @@ class ConfirmScreen(ModalScreen[bool]):
         width: auto;
         max-width: 60;
         padding: 1 3;
-        border: thick $panel;
         background: $surface;
     }
 
@@ -32,13 +37,8 @@ class ConfirmScreen(ModalScreen[bool]):
         margin-bottom: 1;
     }
 
-    ConfirmScreen Horizontal {
-        width: auto;
-        align: right middle;
-    }
-
-    ConfirmScreen Button {
-        margin-left: 1;
+    ConfirmScreen .confirm-prompt {
+        color: $text-muted;
     }
     """
 
@@ -57,15 +57,25 @@ class ConfirmScreen(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         yield Vertical(
             Label(self._message, classes="confirm-message"),
-            Horizontal(
-                Button(self._cancel_label, id="confirm-cancel"),
-                Button(self._confirm_label, id="confirm-yes", variant="error"),
+            Static(
+                f"y: {self._confirm_label.lower()}  n: {self._cancel_label.lower()}",
+                classes="confirm-prompt",
+                id="confirm-prompt",
             ),
         )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        self.dismiss(event.button.id == "confirm-yes")
+    def action_confirm(self) -> None:
+        self.dismiss(True)
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
 
     def on_key(self, event: Key) -> None:
         if event.key == "escape":
+            self.dismiss(False)
+            return
+        if event.character == "y":
+            self.dismiss(True)
+            return
+        if event.character == "n":
             self.dismiss(False)

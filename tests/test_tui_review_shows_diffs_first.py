@@ -70,10 +70,10 @@ def test_review_panel_shows_every_diff_before_agents_speak() -> None:
             assert "app.py" in first
             assert "README.md" in second
             assert panel.agents_visible is False
-            from textual.widgets import Button
+            from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
-            panel.on_button_pressed(
-                Button.Pressed(panel.query_one("#review-continue", Button))
+            panel.on_prompt_action_activated(
+                PromptAction.Activated(panel.query_one("#review-continue", PromptAction))
             )
             assert panel.agents_visible is True
             assert pilot.app.query_one("#review-agents").display is True

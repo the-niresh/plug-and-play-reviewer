@@ -165,7 +165,7 @@ def test_log_out_deletes_the_runner_credential_and_returns_to_the_connect_screen
             assert pilot.app.github_connected is True
             await pilot.press("l")
             await pilot.pause()
-            await pilot.click("#confirm-yes")
+            await pilot.press("y")
             await pilot.pause()
             assert app._secrets.get("runner_credential") is None
             assert pilot.app.github_connected is False
@@ -184,7 +184,7 @@ def test_cancelling_the_log_out_confirmation_keeps_the_session(tmp_path: Path) -
             assert pilot.app.github_connected is True
             await pilot.press("l")
             await pilot.pause()
-            await pilot.click("#confirm-cancel")
+            await pilot.press("n")
             await pilot.pause()
             assert app._secrets.get("runner_credential") == "test-runner-credential"
             assert pilot.app.github_connected is True

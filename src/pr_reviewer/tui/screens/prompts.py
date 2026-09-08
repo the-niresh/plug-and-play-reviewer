@@ -5,12 +5,13 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widget import Widget
-from textual.widgets import Button, Label, Select, Static, TextArea
+from textual.widgets import Label, Select, Static, TextArea
 
 from pr_reviewer.local_store.repo_config import RepoConfigStore
 from pr_reviewer.tui.agent_prompt_catalogue import list_builtin_agent_prompts
 from pr_reviewer.tui.installation_snapshot import InstallationSnapshot
 from pr_reviewer.tui.repository_prompt import quote_repository_prompt
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 
 class AgentPromptsPanel(Widget):
@@ -40,6 +41,11 @@ class AgentPromptsPanel(Widget):
         color: $accent;
         margin-top: 2;
         margin-bottom: 1;
+    }
+
+    AgentPromptsPanel .custom-prompt-action {
+        color: $accent;
+        margin-top: 1;
     }
     """
 
@@ -94,7 +100,11 @@ class AgentPromptsPanel(Widget):
                         value=self._default_repo,
                     ),
                     TextArea(id="custom-prompt-input"),
-                    Button("Save new version", id="custom-prompt-save", variant="primary"),
+                    PromptAction(
+                        "> save new version",
+                        id="custom-prompt-save",
+                        classes="custom-prompt-action",
+                    ),
                     Static("", id="custom-prompt-status"),
                     Static("", id="custom-prompt-versions"),
                 ]
@@ -108,8 +118,8 @@ class AgentPromptsPanel(Widget):
         if event.select.id == "custom-prompt-repo" and event.value is not Select.NULL:
             self._refresh_custom_prompt_display()
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id != "custom-prompt-save" or self._repo_config is None:
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        if event.prompt_action.id != "custom-prompt-save" or self._repo_config is None:
             return
         repo_id = self._selected_repo_id()
         if repo_id is None:

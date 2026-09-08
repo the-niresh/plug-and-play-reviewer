@@ -71,10 +71,9 @@ def test_terminal_dashboard_shows_overview_table_and_detail() -> None:
             assert "Reviews: 1" in overview
             assert "Findings: 1" in overview
             row = pilot.app.query_one("#review-row-review-1")
-            assert "acme/widgets" in str(row.label)
-            assert "HIGH severity" in str(row.label)
-            row.focus()
-            await pilot.press("enter")
+            assert "acme/widgets" in _widget_text(row)
+            assert "HIGH severity" in _widget_text(row)
+            await pilot.click("#review-row-review-1")
             assert _widget_text(pilot.app.query_one("#review-detail-title")) == "PR #7"
             findings = _widget_text(pilot.app.query_one("#review-detail-findings"))
             assert "tests/test_app.py:4-4" in findings
@@ -108,10 +107,9 @@ def test_terminal_dashboard_marks_stopped_early_as_not_complete() -> None:
 
         async with Harness().run_test() as pilot:
             row = pilot.app.query_one("#review-row-review-2")
-            assert "Stopped early" in str(row.label)
-            assert "completed" not in str(row.label).lower()
-            row.focus()
-            await pilot.press("enter")
+            assert "Stopped early" in _widget_text(row)
+            assert "completed" not in _widget_text(row).lower()
+            await pilot.click("#review-row-review-2")
             status = _widget_text(pilot.app.query_one("#review-detail-status"))
             assert "Stopped early" in status
             assert "provider ran out of tokens" in status

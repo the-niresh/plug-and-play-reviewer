@@ -57,7 +57,8 @@ def _receipt(finding: Finding) -> FindingReceipt:
 def test_copy_remediation_button_copies_the_real_prompt_to_the_clipboard() -> None:
     async def exercise() -> None:
         from textual.app import App, ComposeResult
-        from textual.widgets import Button
+
+        from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
         class Harness(App[None]):
             def compose(self) -> ComposeResult:
@@ -72,10 +73,10 @@ def test_copy_remediation_button_copies_the_real_prompt_to_the_clipboard() -> No
             panel.add_finding(finding, receipt, remediation)
             await pilot.pause()
 
-            button = pilot.app.query_one(f"#copy-remediation-{finding.id}", Button)
+            prompt = pilot.app.query_one(f"#copy-remediation-{finding.id}", PromptAction)
             copied: list[str] = []
             pilot.app.copy_to_clipboard = copied.append  # type: ignore[assignment]
-            panel.on_button_pressed(Button.Pressed(button))
+            panel.on_prompt_action_activated(PromptAction.Activated(prompt))
 
             assert copied == [remediation.prompt]
             assert "Missing null check" in remediation.prompt

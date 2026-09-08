@@ -6,10 +6,15 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from textual.containers import Container
 
 from pr_reviewer.tui.app import ReviewerApp
 from pr_reviewer.tui.installation_snapshot import InstallationSnapshot, RepositoryPermission
 from pr_reviewer.tui.nav import SECTIONS, SectionNav
+from pr_reviewer.tui.review_dashboard import ReviewDashboardPanel
+from pr_reviewer.tui.screens.profile import ProfilePanel
+from pr_reviewer.tui.screens.prompts import AgentPromptsPanel
+from pr_reviewer.tui.screens.repositories import RepositoriesPanel
 
 SAMPLE_INSTALLATION = InstallationSnapshot(
     github_login="the-niresh",
@@ -18,15 +23,12 @@ SAMPLE_INSTALLATION = InstallationSnapshot(
     repositories=(RepositoryPermission(11, "in-scope"),),
 )
 
-
-
-
-def make_connected_app(tmp_path: Path):
-
-    return ReviewerApp(
-        secrets=connected_secrets(tmp_path),
-        installation_snapshot=SAMPLE_INSTALLATION,
-    )
+SECTION_PANEL_TYPES: dict[str, type] = {
+    "repositories": RepositoriesPanel,
+    "agent-prompts": AgentPromptsPanel,
+    "profile": ProfilePanel,
+    "reviews": ReviewDashboardPanel,
+}
 
 
 def connected_secrets(tmp_path: Path):
@@ -36,6 +38,19 @@ def connected_secrets(tmp_path: Path):
     secrets.set("runner_credential", "test-runner-credential")
     secrets.set("model_key", "sk-test-model-key")
     return secrets
+
+
+def make_connected_app(tmp_path: Path) -> ReviewerApp:
+    return ReviewerApp(
+        secrets=connected_secrets(tmp_path),
+        installation_snapshot=SAMPLE_INSTALLATION,
+        config_dir=tmp_path,
+    )
+
+
+@pytest.fixture(autouse=True)
+def skip_background_installation_fetch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ReviewerApp, "_refresh_installation_snapshot_async", lambda self: None)
 
 
 @pytest.mark.parametrize("section_id", SECTIONS)
@@ -84,8 +99,6 @@ def test_selecting_a_section_updates_content_and_indicator(tmp_path: Path) -> No
             await pilot.click("#nav-reviews")
             nav = app.query_one(SectionNav)
             assert nav.current_section == "reviews"
-            from pr_reviewer.tui.review_dashboard import ReviewDashboardPanel
-
             assert pilot.app.query_one(ReviewDashboardPanel) is not None
             reviews = nav.query_one("#nav-reviews")
             repositories = nav.query_one("#nav-repositories")
@@ -93,3 +106,71 @@ def test_selecting_a_section_updates_content_and_indicator(tmp_path: Path) -> No
             assert "nav-item--current" not in repositories.classes
 
     asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("section_id", SECTIONS)
+def test_reselecting_section_keeps_exactly_one_panel(
+    tmp_path: Path, section_id: str
+) -> None:
+    async def exercise() -> None:
+        app = make_connected_app(tmp_path)
+        panel_type = SECTION_PANEL_TYPES[section_id]
+        other_section = next(sid for sid in SECTIONS if sid != section_id)
+
+        async with app.run_test() as pilot:
+            await pilot.click(f"#nav-{section_id}")
+            await pilot.pause()
+            await pilot.click(f"#nav-{section_id}")
+            await pilot.pause()
+
+            pane = app.query_one("#section-content", Container)
+            panels = list(app.query(panel_type))
+            assert len(panels) == 1
+            assert len(pane.children) == 1
+
+            await pilot.click(f"#nav-{other_section}")
+            await pilot.pause()
+            await pilot.click(f"#nav-{section_id}")
+            await pilot.pause()
+
+            panels = list(app.query(panel_type))
+            assert len(panels) == 1
+            assert len(pane.children) == 1
+
+    asyncio.run(exercise())
+
+
+def test_section_mount_failure_shows_one_line_not_traceback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from pr_reviewer.tui.review_dashboard import ReviewDashboardPanel as Dashboard
+
+    def exploding_init(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        raise RuntimeError("simulated mount failure")
+
+    monkeypatch.setattr(Dashboard, "__init__", exploding_init)
+
+    async def exercise() -> None:
+        app = make_connected_app(tmp_path)
+        async with app.run_test() as pilot:
+            await pilot.click("#nav-reviews")
+            await pilot.pause()
+            error_line = app.query_one("#section-error")
+            rendered = str(error_line.render()).lower()
+            assert "something went wrong" in rendered
+            assert "log" in rendered
+
+    asyncio.run(exercise())
+
+    captured = capsys.readouterr()
+    combined = captured.out + captured.err
+    assert "Traceback" not in combined
+    assert "locals" not in combined.lower()
+    assert "simulated mount failure" not in combined
+
+    log_path = tmp_path / "tui-errors.log"
+    assert log_path.is_file()
+    log_text = log_path.read_text(encoding="utf-8")
+    assert "simulated mount failure" in log_text

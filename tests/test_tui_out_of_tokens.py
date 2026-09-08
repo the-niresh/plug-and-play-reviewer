@@ -11,7 +11,8 @@ from pr_reviewer.tui.screens.review import ReviewPanel
 def test_out_of_tokens_message_is_rendered_in_plain_words() -> None:
     async def exercise() -> None:
         from textual.app import App, ComposeResult
-        from textual.widgets import Button
+
+        from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
         class Harness(App[None]):
             def compose(self) -> ComposeResult:
@@ -19,8 +20,8 @@ def test_out_of_tokens_message_is_rendered_in_plain_words() -> None:
 
         async with Harness().run_test() as pilot:
             panel = pilot.app.query_one(ReviewPanel)
-            panel.on_button_pressed(
-                Button.Pressed(panel.query_one("#review-continue", Button))
+            panel.on_prompt_action_activated(
+                PromptAction.Activated(panel.query_one("#review-continue", PromptAction))
             )
             # The reason carries a JSON-shaped provider payload on purpose: this is the
             # exact string that must never reach the screen. If show_out_of_tokens ever

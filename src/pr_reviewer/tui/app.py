@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import sys
+import time
+import traceback
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal
 from textual.css.query import NoMatches
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Footer, Static
 
@@ -66,6 +71,23 @@ class MainLayout(Horizontal):
     ]
 
 
+
+
+class _InstallationSnapshotReady(Message):
+    """Posted after a background installation fetch finishes."""
+
+    def __init__(
+        self,
+        snapshot: InstallationSnapshot | None,
+        problem: str | None,
+        *,
+        elapsed_seconds: float,
+    ) -> None:
+        self.snapshot = snapshot
+        self.problem = problem
+        self.elapsed_seconds = elapsed_seconds
+        super().__init__()
+
 class ReviewerApp(App[None]):
     TITLE = "reviewer"
     CSS = REVIEWER_CSS
@@ -74,8 +96,8 @@ class ReviewerApp(App[None]):
     # app.focus_next/focus_previous), but that alone treats the sidebar and the content
     # pane as one flat list of buttons -- nothing marks "you just crossed into the other
     # pane". These bindings make that crossing a first-class, visible action: the footer
-    # names every key, and the CSS above gives the pane that holds focus a heavy accent
-    # border so the crossing is never only a hover effect.
+    # names every key, and the CSS above gives the pane that holds focus a distinct
+    # background so the crossing is never only a hover effect.
     BINDINGS = [
         Binding("tab", "focus_next_pane", "Next pane", show=True),
         Binding("shift+tab", "focus_previous_pane", "Prev pane", show=True),
@@ -139,6 +161,42 @@ class ReviewerApp(App[None]):
         self._browser_opener = browser_opener
         self._repositories_reader = repositories_reader
         self._pull_requests_reader = pull_requests_reader
+        self._awaiting_initial_installation = False
+
+    def _tui_error_log_path(self) -> Path:
+        return self._config_dir / "tui-errors.log"
+
+    def _log_tui_error(self, error: Exception, *, context: str) -> None:
+        path = self._tui_error_log_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(UTC).isoformat()
+        detail = traceback.format_exc()
+        if not detail or detail.strip() == "NoneType: None":
+            detail = "".join(
+                traceback.format_exception(type(error), error, error.__traceback__)
+            )
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(f"{stamp} | {context}\n{detail}\n")
+
+    async def _replace_pane_children(
+        self,
+        pane: Container,
+        *widgets: Widget,
+    ) -> None:
+        async with pane.batch():
+            await pane.remove_children()
+            if widgets:
+                await pane.mount(*widgets)
+
+    def _section_error_message(self) -> Static:
+        log_path = self._tui_error_log_path()
+        return Static(
+            (
+                "Something went wrong loading this section. "
+                f"Details are in {log_path}. Try again or restart reviewer."
+            ),
+            id="section-error",
+        )
 
     @property
     def github_connected(self) -> bool:
@@ -152,7 +210,10 @@ class ReviewerApp(App[None]):
         if self.github_connected:
             yield MainLayout(
                 SectionNav(id="section-nav"),
-                Container(id="section-content"),
+                Container(
+                    Static("checking sign-in...", id="startup-status"),
+                    id="section-content",
+                ),
                 id="main-layout",
             )
             yield Footer()
@@ -177,8 +238,7 @@ class ReviewerApp(App[None]):
         if not self.model_key_configured:
             self._mount_model_access_panel()
             return
-        self._mount_default_section()
-        self._start_auto_review()
+        self._begin_connected_startup()
 
     def on_unmount(self) -> None:
         self._stop_auto_review()
@@ -256,28 +316,25 @@ class ReviewerApp(App[None]):
         if not self.model_key_configured:
             self._mount_model_access_panel()
             return
-        self._mount_default_section()
-        self._start_auto_review()
+        self._begin_connected_startup()
 
-    def on_model_key_stored(self, _message: ModelKeyStored) -> None:
+    async def on_model_key_stored(self, _message: ModelKeyStored) -> None:
         pane = self.query_one("#section-content", Container)
-        pane.remove_children()
-        self._mount_default_section()
-        self._start_auto_review()
+        await self._replace_pane_children(pane)
+        self._begin_connected_startup()
 
-
-    def on_pull_request_selected(self, message: PullRequestSelected) -> None:
+    async def on_pull_request_selected(self, message: PullRequestSelected) -> None:
         snapshot = self._resolve_installation_snapshot()
         if snapshot is None:
             return
         self.query_one(SectionNav).current_section = "reviews"
-        self._show_section(
+        await self._show_section(
             "reviews",
             snapshot,
             review_id=f"pr-{message.pull_request_number}",
         )
 
-    def on_section_selected(self, message: SectionSelected) -> None:
+    async def on_section_selected(self, message: SectionSelected) -> None:
         if message.section_id == "reviews" and not can_start_review(
             self.github_connected,
             model_key_present=self.model_key_configured,
@@ -295,10 +352,12 @@ class ReviewerApp(App[None]):
             # section having loaded and having nothing to show -- the whole point of
             # _installation_problem is to say why, not to be read only on first connect.
             pane = self.query_one("#section-content", Container)
-            pane.remove_children()
-            pane.mount(Static(self._installation_problem, id="installation-missing"))
+            await self._replace_pane_children(
+                pane,
+                Static(self._installation_problem, id="installation-missing"),
+            )
             return
-        self._show_section(message.section_id, snapshot)
+        await self._show_section(message.section_id, snapshot)
 
     def _mount_model_access_panel(self) -> None:
         self.query_one("#section-content", Container).mount(
@@ -306,45 +365,112 @@ class ReviewerApp(App[None]):
         )
 
     def _mount_default_section(self) -> None:
+        self.call_next(self._mount_default_section_async)
+
+    async def _mount_default_section_async(self) -> None:
         snapshot = self._resolve_installation_snapshot()
         if snapshot is None:
-            self.query_one("#section-content", Container).mount(
-                Static(self._installation_problem, id="installation-missing")
+            pane = self.query_one("#section-content", Container)
+            await self._replace_pane_children(
+                pane,
+                Static(self._installation_problem, id="installation-missing"),
             )
             return
-        self._show_section("repositories", snapshot)
+        await self._show_section("repositories", snapshot)
+
+    def _begin_connected_startup(self) -> None:
+        cached = self._load_cached_installation_snapshot()
+        if cached is not None:
+            self._installation_snapshot = cached
+            self._mount_default_section()
+            self._start_auto_review()
+        else:
+            self._awaiting_initial_installation = True
+            try:
+                self.query_one("#startup-status", Static).update("checking sign-in...")
+            except NoMatches:
+                self._show_startup_status("checking sign-in...")
+        self._refresh_installation_snapshot_async()
+
+    def _show_startup_status(self, message: str) -> None:
+        try:
+            self.query_one("#startup-status", Static).update(message)
+            return
+        except NoMatches:
+            pass
+        self.call_next(self._show_startup_status_async, message)
+
+    async def _show_startup_status_async(self, message: str) -> None:
+        try:
+            pane = self.query_one("#section-content", Container)
+        except NoMatches:
+            return
+        await self._replace_pane_children(pane, Static(message, id="startup-status"))
+
+    def _load_cached_installation_snapshot(self) -> InstallationSnapshot | None:
+        if self._installation_snapshot is not None:
+            return self._installation_snapshot
+        return load_installation_snapshot(default_snapshot_path(self._config_dir))
+
+    @work(thread=True, exclusive=True)
+    def _refresh_installation_snapshot_async(self) -> None:
+        started = time.monotonic()
+        snapshot, problem = self._fetch_installation_snapshot_from_network()
+        elapsed = time.monotonic() - started
+        self.post_message(
+            _InstallationSnapshotReady(
+                snapshot,
+                problem,
+                elapsed_seconds=elapsed,
+            )
+        )
+
+    def on__installation_snapshot_ready(self, message: _InstallationSnapshotReady) -> None:
+        if message.problem and self._installation_snapshot is None:
+            self._installation_problem = message.problem
+            self._show_startup_status(message.problem)
+            return
+        if message.snapshot is not None:
+            save_installation_snapshot(
+                default_snapshot_path(self._config_dir),
+                message.snapshot,
+            )
+            self._installation_snapshot = message.snapshot
+        if not self._awaiting_initial_installation:
+            return
+        self._awaiting_initial_installation = False
+        if self._installation_snapshot is not None:
+            self._mount_default_section()
+            self._start_auto_review()
+
+    def _fetch_installation_snapshot_from_network(
+        self,
+    ) -> tuple[InstallationSnapshot | None, str | None]:
+        credential = self._secrets.get(RUNNER_CREDENTIAL_SECRET)
+        hosted_origin = _hosted_origin_from_env()
+        if not credential:
+            return None, "This terminal is not paired yet. Sign in to connect it."
+        if hosted_origin is None:
+            return None, "No hosted plane is configured for this terminal."
+        try:
+            fetched = self._installation_client.fetch(hosted_origin, credential)
+        except Exception as exc:  # noqa: BLE001 - every failure has to reach the screen in words
+            if "401" in str(exc) or "unknown_credential" in str(exc):
+                return None, (
+                    "This terminal's pairing is no longer recognised by reviewer.niresh.tech. "
+                    "Sign in again to re-pair it."
+                )
+            return None, f"Could not reach reviewer.niresh.tech ({exc})."
+        return fetched, None
 
     def _resolve_installation_snapshot(self) -> InstallationSnapshot | None:
         if self._installation_snapshot is not None:
             return self._installation_snapshot
-
-        snapshot_path = default_snapshot_path(self._config_dir)
-        cached = load_installation_snapshot(snapshot_path)
-        credential = self._secrets.get(RUNNER_CREDENTIAL_SECRET)
-        hosted_origin = _hosted_origin_from_env()
-        if not credential:
-            self._installation_problem = "This terminal is not paired yet. Sign in to connect it."
+        cached = self._load_cached_installation_snapshot()
+        if cached is not None:
+            self._installation_snapshot = cached
             return cached
-        if hosted_origin is None:
-            self._installation_problem = "No hosted plane is configured for this terminal."
-            return cached
-        try:
-            fetched = self._installation_client.fetch(hosted_origin, credential)
-        except Exception as exc:  # noqa: BLE001 - every failure has to reach the screen in words
-            # A stored credential the hosted plane rejects is the trap worth naming: the app
-            # treats a credential's mere presence as "connected", so every section rendered
-            # empty and the user had no way to learn the pairing had lapsed.
-            if "401" in str(exc) or "unknown_credential" in str(exc):
-                self._installation_problem = (
-                    "This terminal's pairing is no longer recognised by reviewer.niresh.tech. "
-                    "Sign in again to re-pair it."
-                )
-            else:
-                self._installation_problem = f"Could not reach reviewer.niresh.tech ({exc})."
-            return cached
-        save_installation_snapshot(snapshot_path, fetched)
-        self._installation_snapshot = fetched
-        return fetched
+        return None
 
     def _start_auto_review(self) -> None:
         if not self.github_connected or not self.model_key_configured:
@@ -402,69 +528,96 @@ class ReviewerApp(App[None]):
             # _show_section again with the default review_id, clobbering the
             # PR-scoped ReviewPanel this method is about to mount below.
             self.query_one(SectionNav).current_section = "reviews"
-        self._show_section("reviews", snapshot, review_id=f"pr-{outcome.pull_request_number}")
+        self.call_next(
+            self._show_section,
+            "reviews",
+            snapshot,
+            review_id=f"pr-{outcome.pull_request_number}",
+        )
 
-    def _show_section(
+    async def _show_section(
         self,
         section_id: str,
         snapshot: InstallationSnapshot,
         *,
         review_id: str = "live-review",
     ) -> None:
-        if section_id not in SECTIONS:
-            pane = self.query_one("#section-content", Container)
-            pane.remove_children()
-            pane.mount(Static(section_id, id="section-placeholder"))
-            return
-        if section_id == "reviews" and (
-            not self.github_connected or not self.model_key_configured
-        ):
-            return
         pane = self.query_one("#section-content", Container)
-        pane.remove_children()
-        if section_id == "profile":
-            pane.mount(ProfilePanel(snapshot))
-            return
-        if section_id == "repositories":
-            pane.mount(
-                RepositoriesPanel(
-                    snapshot.installation_id,
-                    repositories_reader=self._repositories_reader,
-                    pull_requests_reader=self._pull_requests_reader,
-                    
-                )
-            )
-            return
-        if section_id == "agent-prompts":
-            pane.mount(AgentPromptsPanel(snapshot, repo_config=self._repo_config))
-            return
-        if section_id == "reviews":
-            if review_id != "live-review":
-                pane.mount(
-                    ReviewPanel(
-                        (
-                            ReviewDiffItem(
-                                "app.py",
-                                "@@ -1,1 +1,2 @@\n-old\n+new\n",
-                            ),
-                            ReviewDiffItem(
-                                "README.md",
-                                "@@ -1,1 +1,2 @@\n # Widgets\n+More docs\n",
-                            ),
-                        ),
-                        review_log=self._review_log,
-                        review_id=review_id,
-                    )
+        try:
+            if section_id not in SECTIONS:
+                await self._replace_pane_children(
+                    pane,
+                    Static(section_id, id="section-placeholder"),
                 )
                 return
-            pane.mount(
-                ReviewDashboardPanel(
-                    dashboard_repositories_from_log(snapshot, self._review_log),
-                    id="reviews-dashboard",
+            if section_id == "reviews" and (
+                not self.github_connected or not self.model_key_configured
+            ):
+                return
+            if section_id == "profile":
+                await self._replace_pane_children(pane, ProfilePanel(snapshot))
+                return
+            if section_id == "repositories":
+                await self._replace_pane_children(
+                    pane,
+                    RepositoriesPanel(
+                        snapshot.installation_id,
+                        repositories_reader=self._repositories_reader,
+                        pull_requests_reader=self._pull_requests_reader,
+                    ),
                 )
+                return
+            if section_id == "agent-prompts":
+                await self._replace_pane_children(
+                    pane,
+                    AgentPromptsPanel(snapshot, repo_config=self._repo_config),
+                )
+                return
+            if section_id == "reviews":
+                if review_id != "live-review":
+                    await self._replace_pane_children(
+                        pane,
+                        ReviewPanel(
+                            (
+                                ReviewDiffItem(
+                                    "app.py",
+                                    "@@ -1,1 +1,2 @@\n-old\n+new\n",
+                                ),
+                                ReviewDiffItem(
+                                    "README.md",
+                                    "@@ -1,1 +1,2 @@\n # Widgets\n+More docs\n",
+                                ),
+                            ),
+                            review_log=self._review_log,
+                            review_id=review_id,
+                        ),
+                    )
+                    return
+                await self._replace_pane_children(
+                    pane,
+                    ReviewDashboardPanel(
+                        dashboard_repositories_from_log(snapshot, self._review_log),
+                        id="reviews-dashboard",
+                    ),
+                )
+                return
+            await self._replace_pane_children(
+                pane,
+                Static(section_id, id="section-placeholder"),
             )
-            return
-        pane.mount(Static(section_id, id="section-placeholder"))
+        except Exception as exc:  # noqa: BLE001 - section failures must stay in the UI
+            self._log_tui_error(exc, context=f"mount section {section_id}")
+            await self._replace_pane_children(pane, self._section_error_message())
+
+    def _handle_exception(self, error: Exception) -> None:
+        """Log and close without dumping Rich tracebacks or locals to the terminal."""
+        self._return_code = 1
+        if self._exception is None:
+            self._exception = error
+            self._exception_event.set()
+        self._log_tui_error(error, context="unhandled tui error")
+        self._exit_renderables.clear()
+        self._close_messages_no_wait()
 
     # -- keyboard model: move focus between the sidebar and the content pane, move within
     # whichever pane holds focus, jump straight to a section, and help/quit. tab/shift+tab
@@ -472,7 +625,7 @@ class ReviewerApp(App[None]):
     # but that treats the whole app as one flat list -- these actions instead treat the
     # sidebar and the content pane as exactly two panes, and only ever move within or
     # between those two, so "which pane is live" stays a deliberate, visible choice (see the
-    # :focus-within borders in theme.py and nav.py) rather than an accident of tab order.
+    # :focus-within backgrounds in theme.py and nav.py) rather than an accident of tab order.
 
     def _panes(self) -> tuple[Widget, Widget] | None:
         try:

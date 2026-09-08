@@ -13,7 +13,8 @@ from pr_reviewer.tui.screens.review import AgentReasoningChunk, ReviewPanel
 def test_agent_reasoning_streams_after_diffs_phase(tmp_path: Path) -> None:
     async def exercise() -> None:
         from textual.app import App, ComposeResult
-        from textual.widgets import Button
+
+        from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
         log = ReviewLogStore(tmp_path / "review_log.json")
         feed = tuple(
@@ -34,8 +35,8 @@ def test_agent_reasoning_streams_after_diffs_phase(tmp_path: Path) -> None:
         async with Harness().run_test() as pilot:
             panel = pilot.app.query_one(ReviewPanel)
             assert panel.phase == "diffs"
-            panel.on_button_pressed(
-                Button.Pressed(panel.query_one("#review-continue", Button))
+            panel.on_prompt_action_activated(
+                PromptAction.Activated(panel.query_one("#review-continue", PromptAction))
             )
             assert panel.phase == "agents"
             assert panel.streamed_concerns == SPECIALIST_CONCERNS

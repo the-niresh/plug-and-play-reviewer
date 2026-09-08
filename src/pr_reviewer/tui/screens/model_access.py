@@ -9,12 +9,13 @@ from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Static
+from textual.widgets import Input, Label, Select, Static
 
 from pr_reviewer.models.catalogue import list_providers
 from pr_reviewer.models.provider import ModelKeyInvalid, ModelProviderFailure, ModelVendor
 from pr_reviewer.runner.secrets import SecretStore
 from pr_reviewer.tui.auth_state import MODEL_KEY_SECRET
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 ACCESS_METHODS: tuple[dict[str, str], ...] = (
     {"id": "api_key", "label": "API key", "kind": "api_key"},
@@ -93,7 +94,11 @@ class ModelAccessPanel(Widget):
                 password=True,
                 id="model-access-key-input",
             ),
-            Button("Save and verify", id="model-access-save", variant="primary"),
+            PromptAction(
+                "> save and verify",
+                id="model-access-save",
+                classes="model-access-prompt",
+            ),
             Static("", id="model-access-status"),
             id="model-access-panel",
         )
@@ -107,8 +112,8 @@ class ModelAccessPanel(Widget):
             "model-access-status--error",
         )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id != "model-access-save":
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        if event.prompt_action.id != "model-access-save":
             return
         provider_id = str(self.query_one("#model-access-provider", Select).value)
         api_key = self.query_one("#model-access-key-input", Input).value.strip()

@@ -7,7 +7,7 @@ from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Label, Static
+from textual.widgets import Label, Static
 
 from pr_reviewer.tui.github_reads import (
     InstallationRepositoriesReader,
@@ -18,6 +18,7 @@ from pr_reviewer.tui.github_reads import (
     resolve_installation_repositories_reader,
     resolve_open_pull_requests_reader,
 )
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 
 class PullRequestSelected(Message):
@@ -119,7 +120,11 @@ class RepositoriesPanel(Widget):
             repo = self._selected_repository
             rows: list[Widget] = [
                 Label(f"Pull requests for {repo.full_name}", classes="repositories-heading"),
-                Button("Back to repositories", id="repositories-back"),
+                PromptAction(
+                    "> back to repositories",
+                    id="repositories-back",
+                    classes="repository-row",
+                ),
             ]
             if self._pull_requests_error is not None:
                 rows.append(Static(self._pull_requests_error, id="pull-requests-unavailable"))
@@ -133,8 +138,11 @@ class RepositoriesPanel(Widget):
             else:
                 for pull_request in self._pull_requests:
                     rows.append(
-                        Button(
-                            f"#{pull_request.number} {pull_request.title} by {pull_request.author}",
+                        PromptAction(
+                            (
+                                f"> #{pull_request.number} {pull_request.title} "
+                                f"by {pull_request.author}"
+                            ),
                             id=f"pull-request-{pull_request.number}",
                             classes="repository-row",
                         )
@@ -147,16 +155,16 @@ class RepositoriesPanel(Widget):
         ]
         for repository in self._repositories:
             rows.append(
-                Button(
-                    repository.full_name,
+                PromptAction(
+                    f"> {repository.full_name}",
                     id=f"repository-{repository.id}",
                     classes="repository-row",
                 )
             )
         yield Vertical(*rows)
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id or ""
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        button_id = event.prompt_action.id or ""
         if button_id == "repositories-back":
             self.view = "repositories"
             self._selected_repository = None

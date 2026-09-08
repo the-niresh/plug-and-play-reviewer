@@ -1,28 +1,140 @@
-"""The sign-in screen is a transcript, not a form.
+"""The whole TUI is a transcript, not a form.
 
-D1's whole point: Button, Label and Static inside a bordered, padded panel read like a
-web form, and Niresh called that unusable. These tests pin down the two concrete rules so
-the old style cannot creep back in: no Button widget anywhere on the connect screen, and
-no CSS container declares a border, on either the connect screen or the review screen.
+D1 applies to every screen under tui/, not a hand-picked pair. These tests discover all
+screen and widget modules automatically so a new screen added next month cannot reintroduce
+Button widgets or bordered containers without failing the gate.
 """
 
 from __future__ import annotations
 
+import ast
 import asyncio
+import re
+from pathlib import Path
 
+import pytest
 from textual.app import App, ComposeResult
-from textual.widgets import Button
 
-from pr_reviewer.tui.screens.connect import ConnectConfig, ConnectPanel
-from pr_reviewer.tui.screens.review import ReviewPanel
+REPO_ROOT = Path(__file__).resolve().parent.parent
+TUI_ROOT = REPO_ROOT / "src" / "pr_reviewer" / "tui"
+
+_BORDER_LINE_RE = re.compile(r"border[^:]*:\s*(?!none\b)(?!.*transparent\b)", re.IGNORECASE)
+
+
+def _tui_python_modules() -> tuple[Path, ...]:
+    return tuple(sorted(path for path in TUI_ROOT.rglob("*.py") if path.is_file()))
+
+
+def _css_strings_in_module(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    css_chunks: list[str] = []
+
+    def collect_from_assign(node: ast.Assign) -> None:
+        for target in node.targets:
+            if (
+                isinstance(target, ast.Name)
+                and target.id in {"DEFAULT_CSS", "CSS", "REVIEWER_CSS"}
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+            ):
+                css_chunks.append(node.value.value)
+
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            collect_from_assign(node)
+        elif isinstance(node, ast.ClassDef):
+            for item in node.body:
+                if isinstance(item, ast.Assign):
+                    collect_from_assign(item)
+    return css_chunks
+
+
+def _button_offenders() -> list[str]:
+    offenders: list[str] = []
+    for path in _tui_python_modules():
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        rel = path.relative_to(REPO_ROOT)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.ImportFrom)
+                and node.module == "textual.widgets"
+                and any(alias.name == "Button" for alias in node.names)
+            ):
+                offenders.append(f"{rel}: imports Button")
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "Button"
+            ):
+                offenders.append(f"{rel}: constructs Button")
+    return offenders
+
+
+def _border_offenders() -> list[str]:
+    offenders: list[str] = []
+    for path in _tui_python_modules():
+        rel = path.relative_to(REPO_ROOT)
+        for css in _css_strings_in_module(path):
+            for line in css.splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("/*"):
+                    continue
+                if "border" not in stripped.lower():
+                    continue
+                if _BORDER_LINE_RE.search(stripped):
+                    offenders.append(f"{rel}: {stripped}")
+    return offenders
+
+
+def test_no_tui_module_imports_or_constructs_button() -> None:
+    offenders = _button_offenders()
+    assert offenders == [], "Button widgets found:\n" + "\n".join(offenders)
+
+
+def test_no_tui_css_declares_a_visible_border() -> None:
+    offenders = _border_offenders()
+    assert offenders == [], "Visible borders found:\n" + "\n".join(offenders)
+
+
+class _NeverRespondingInstallationClient:
+    def fetch(self, hosted_origin: str, credential: str) -> object:
+        import threading
+
+        threading.Event().wait()
+        raise AssertionError("unreachable")
+
+
+def test_first_paint_does_not_wait_on_installation_fetch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pr_reviewer.runner.secrets import FileSecretStore
+    from pr_reviewer.tui.app import ReviewerApp
+
+    secrets = FileSecretStore(tmp_path)
+    secrets.set("runner_credential", "test-runner-credential")
+    secrets.set("model_key", "sk-test-model-key")
+
+    def skip_background_fetch(self: ReviewerApp) -> None:
+        return None
+
+    monkeypatch.setattr(ReviewerApp, "_refresh_installation_snapshot_async", skip_background_fetch)
+
+    async def exercise() -> None:
+        app = ReviewerApp(
+            secrets=secrets,
+            config_dir=tmp_path,
+            installation_client=_NeverRespondingInstallationClient(),
+        )
+        async with app.run_test() as pilot:
+            status = pilot.app.query_one("#startup-status")
+            text = str(status.render()).lower()
+            assert "checking sign-in" in text
+
+    asyncio.run(exercise())
 
 
 class FakePairingClient:
-    def __init__(self) -> None:
-        self.create_calls: list[tuple[str, str]] = []
-
     def create_code(self, device_name: str, challenge: str) -> str:
-        self.create_calls.append((device_name, challenge))
         return "PAIR-TRANSCRIPT-1"
 
     def status(self, code: str, challenge: str) -> str:
@@ -32,7 +144,9 @@ class FakePairingClient:
         return "runner-credential"
 
 
-def make_connect_harness() -> App[None]:
+def test_sign_in_still_works_without_a_button() -> None:
+    from pr_reviewer.tui.screens.connect import ConnectConfig, ConnectPanel
+
     class Harness(App[None]):
         def compose(self) -> ComposeResult:
             yield ConnectPanel(
@@ -41,43 +155,15 @@ def make_connect_harness() -> App[None]:
                     device_name="test-laptop",
                 ),
                 pairing_client=FakePairingClient(),
-                # Short and fast: FakePairingClient.status never resolves past "pending",
-                # so a real 300s deadline would leave the worker thread running for the
-                # full wait and the test process joining it at shutdown -- the exact
-                # leaked-thread cost AGENTS.md warns about.
                 pairing_deadline_seconds=0.2,
                 pairing_poll_interval=0.01,
             )
 
-    return Harness()
-
-
-def test_connect_screen_has_no_button_widget() -> None:
-    """The sign-in action must not be a Button -- that is the whole form look."""
-
     async def exercise() -> None:
-        async with make_connect_harness().run_test() as pilot:
+        async with Harness().run_test() as pilot:
+            from textual.widgets import Button
+
             assert not pilot.app.query(Button)
-
-    asyncio.run(exercise())
-
-
-def test_connect_screen_declares_no_border() -> None:
-    """A form hides behind boxes. A transcript has none."""
-    assert "border" not in ConnectPanel.DEFAULT_CSS.lower()
-
-
-def test_review_screen_declares_no_border() -> None:
-    """Same rule for the review path: a finding is a transcript row, not a bordered card."""
-    assert "border" not in ReviewPanel.DEFAULT_CSS.lower()
-
-
-def test_sign_in_still_works_without_a_button() -> None:
-    """Removing the Button must not remove the behaviour -- clicking the prompt line still
-    starts the same sign-in flow it always did."""
-
-    async def exercise() -> None:
-        async with make_connect_harness().run_test() as pilot:
             await pilot.click("#connect-sign-in")
             for _ in range(200):
                 if pilot.app.query("#sign-in-url"):

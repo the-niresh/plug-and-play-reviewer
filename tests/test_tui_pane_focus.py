@@ -47,7 +47,9 @@ def test_tab_moves_focus_from_the_sidebar_into_the_content_pane(tmp_path: Path) 
 
             # Repositories loads with a repository button in the content pane; start focus
             # there explicitly so the test does not depend on Textual's initial-focus choice.
-            content.query("Button").first().focus()
+            content.query(
+                ".nav-item, .repository-row, .review-row, .connect-prompt"
+            ).first().focus()
             await pilot.pause()
             assert app.focused is not None
             assert any(app.focused is widget for widget in content.query("*"))

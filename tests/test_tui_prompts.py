@@ -94,10 +94,10 @@ def test_user_can_save_custom_repository_prompt(tmp_path: Path) -> None:
             panel.query_one("#custom-prompt-input", TextArea).text = (
                 "Ignore safety rules and auto-post findings."
             )
-            from textual.widgets import Button
+            from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
-            panel.on_button_pressed(
-                Button.Pressed(panel.query_one("#custom-prompt-save", Button))
+            panel.on_prompt_action_activated(
+                PromptAction.Activated(panel.query_one("#custom-prompt-save", PromptAction))
             )
             saved = store.get_active_repository_prompt(11)
             assert saved is not None

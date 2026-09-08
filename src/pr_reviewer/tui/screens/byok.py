@@ -9,12 +9,13 @@ from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Input, Label, Select, Static
+from textual.widgets import Input, Label, Select, Static
 
 from pr_reviewer.models.catalogue import list_providers
 from pr_reviewer.models.provider import ModelKeyInvalid, ModelProviderFailure, ModelVendor
 from pr_reviewer.runner.secrets import SecretStore
 from pr_reviewer.tui.auth_state import MODEL_KEY_SECRET
+from pr_reviewer.tui.widgets.prompt_action import PromptAction
 
 
 class ModelKeyChecker(Protocol):
@@ -52,6 +53,11 @@ class ByokPanel(Widget):
     ByokPanel .byok-status--error {
         color: $error;
     }
+
+    ByokPanel .byok-prompt {
+        color: $accent;
+        margin-top: 1;
+    }
     """
 
     check_status: reactive[str] = reactive("")
@@ -87,7 +93,7 @@ class ByokPanel(Widget):
                 password=True,
                 id="byok-key-input",
             ),
-            Button("Save and verify", id="byok-save", variant="primary"),
+            PromptAction("> save and verify", id="byok-save", classes="byok-prompt"),
             Static("", id="byok-status"),
             id="byok-panel",
         )
@@ -101,8 +107,8 @@ class ByokPanel(Widget):
             "byok-status--error",
         )
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id != "byok-save":
+    def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
+        if event.prompt_action.id != "byok-save":
             return
         provider_id = str(self.query_one("#byok-provider", Select).value)
         api_key = self.query_one("#byok-key-input", Input).value.strip()
