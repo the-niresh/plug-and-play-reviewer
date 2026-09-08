@@ -16,7 +16,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
-from pr_reviewer.retrieval.embed import MAX_EMBEDDING_INPUT_CHARS
+from pr_reviewer.retrieval.embed import (
+    MAX_EMBEDDING_TOKENS_PER_INPUT,
+    split_text_to_max_embedding_tokens,
+)
 from pr_reviewer.reviewer.triage import is_unembeddable_path
 
 WINDOW_SIZE_LINES = 40
@@ -179,7 +182,7 @@ def _make_chunk(
     identity: str,
     symbol_name: str | None,
 ) -> tuple[CodeChunk, ...]:
-    pieces = _split_oversized_content(content, MAX_EMBEDDING_INPUT_CHARS)
+    pieces = split_text_to_max_embedding_tokens(content, MAX_EMBEDDING_TOKENS_PER_INPUT)
     if len(pieces) == 1:
         return (_build_chunk(
             file_path=file_path,
@@ -202,12 +205,6 @@ def _make_chunk(
         )
         for part_index, piece in enumerate(pieces)
     )
-
-
-def _split_oversized_content(content: str, max_chars: int) -> list[str]:
-    if len(content) <= max_chars:
-        return [content]
-    return [content[offset : offset + max_chars] for offset in range(0, len(content), max_chars)]
 
 
 def _build_chunk(

@@ -205,28 +205,27 @@ def test_local_retrieval_connection_wraps_genuine_connection_failure(
 
 
 def test_embed_rejects_single_input_over_per_input_token_limit() -> None:
-    from pr_reviewer.retrieval.embed import estimate_embedding_tokens
-    from pr_reviewer.retrieval.openai_embeddings import (
+    from pr_reviewer.retrieval.embed import (
         MAX_EMBEDDING_TOKENS_PER_INPUT,
+        count_embedding_tokens,
+    )
+    from pr_reviewer.retrieval.openai_embeddings import (
         EmbeddingInputTooLargeError,
-        OpenAIEmbeddingProvider,
+        _embedding_batches,
     )
 
-    huge = "x" * (MAX_EMBEDDING_TOKENS_PER_INPUT * 3 + 3)
-    assert estimate_embedding_tokens(huge) > MAX_EMBEDDING_TOKENS_PER_INPUT
-    http = _BatchRecordingEmbeddingHttp()
-    provider = OpenAIEmbeddingProvider(api_key="sk-test", http=http)
+    huge = "x" * 100_000
+    assert count_embedding_tokens(huge) > MAX_EMBEDDING_TOKENS_PER_INPUT
     with pytest.raises(EmbeddingInputTooLargeError):
-        provider.embed([huge])
-    assert http.requests == []
+        _embedding_batches([huge])
 
 
 def test_embed_never_sends_one_api_item_over_per_input_token_limit() -> None:
-    from pr_reviewer.retrieval.embed import estimate_embedding_tokens
-    from pr_reviewer.retrieval.openai_embeddings import (
+    from pr_reviewer.retrieval.embed import (
         MAX_EMBEDDING_TOKENS_PER_INPUT,
-        OpenAIEmbeddingProvider,
+        count_embedding_tokens,
     )
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
 
     texts = [f"chunk-{index}" for index in range(10)]
     http = _BatchRecordingEmbeddingHttp()
@@ -234,7 +233,7 @@ def test_embed_never_sends_one_api_item_over_per_input_token_limit() -> None:
     provider.embed(texts)
     for batch in http.requests:
         for text in batch:
-            assert estimate_embedding_tokens(text) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+            assert count_embedding_tokens(text) <= MAX_EMBEDDING_TOKENS_PER_INPUT
 
 
 def test_estimate_embedding_tokens_is_conservative_for_code_like_text() -> None:
@@ -303,6 +302,49 @@ def test_embed_does_not_retry_auth_or_unrelated_client_errors() -> None:
         provider.embed(["one", "two"])
     assert exc_info.value.status_code == 400
     assert len(bad_request_http.requests) == 1
+
+
+def test_embed_returns_one_vector_per_input_text() -> None:
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    texts = ["alpha", "beta", "😀" * 5000]
+    http = _SplitOnInputTokenLimitHttp()
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", http=http)
+    vectors = provider.embed(texts)
+
+    assert len(vectors) == len(texts)
+    assert len(http.requests) > 1
+    for index, vector in enumerate(vectors):
+        assert len(vector) == 1536
+        if index < 2:
+            assert vector[0] == float(index)
+
+
+class _SplitOnInputTokenLimitHttp:
+    def __init__(self) -> None:
+        self.requests: list[list[str]] = []
+        self._next_index = 0
+
+    def post(self, path: str, *, json: object, headers: object, timeout: float) -> object:
+        assert path == "/v1/embeddings"
+        inputs = json["input"] if isinstance(json, dict) else []
+        batch = list(inputs) if isinstance(inputs, list) else [str(inputs)]
+        self.requests.append(batch)
+        for text in batch:
+            if len(text) > 100:
+                return _ErrorEmbeddingResponse(
+                    400,
+                    {
+                        "error": {
+                            "message": (
+                                "Invalid 'input[0]': maximum input length is 8192 tokens."
+                            )
+                        }
+                    },
+                )
+        start = self._next_index
+        self._next_index += len(batch)
+        return _OrderedEmbeddingResponse(start, len(batch), len(batch) * 4)
 
 
 class _FixedErrorHttp:

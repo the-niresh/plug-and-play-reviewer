@@ -15,6 +15,7 @@ dependencies = [
   "uvicorn[standard]>=0.35.0",
   "langgraph>=1.2.11",
   "textual>=2.1.2",
+  "tiktoken>=0.14.0",
 ]
 
 [project.scripts]

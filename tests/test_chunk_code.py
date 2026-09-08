@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 PYTHON_SOURCE = """\
 def greet(name: str) -> str:
     return f"hello {name}"
@@ -138,10 +140,77 @@ def test_binary_generated_ignored_and_symlink_files_are_not_chunked(tmp_path: Pa
     assert all(chunk.symbol_name == "keep" for chunk in chunks)
 
 
+def test_count_embedding_tokens_flags_emoji_density() -> None:
+    from pr_reviewer.retrieval.embed import (
+        MAX_EMBEDDING_TOKENS_PER_INPUT,
+        count_embedding_tokens,
+    )
+
+    emoji = "😀" * 5000
+    assert count_embedding_tokens(emoji) > MAX_EMBEDDING_TOKENS_PER_INPUT
+
+
+def test_chunk_tree_splits_emoji_file_by_true_token_count(tmp_path: Path) -> None:
+    from pr_reviewer.retrieval.chunk_code import chunk_tree
+    from pr_reviewer.retrieval.embed import (
+        MAX_EMBEDDING_TOKENS_PER_INPUT,
+        count_embedding_tokens,
+    )
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "emoji.ts").write_text("😀" * 5000, encoding="utf-8")
+
+    chunks = chunk_tree(root)
+    assert len(chunks) > 1
+    assert all(
+        count_embedding_tokens(chunk.content) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+        for chunk in chunks
+    )
+
+
+def test_ordinary_ascii_code_is_not_shredded_by_token_cap() -> None:
+    from pr_reviewer.retrieval.chunk_code import chunk_source
+    from pr_reviewer.retrieval.embed import (
+        MAX_EMBEDDING_TOKENS_PER_INPUT,
+        count_embedding_tokens,
+    )
+
+    chunks = chunk_source("src/greet.py", PYTHON_SOURCE)
+    assert len(chunks) == 3
+    assert all(
+        count_embedding_tokens(chunk.content) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+        for chunk in chunks
+    )
+
+
+def test_zod_checkout_chunks_respect_true_embedding_token_limit() -> None:
+    from pathlib import Path
+
+    from pr_reviewer.retrieval.chunk_code import chunk_tree
+    from pr_reviewer.retrieval.embed import (
+        MAX_EMBEDDING_TOKENS_PER_INPUT,
+        count_embedding_tokens,
+    )
+
+    root = Path.home() / ".cache/pr-reviewer/eval-repos/colinhacks__zod"
+    if not root.exists():
+        pytest.skip("zod checkout not present")
+
+    chunks = chunk_tree(root)
+    assert chunks
+    assert all(
+        count_embedding_tokens(chunk.content) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+        for chunk in chunks
+    )
+
+
 def test_chunk_tree_splits_oversized_single_line_under_input_limit(tmp_path: Path) -> None:
     from pr_reviewer.retrieval.chunk_code import chunk_tree
-    from pr_reviewer.retrieval.embed import estimate_embedding_tokens
-    from pr_reviewer.retrieval.openai_embeddings import MAX_EMBEDDING_TOKENS_PER_INPUT
+    from pr_reviewer.retrieval.embed import (
+        MAX_EMBEDDING_TOKENS_PER_INPUT,
+        count_embedding_tokens,
+    )
 
     root = tmp_path / "repo"
     root.mkdir()
@@ -150,7 +219,7 @@ def test_chunk_tree_splits_oversized_single_line_under_input_limit(tmp_path: Pat
     chunks = chunk_tree(root)
     assert chunks
     assert all(
-        estimate_embedding_tokens(chunk.content) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+        count_embedding_tokens(chunk.content) <= MAX_EMBEDDING_TOKENS_PER_INPUT
         for chunk in chunks
     )
 

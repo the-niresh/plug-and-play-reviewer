@@ -13,8 +13,10 @@ from pr_reviewer.retrieval.embed import (
     OPENAI_EMBEDDING_MODEL,
     V1_EMBEDDING_DIMENSIONS,
     EmbeddingCostLedger,
+    count_embedding_tokens,
     embedding_cost_usd_for,
     estimate_embedding_tokens,
+    split_text_to_max_embedding_tokens,
 )
 
 MAX_EMBEDDING_INPUTS_PER_REQUEST = 2048
@@ -64,24 +66,75 @@ class OpenAIEmbeddingProvider:
         if not texts:
             return []
         vectors: list[list[float]] = []
+        pending: list[str] = []
+        for text in texts:
+            if count_embedding_tokens(text) > MAX_EMBEDDING_TOKENS_PER_INPUT:
+                if pending:
+                    vectors.extend(self._embed_batched_texts(pending))
+                    pending = []
+                vectors.append(self._embed_split_and_average(text))
+            else:
+                pending.append(text)
+        if pending:
+            vectors.extend(self._embed_batched_texts(pending))
+        return vectors
+
+    def _embed_batched_texts(self, texts: list[str]) -> list[list[float]]:
+        vectors: list[list[float]] = []
         for batch in _embedding_batches(texts):
             vectors.extend(self._embed_batch(batch))
         return vectors
 
     def _embed_batch(self, texts: list[str]) -> list[list[float]]:
+        try:
+            return self._embed_batch_post(texts)
+        except ModelProviderFailure as exc:
+            if is_embedding_request_token_limit_failure(exc) and len(texts) > 1:
+                midpoint = len(texts) // 2
+                return self._embed_batch(texts[:midpoint]) + self._embed_batch(texts[midpoint:])
+            if is_embedding_input_token_limit_failure(exc):
+                if len(texts) == 1:
+                    return [self._embed_split_and_average(texts[0])]
+                return [self._embed_one_resilient(text) for text in texts]
+            raise
+
+    def _embed_one_resilient(self, text: str) -> list[float]:
+        try:
+            return self._embed_batch_post([text])[0]
+        except ModelProviderFailure as exc:
+            if is_embedding_input_token_limit_failure(exc):
+                return self._embed_split_and_average(text)
+            raise
+
+    def _embed_split_and_average(self, text: str) -> list[float]:
+        parts = split_text_to_max_embedding_tokens(text, MAX_EMBEDDING_TOKENS_PER_INPUT)
+        vectors = [self._embed_text_piece(part) for part in parts]
+        return _average_vectors(vectors)
+
+    def _embed_text_piece(self, text: str) -> list[float]:
+        try:
+            return self._embed_batch_post([text])[0]
+        except ModelProviderFailure as exc:
+            if not is_embedding_input_token_limit_failure(exc):
+                raise
+            token_count = count_embedding_tokens(text)
+            if token_count <= 1:
+                raise
+            parts = split_text_to_max_embedding_tokens(text, max(1, token_count // 2))
+            if len(parts) == 1:
+                midpoint = len(text) // 2
+                parts = [text[:midpoint], text[midpoint:]]
+            vectors = [self._embed_text_piece(part) for part in parts]
+            return _average_vectors(vectors)
+
+    def _embed_batch_post(self, texts: list[str]) -> list[list[float]]:
         response = self._http.post(
             "/v1/embeddings",
             json={"model": self.model_name, "input": texts},
             headers={"authorization": f"Bearer {self._api_key}"},
             timeout=60.0,
         )
-        try:
-            raise_for_provider_status(response)
-        except ModelProviderFailure as exc:
-            if len(texts) <= 1 or not is_embedding_request_token_limit_failure(exc):
-                raise
-            midpoint = len(texts) // 2
-            return self._embed_batch(texts[:midpoint]) + self._embed_batch(texts[midpoint:])
+        raise_for_provider_status(response)
         payload = response.json()
         try:
             rows = payload["data"]
@@ -106,7 +159,7 @@ def is_embedding_request_token_limit_failure(exc: ModelProviderFailure) -> bool:
     if exc.status_code != 400:
         return False
     message = str(exc).lower()
-    if "input" in message and ("length" in message or "per input" in message):
+    if is_embedding_input_token_limit_failure(exc):
         return False
     has_token_signal = "token" in message
     has_limit_signal = any(word in message for word in ("max", "limit", "exceed", "requested"))
@@ -114,14 +167,26 @@ def is_embedding_request_token_limit_failure(exc: ModelProviderFailure) -> bool:
     return has_token_signal and has_limit_signal and has_request_scope
 
 
+def is_embedding_input_token_limit_failure(exc: ModelProviderFailure) -> bool:
+    """True when the provider rejected one input for exceeding the per-input token cap."""
+    if exc.status_code != 400:
+        return False
+    message = str(exc).lower()
+    has_input_signal = "input[" in message or ("input" in message and "length" in message)
+    has_token_signal = "token" in message
+    has_limit_signal = any(word in message for word in ("max", "limit", "exceed"))
+    return has_input_signal and has_token_signal and has_limit_signal
+
+
 def _embedding_batches(texts: Sequence[str]) -> list[list[str]]:
     batches: list[list[str]] = []
     current: list[str] = []
     current_tokens = 0
     for index, text in enumerate(texts):
+        true_tokens = count_embedding_tokens(text)
+        if true_tokens > MAX_EMBEDDING_TOKENS_PER_INPUT:
+            raise EmbeddingInputTooLargeError(index, true_tokens)
         tokens = estimate_embedding_tokens(text)
-        if tokens > MAX_EMBEDDING_TOKENS_PER_INPUT:
-            raise EmbeddingInputTooLargeError(index, tokens)
         if current and (
             len(current) >= MAX_EMBEDDING_INPUTS_PER_REQUEST
             or current_tokens + tokens > MAX_EMBEDDING_TOKENS_PER_REQUEST
@@ -134,6 +199,20 @@ def _embedding_batches(texts: Sequence[str]) -> list[list[str]]:
     if current:
         batches.append(current)
     return batches
+
+
+def _average_vectors(vectors: Sequence[Sequence[float]]) -> list[float]:
+    if not vectors:
+        raise ModelProviderFailure("cannot average an empty vector list")
+    width = len(vectors[0])
+    total = [0.0] * width
+    for vector in vectors:
+        if len(vector) != width:
+            raise ModelProviderFailure("embedding vectors had mismatched widths")
+        for index, value in enumerate(vector):
+            total[index] += float(value)
+    count = float(len(vectors))
+    return [value / count for value in total]
 
 
 def _coerce_vector(raw: Any) -> list[float]:

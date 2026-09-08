@@ -10,19 +10,21 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
+from functools import lru_cache
 from typing import Any, Protocol
 
+import tiktoken
 from psycopg import Connection
 
 V1_EMBEDDING_DIMENSIONS = 1536
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
 DETERMINISTIC_EMBEDDING_MODEL = "deterministic-sha256-v1"
+_EMBEDDING_TOKEN_ENCODING = "cl100k_base"
 _EMBEDDING_PRICE_PER_MILLION: dict[str, Decimal] = {
     OPENAI_EMBEDDING_MODEL: Decimal("0.02"),
 }
 DEFAULT_ESTIMATED_SHA_INDEX_TOKENS = 250_000
 MAX_EMBEDDING_TOKENS_PER_INPUT = 8192
-MAX_EMBEDDING_INPUT_CHARS = MAX_EMBEDDING_TOKENS_PER_INPUT * 3
 
 
 @dataclass
@@ -37,6 +39,26 @@ class EmbeddingCostLedger:
 
 def estimate_embedding_tokens(text: str) -> int:
     return max(1, len(text) // 3)
+
+
+@lru_cache(maxsize=1)
+def _embedding_tokenizer() -> tiktoken.Encoding:
+    return tiktoken.get_encoding(_EMBEDDING_TOKEN_ENCODING)
+
+
+def count_embedding_tokens(text: str) -> int:
+    return len(_embedding_tokenizer().encode(text, disallowed_special=()))
+
+
+def split_text_to_max_embedding_tokens(text: str, max_tokens: int) -> list[str]:
+    encoding = _embedding_tokenizer()
+    tokens = encoding.encode(text, disallowed_special=())
+    if len(tokens) <= max_tokens:
+        return [text]
+    return [
+        encoding.decode(tokens[start : start + max_tokens])
+        for start in range(0, len(tokens), max_tokens)
+    ]
 
 
 def embedding_cost_usd_for(token_count: int, model_name: str) -> Decimal:
