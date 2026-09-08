@@ -279,6 +279,106 @@ def test_embed_ledger_counts_only_accepted_split_batches() -> None:
     )
 
 
+def test_embed_retries_rate_limit_then_returns_vectors() -> None:
+    from pr_reviewer.models.retry import RetryPolicy
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    sleeps: list[float] = []
+    http = _RateLimitThenSuccessHttp()
+    provider = OpenAIEmbeddingProvider(
+        api_key="sk-test",
+        http=http,
+        retry_policy=RetryPolicy(max_attempts=3, max_elapsed_seconds=30),
+        sleep=sleeps.append,
+        pacing_seconds=0.0,
+    )
+    vectors = provider.embed(["alpha", "beta"])
+
+    assert len(http.requests) > 1
+    assert len(vectors) == 2
+    assert vectors[0][0] == 0.0
+    assert vectors[1][0] == 1.0
+
+
+def test_embed_honours_retry_after_header_through_injected_sleep() -> None:
+    from pr_reviewer.models.retry import RetryPolicy
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    sleeps: list[float] = []
+    http = _RateLimitThenSuccessHttp(retry_after="2")
+    provider = OpenAIEmbeddingProvider(
+        api_key="sk-test",
+        http=http,
+        retry_policy=RetryPolicy(max_attempts=3, max_elapsed_seconds=30),
+        sleep=sleeps.append,
+        pacing_seconds=0.0,
+    )
+    provider.embed(["alpha"])
+
+    assert sleeps[0] == 2.0
+
+
+def test_embed_does_not_retry_unauthorized_requests() -> None:
+    from pr_reviewer.models.provider import ModelProviderFailure
+    from pr_reviewer.models.retry import RetryPolicy
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    http = _FixedErrorHttp(
+        401,
+        {"error": {"message": "Incorrect API key provided"}},
+    )
+    provider = OpenAIEmbeddingProvider(
+        api_key="sk-bad",
+        http=http,
+        retry_policy=RetryPolicy(max_attempts=5, max_elapsed_seconds=30),
+        sleep=lambda _seconds: None,
+        pacing_seconds=0.0,
+    )
+    with pytest.raises(ModelProviderFailure) as exc_info:
+        provider.embed(["one", "two"])
+    assert exc_info.value.status_code == 401
+    assert len(http.requests) == 1
+
+
+def test_embed_rate_limit_attempts_are_bounded() -> None:
+    from pr_reviewer.models.provider import ModelProviderFailure
+    from pr_reviewer.models.retry import RetryPolicy
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    http = _AlwaysRateLimitedHttp()
+    provider = OpenAIEmbeddingProvider(
+        api_key="sk-test",
+        http=http,
+        retry_policy=RetryPolicy(max_attempts=3, max_elapsed_seconds=30),
+        sleep=lambda _seconds: None,
+        pacing_seconds=0.0,
+    )
+    with pytest.raises(ModelProviderFailure) as exc_info:
+        provider.embed(["alpha"])
+    assert exc_info.value.status_code == 429
+    assert len(http.requests) == 3
+
+
+def test_embed_token_limit_splits_batch_without_retrying() -> None:
+    from pr_reviewer.models.retry import RetryPolicy
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    sleeps: list[float] = []
+    http = _SplitOnRequestTokenLimitHttp()
+    provider = OpenAIEmbeddingProvider(
+        api_key="sk-test",
+        http=http,
+        retry_policy=RetryPolicy(max_attempts=5, max_elapsed_seconds=30),
+        sleep=sleeps.append,
+        pacing_seconds=0.0,
+    )
+    vectors = provider.embed([f"chunk-{index}" for index in range(8)])
+
+    assert len(vectors) == 8
+    assert len(http.requests) > 1
+    assert sleeps == []
+
+
 def test_embed_does_not_retry_auth_or_unrelated_client_errors() -> None:
     from pr_reviewer.models.provider import ModelProviderFailure
     from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
@@ -318,6 +418,46 @@ def test_embed_returns_one_vector_per_input_text() -> None:
         assert len(vector) == 1536
         if index < 2:
             assert vector[0] == float(index)
+
+
+class _RateLimitThenSuccessHttp:
+    def __init__(self, *, retry_after: str = "1") -> None:
+        self.requests: list[list[str]] = []
+        self._retry_after = retry_after
+        self._calls = 0
+        self._next_index = 0
+
+    def post(self, path: str, *, json: object, headers: object, timeout: float) -> object:
+        assert path == "/v1/embeddings"
+        inputs = json["input"] if isinstance(json, dict) else []
+        batch = list(inputs) if isinstance(inputs, list) else [str(inputs)]
+        self.requests.append(batch)
+        self._calls += 1
+        if self._calls == 1:
+            return _ErrorEmbeddingResponse(
+                429,
+                {"error": {"message": "rate limit exceeded"}},
+                headers={"Retry-After": self._retry_after},
+            )
+        start = self._next_index
+        self._next_index += len(batch)
+        return _OrderedEmbeddingResponse(start, len(batch), len(batch) * 4)
+
+
+class _AlwaysRateLimitedHttp:
+    def __init__(self) -> None:
+        self.requests: list[list[str]] = []
+
+    def post(self, path: str, *, json: object, headers: object, timeout: float) -> object:
+        assert path == "/v1/embeddings"
+        inputs = json["input"] if isinstance(json, dict) else []
+        batch = list(inputs) if isinstance(inputs, list) else [str(inputs)]
+        self.requests.append(batch)
+        return _ErrorEmbeddingResponse(
+            429,
+            {"error": {"message": "rate limit exceeded"}},
+            headers={"Retry-After": "1"},
+        )
 
 
 class _SplitOnInputTokenLimitHttp:
@@ -362,9 +502,16 @@ class _FixedErrorHttp:
 
 
 class _ErrorEmbeddingResponse:
-    def __init__(self, status_code: int, payload: dict[str, object]) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        payload: dict[str, object],
+        *,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.status_code = status_code
         self._payload = payload
+        self.headers = headers or {}
 
     def json(self) -> dict[str, object]:
         return self._payload

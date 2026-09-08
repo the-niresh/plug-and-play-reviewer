@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
 
 import httpx
 
-from pr_reviewer.models.provider import ModelProviderFailure, raise_for_provider_status
+from pr_reviewer.models.provider import ModelProviderFailure
+from pr_reviewer.models.provider_errors import (
+    ProviderErrorKind,
+    ProviderFailure,
+    classify_provider_failure,
+)
+from pr_reviewer.models.retry import RetryPolicy, retry_provider_call
 from pr_reviewer.retrieval.embed import (
     MAX_EMBEDDING_TOKENS_PER_INPUT,
     OPENAI_EMBEDDING_MODEL,
@@ -21,6 +28,8 @@ from pr_reviewer.retrieval.embed import (
 
 MAX_EMBEDDING_INPUTS_PER_REQUEST = 2048
 MAX_EMBEDDING_TOKENS_PER_REQUEST = 300_000
+EMBEDDING_RETRY_POLICY = RetryPolicy(max_attempts=5, max_elapsed_seconds=120.0)
+EMBEDDING_REQUEST_PACING_SECONDS = 0.05
 
 
 class EmbeddingInputTooLargeError(RuntimeError):
@@ -57,10 +66,22 @@ class OpenAIEmbeddingProvider:
         ledger: EmbeddingCostLedger | None = None,
         http: _EmbeddingHttp | None = None,
         base_url: str = "https://api.openai.com",
+        retry_policy: RetryPolicy | None = None,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+        pacing_seconds: float | None = None,
     ) -> None:
         self._api_key = api_key
         self._ledger = ledger
         self._http = http if http is not None else httpx.Client(base_url=base_url)
+        self._retry_policy = retry_policy if retry_policy is not None else EMBEDDING_RETRY_POLICY
+        self._clock = clock
+        self._sleep = sleep
+        self._pacing_seconds = (
+            pacing_seconds
+            if pacing_seconds is not None
+            else EMBEDDING_REQUEST_PACING_SECONDS
+        )
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:
@@ -128,13 +149,39 @@ class OpenAIEmbeddingProvider:
             return _average_vectors(vectors)
 
     def _embed_batch_post(self, texts: list[str]) -> list[list[float]]:
-        response = self._http.post(
-            "/v1/embeddings",
-            json={"model": self.model_name, "input": texts},
-            headers={"authorization": f"Bearer {self._api_key}"},
-            timeout=60.0,
+        status_code = 0
+
+        def attempt() -> list[list[float]] | ProviderFailure:
+            nonlocal status_code
+            response = self._http.post(
+                "/v1/embeddings",
+                json={"model": self.model_name, "input": texts},
+                headers={"authorization": f"Bearer {self._api_key}"},
+                timeout=60.0,
+            )
+            status_code = response.status_code
+            if response.status_code == 200:
+                return self._vectors_from_response(response, texts)
+            return _embedding_http_failure(response)
+
+        result = retry_provider_call(
+            attempt,
+            policy=self._retry_policy,
+            clock=self._clock,
+            sleep=self._sleep,
         )
-        raise_for_provider_status(response)
+        if result.failure is not None:
+            raise ModelProviderFailure(result.failure.reason, status_code=status_code)
+        if self._pacing_seconds > 0:
+            self._sleep(self._pacing_seconds)
+        assert result.value is not None
+        return result.value
+
+    def _vectors_from_response(
+        self,
+        response: httpx.Response,
+        texts: list[str],
+    ) -> list[list[float]]:
         payload = response.json()
         try:
             rows = payload["data"]
@@ -152,6 +199,50 @@ class OpenAIEmbeddingProvider:
         if len(vectors) != len(texts):
             raise ModelProviderFailure("embedding response returned the wrong count")
         return vectors
+
+
+def _embedding_http_failure(response: httpx.Response) -> ProviderFailure:
+    headers = {key.lower(): value for key, value in response.headers.items()}
+    try:
+        body = response.json()
+    except ValueError:
+        body = {}
+    status_code = response.status_code
+    kind = classify_provider_failure(
+        provider="openai",
+        status_code=status_code,
+        headers=headers,
+        body=body,
+    )
+    if (status_code >= 500 or status_code == 429) and kind is not ProviderErrorKind.OUT_OF_TOKENS:
+        kind = ProviderErrorKind.RETRYABLE_RATE_LIMIT
+    message = _provider_error_message(body) or f"provider returned {status_code}"
+    return ProviderFailure(
+        provider="openai",
+        kind=kind,
+        reason=message,
+        retry_after_seconds=_retry_after_seconds(headers),
+    )
+
+
+def _provider_error_message(payload: object) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return ""
+    message = error.get("message")
+    return str(message) if message is not None else ""
+
+
+def _retry_after_seconds(headers: Mapping[str, str]) -> float | None:
+    raw = headers.get("retry-after")
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
 
 
 def is_embedding_request_token_limit_failure(exc: ModelProviderFailure) -> bool:
