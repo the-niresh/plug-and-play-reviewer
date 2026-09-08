@@ -530,6 +530,115 @@ def test_review_pull_request_calls_wrap_untrusted_review_inputs() -> None:
     assert "UntrustedText" in source_path.read_text(encoding="utf-8")
 
 
+def _scripted_generate_model(
+    generate_parsed: list[dict[str, Any]],
+    *,
+    costs: list[str] | None = None,
+) -> Any:
+    from pr_reviewer.models.provider import ModelResponse
+
+    generate_costs = costs or ["0"] * len(generate_parsed)
+
+    class ScriptedModel:
+        def __init__(self) -> None:
+            self.calls: list[Any] = []
+            self._generate_index = 0
+
+        def complete_json(self, request: Any) -> Any:
+            self.calls.append(request)
+            if request.schema_name == "FindingReflectionScores":
+                raw_candidates = next(
+                    item.content
+                    for item in request.untrusted_inputs
+                    if item.name == "candidate_findings"
+                )
+                candidate_count = len(json.loads(raw_candidates))
+                response_parsed = {
+                    "scores": [
+                        {"index": index, "score": 1.0, "reason": "accepted"}
+                        for index in range(candidate_count)
+                    ]
+                }
+                cost_usd = "0"
+            else:
+                response_parsed = generate_parsed[self._generate_index]
+                cost_usd = generate_costs[self._generate_index]
+                self._generate_index += 1
+            return ModelResponse(
+                parsed=response_parsed,
+                output_hash="a" * 64,
+                provider_request_id=None,
+                provider="openai",
+                model=request.model,
+                prompt_name=request.prompt_name,
+                prompt_version=request.prompt_version,
+                input_tokens=1,
+                output_tokens=1,
+                cost_usd=cost_usd,
+                latency_ms=1,
+            )
+
+    return ScriptedModel()
+
+
+def _generate_models(model: Any) -> list[str]:
+    return [call.model for call in model.calls if call.schema_name == "ReviewFindingsDraft"]
+
+
+def test_empty_mini_review_retries_once_with_gpt_4_1_and_sums_both_costs() -> None:
+    from pr_reviewer.reviewer.review_pull_request import review_pull_request
+
+    packed = _packed([_file("app.py")])
+    model = _scripted_generate_model(
+        [
+            {"findings": []},
+            {"findings": [_draft_dict(title="Nested option was not copied")]},
+        ],
+        costs=["0.001", "0.008"],
+    )
+
+    outcome = review_pull_request(
+        _snapshot([_file("app.py")]),
+        packed,
+        [],
+        model,
+        model_name="gpt-4o-mini",
+    )
+
+    assert _generate_models(model) == ["gpt-4o-mini", "gpt-4.1"]
+    assert [item.title for item in outcome.candidates] == ["Nested option was not copied"]
+    assert outcome.cost_usd == pytest.approx(0.009)
+
+
+def test_accepted_mini_finding_does_not_call_gpt_4_1() -> None:
+    from pr_reviewer.reviewer.review_pull_request import review_pull_request
+
+    packed = _packed([_file("app.py")])
+    model = _scripted_generate_model(
+        [{"findings": [_draft_dict()]}],
+        costs=["0.002"],
+    )
+
+    outcome = review_pull_request(
+        _snapshot([_file("app.py")]),
+        packed,
+        [],
+        model,
+        model_name="gpt-4o-mini",
+    )
+
+    assert _generate_models(model) == ["gpt-4o-mini"]
+    assert [item.title for item in outcome.candidates] == ["Missing null check"]
+    assert outcome.cost_usd == pytest.approx(0.002)
+
+
+def test_role_models_generate_stays_gpt_4o_mini() -> None:
+    from pr_reviewer.models.routing import RoleModels
+
+    assert RoleModels().generate == "gpt-4o-mini"
+    assert RoleModels.generate == "gpt-4o-mini"
+
+
 def test_local_candidate_schema_cannot_store_system_owned_fields() -> None:
     matches = sorted(
         (SRC_ROOT / "local_store" / "postgres_migrations").glob(

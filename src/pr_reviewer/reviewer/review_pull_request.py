@@ -1,4 +1,4 @@
-"""Diff-only one-agent review. One model call. Heartbeat is synchronous and once."""
+"""Diff-only one-agent review. Heartbeat is synchronous and once."""
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from pr_reviewer.models.provider import (
     ModelProvider,
     ModelProviderFailure,
     ModelRequest,
+    ModelResponse,
     cost_usd_for,
 )
 from pr_reviewer.prompts.diff_only import DIFF_ONLY_PROMPT
@@ -32,6 +33,8 @@ from pr_reviewer.security.prompt_boundaries import UntrustedText, wrap_untrusted
 
 MAX_FINDING_DRAFTS = 32
 MAX_OUTPUT_TOKENS = 2048
+DEFAULT_GENERATE_MODEL = "gpt-4o-mini"
+EMPTY_GENERATE_RETRY_MODEL = "gpt-4.1"
 DIFF_ONLY_PROMPT_NAME = DIFF_ONLY_PROMPT.name
 DIFF_ONLY_PROMPT_VERSION = DIFF_ONLY_PROMPT.version
 _NEW_LINE = re.compile(r"^(\d+)\| ")
@@ -88,29 +91,31 @@ def review_pull_request(
         + "\n\n"
         + "\n\n".join(sections)
     )
-    if budget is not None:
-        require_within_budget(budget, estimate_review_cost(prompt_content, model_name))
-    response = model.complete_json(
-        ModelRequest(
-            model=model_name,
-            prompt_name=DIFF_ONLY_PROMPT.name,
-            prompt_version=DIFF_ONLY_PROMPT.version,
-            prompt_content=prompt_content,
-            schema_name="ReviewFindingsDraft",
-            untrusted_inputs=[],
-            timeout_seconds=60.0,
-            max_output_tokens=MAX_OUTPUT_TOKENS,
-        )
+    response = _complete_generate(
+        model, prompt_content, model_name=model_name, budget=budget
     )
     parsed_candidates = _candidates_from_parsed(response.parsed, packed)
+    total_cost_usd = float(response.cost_usd)
+    total_latency_ms = response.latency_ms
+    if (
+        not parsed_candidates.candidates
+        and model_name == DEFAULT_GENERATE_MODEL
+        and model_name != EMPTY_GENERATE_RETRY_MODEL
+    ):
+        retry = _complete_generate(
+            model, prompt_content, model_name=EMPTY_GENERATE_RETRY_MODEL, budget=budget
+        )
+        parsed_candidates = _candidates_from_parsed(retry.parsed, packed)
+        total_cost_usd += float(retry.cost_usd)
+        total_latency_ms += retry.latency_ms
     reflected = reflect_findings(
         model=model,
         model_name=model_name,
         packed=packed,
         candidates=parsed_candidates.candidates,
     )
-    total_cost_usd = float(response.cost_usd) + reflected.cost_usd
-    total_latency_ms = response.latency_ms + reflected.latency_ms
+    total_cost_usd += reflected.cost_usd
+    total_latency_ms += reflected.latency_ms
     return ReviewOutcome(
         candidates=reflected.accepted,
         suppressed_candidates=reflected.suppressed,
@@ -123,6 +128,29 @@ def review_pull_request(
         duplicate_rejected_findings=parsed_candidates.duplicate_rejected_findings,
         cost_usd=total_cost_usd,
         latency_ms=total_latency_ms,
+    )
+
+
+def _complete_generate(
+    model: ModelProvider,
+    prompt_content: str,
+    *,
+    model_name: str,
+    budget: BudgetLimit | None,
+) -> ModelResponse:
+    if budget is not None:
+        require_within_budget(budget, estimate_review_cost(prompt_content, model_name))
+    return model.complete_json(
+        ModelRequest(
+            model=model_name,
+            prompt_name=DIFF_ONLY_PROMPT.name,
+            prompt_version=DIFF_ONLY_PROMPT.version,
+            prompt_content=prompt_content,
+            schema_name="ReviewFindingsDraft",
+            untrusted_inputs=[],
+            timeout_seconds=60.0,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+        )
     )
 
 
