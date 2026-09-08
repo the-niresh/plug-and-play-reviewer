@@ -156,6 +156,7 @@ def _candidates_from_parsed(parsed: object, packed: PackedDiff) -> ParsedCandida
     if not isinstance(raw_findings, list):
         return ParsedCandidates(candidates=())
     lines_by_path = {item.file_path: _new_side_lines(item.content) for item in packed.items}
+    hunks_by_path = {item.file_path: _new_side_hunk_ranges(item.content) for item in packed.items}
     packed_has_implementation = any(not _is_test_path(item.file_path) for item in packed.items)
     accepted: list[FindingCandidate] = []
     seen: set[tuple[str, int, int, str]] = set()
@@ -174,6 +175,7 @@ def _candidates_from_parsed(parsed: object, packed: PackedDiff) -> ParsedCandida
         if packed_has_implementation and _is_test_path(draft.file_path):
             grounding_rejected += 1
             continue
+        draft = _expand_draft_to_hunk(draft, hunks_by_path)
         key = (draft.file_path, draft.line_start, draft.line_end, draft.title)
         if key in seen:
             duplicate_rejected += 1
@@ -206,6 +208,44 @@ def _new_side_lines(content: str) -> set[int]:
         if match is not None:
             lines.add(int(match.group(1)))
     return lines
+
+
+def _new_side_hunk_ranges(content: str) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
+    current: list[int] = []
+    in_new = False
+    for line in content.splitlines():
+        if line.startswith("NEW "):
+            if current:
+                ranges.append((current[0], current[-1]))
+                current = []
+            in_new = True
+            continue
+        if line.startswith("OLD "):
+            if current:
+                ranges.append((current[0], current[-1]))
+                current = []
+            in_new = False
+            continue
+        if not in_new:
+            continue
+        match = _NEW_LINE.match(line)
+        if match is not None:
+            current.append(int(match.group(1)))
+    if current:
+        ranges.append((current[0], current[-1]))
+    return ranges
+
+
+def _expand_draft_to_hunk(
+    draft: FindingDraft, hunks_by_path: dict[str, list[tuple[int, int]]]
+) -> FindingDraft:
+    for start, end in hunks_by_path.get(draft.file_path, ()):
+        if start <= draft.line_start and draft.line_end <= end:
+            if draft.line_start == start and draft.line_end == end:
+                return draft
+            return draft.model_copy(update={"line_start": start, "line_end": end})
+    return draft
 
 
 def _in_changed_diff(draft: FindingDraft, lines_by_path: dict[str, set[int]]) -> bool:

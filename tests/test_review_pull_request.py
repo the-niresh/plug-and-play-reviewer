@@ -22,6 +22,30 @@ SRC_ROOT = Path(__file__).resolve().parent.parent / "src" / "pr_reviewer"
 BASE_SHA = "a" * 40
 HEAD_SHA = "b" * 40
 SMALL_PATCH = "@@ -1,1 +1,1 @@\n-old\n+new\n"
+# Modeled on flask-py-013 (dev): one hunk in src/flask/cli.py. NEW side is 858-863.
+CLI_HUNK_PATCH = """\
+@@ -858,7 +858,9 @@ class SeparatedPathType(click.Path):
+         self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None
+     ) -> t.Any:
+         items = self.split_envvar_value(value)
+-        return [super().convert(item, param, ctx) for item in items]
++        # can't call no-arg super() inside list comprehension until Python 3.12
++        super_convert = super().convert
++        return [super_convert(item, param, ctx) for item in items]
+"""
+# Same file, two distant hunks. A late-hunk finding must not absorb the early hunk.
+TWO_HUNK_PATCH = """\
+@@ -286,3 +286,3 @@
+ context
+-old
++changed early
+ more
+@@ -603,3 +605,3 @@
+ later
+-old
++changed late
+ more
+"""
 FORBIDDEN_FIELDS = (
     "id",
     "review_job_id",
@@ -241,6 +265,44 @@ def test_test_file_finding_is_kept_when_only_tests_changed() -> None:
         {"findings": [_draft_dict(file_path="tests/test_cli.py", title="test-only pr")]},
     )
     assert [item.title for item in outcome.candidates] == ["test-only pr"]
+
+
+def test_finding_in_later_hunk_lines_expands_to_the_full_new_side_hunk() -> None:
+    packed = _packed([_file("src/flask/cli.py", patch=CLI_HUNK_PATCH)])
+    outcome, _model = _review(
+        packed,
+        {
+            "findings": [
+                _draft_dict(
+                    file_path="src/flask/cli.py",
+                    line_start=863,
+                    line_end=863,
+                    title="super in comprehension",
+                )
+            ]
+        },
+    )
+    assert len(outcome.candidates) == 1
+    assert (outcome.candidates[0].line_start, outcome.candidates[0].line_end) == (858, 863)
+
+
+def test_finding_does_not_expand_into_a_distant_hunk() -> None:
+    packed = _packed([_file("src/flask/cli.py", patch=TWO_HUNK_PATCH)])
+    outcome, _model = _review(
+        packed,
+        {
+            "findings": [
+                _draft_dict(
+                    file_path="src/flask/cli.py",
+                    line_start=606,
+                    line_end=606,
+                    title="late hunk only",
+                )
+            ]
+        },
+    )
+    assert len(outcome.candidates) == 1
+    assert (outcome.candidates[0].line_start, outcome.candidates[0].line_end) == (605, 607)
 
 
 def test_empty_evidence_is_dropped() -> None:
