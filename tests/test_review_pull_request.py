@@ -585,9 +585,32 @@ def _generate_models(model: Any) -> list[str]:
     return [call.model for call in model.calls if call.schema_name == "ReviewFindingsDraft"]
 
 
-def test_empty_mini_review_retries_once_with_gpt_4_1_and_sums_both_costs() -> None:
-    from pr_reviewer.reviewer.review_pull_request import review_pull_request
+def test_empty_generate_retry_is_off_by_default() -> None:
+    from pr_reviewer.reviewer import review_pull_request as review_mod
 
+    packed = _packed([_file("app.py")])
+    model = _scripted_generate_model([{"findings": []}], costs=["0.001"])
+
+    outcome = review_mod.review_pull_request(
+        _snapshot([_file("app.py")]),
+        packed,
+        [],
+        model,
+        model_name="gpt-4o-mini",
+    )
+
+    assert review_mod.EMPTY_GENERATE_RETRY_ENABLED is False
+    assert _generate_models(model) == ["gpt-4o-mini"]
+    assert outcome.candidates == ()
+    assert outcome.cost_usd == pytest.approx(0.001)
+
+
+def test_empty_mini_review_retries_once_with_gpt_4_1_and_sums_both_costs(
+    monkeypatch: Any,
+) -> None:
+    from pr_reviewer.reviewer import review_pull_request as review_mod
+
+    monkeypatch.setattr(review_mod, "EMPTY_GENERATE_RETRY_ENABLED", True)
     packed = _packed([_file("app.py")])
     model = _scripted_generate_model(
         [
@@ -597,7 +620,7 @@ def test_empty_mini_review_retries_once_with_gpt_4_1_and_sums_both_costs() -> No
         costs=["0.001", "0.008"],
     )
 
-    outcome = review_pull_request(
+    outcome = review_mod.review_pull_request(
         _snapshot([_file("app.py")]),
         packed,
         [],

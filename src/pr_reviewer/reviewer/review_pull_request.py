@@ -35,6 +35,7 @@ MAX_FINDING_DRAFTS = 32
 MAX_OUTPUT_TOKENS = 2048
 DEFAULT_GENERATE_MODEL = "gpt-4o-mini"
 EMPTY_GENERATE_RETRY_MODEL = "gpt-4.1"
+EMPTY_GENERATE_RETRY_ENABLED = False
 DIFF_ONLY_PROMPT_NAME = DIFF_ONLY_PROMPT.name
 DIFF_ONLY_PROMPT_VERSION = DIFF_ONLY_PROMPT.version
 _NEW_LINE = re.compile(r"^(\d+)\| ")
@@ -98,7 +99,8 @@ def review_pull_request(
     total_cost_usd = float(response.cost_usd)
     total_latency_ms = response.latency_ms
     if (
-        not parsed_candidates.candidates
+        EMPTY_GENERATE_RETRY_ENABLED
+        and not parsed_candidates.candidates
         and model_name == DEFAULT_GENERATE_MODEL
         and model_name != EMPTY_GENERATE_RETRY_MODEL
     ):
