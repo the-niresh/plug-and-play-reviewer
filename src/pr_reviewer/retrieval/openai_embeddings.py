@@ -75,7 +75,13 @@ class OpenAIEmbeddingProvider:
             headers={"authorization": f"Bearer {self._api_key}"},
             timeout=60.0,
         )
-        raise_for_provider_status(response)
+        try:
+            raise_for_provider_status(response)
+        except ModelProviderFailure as exc:
+            if len(texts) <= 1 or not is_embedding_request_token_limit_failure(exc):
+                raise
+            midpoint = len(texts) // 2
+            return self._embed_batch(texts[:midpoint]) + self._embed_batch(texts[midpoint:])
         payload = response.json()
         try:
             rows = payload["data"]
@@ -93,6 +99,19 @@ class OpenAIEmbeddingProvider:
         if len(vectors) != len(texts):
             raise ModelProviderFailure("embedding response returned the wrong count")
         return vectors
+
+
+def is_embedding_request_token_limit_failure(exc: ModelProviderFailure) -> bool:
+    """True when the provider rejected a batch for exceeding the request token cap."""
+    if exc.status_code != 400:
+        return False
+    message = str(exc).lower()
+    if "input" in message and ("length" in message or "per input" in message):
+        return False
+    has_token_signal = "token" in message
+    has_limit_signal = any(word in message for word in ("max", "limit", "exceed", "requested"))
+    has_request_scope = "request" in message
+    return has_token_signal and has_limit_signal and has_request_scope
 
 
 def _embedding_batches(texts: Sequence[str]) -> list[list[str]]:

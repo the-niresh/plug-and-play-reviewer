@@ -212,7 +212,7 @@ def test_embed_rejects_single_input_over_per_input_token_limit() -> None:
         OpenAIEmbeddingProvider,
     )
 
-    huge = "x" * (MAX_EMBEDDING_TOKENS_PER_INPUT * 4 + 4)
+    huge = "x" * (MAX_EMBEDDING_TOKENS_PER_INPUT * 3 + 3)
     assert estimate_embedding_tokens(huge) > MAX_EMBEDDING_TOKENS_PER_INPUT
     http = _BatchRecordingEmbeddingHttp()
     provider = OpenAIEmbeddingProvider(api_key="sk-test", http=http)
@@ -235,6 +235,128 @@ def test_embed_never_sends_one_api_item_over_per_input_token_limit() -> None:
     for batch in http.requests:
         for text in batch:
             assert estimate_embedding_tokens(text) <= MAX_EMBEDDING_TOKENS_PER_INPUT
+
+
+def test_estimate_embedding_tokens_is_conservative_for_code_like_text() -> None:
+    from pr_reviewer.retrieval.embed import estimate_embedding_tokens
+
+    code = (
+        "def authenticate(token: str) -> bool:\n"
+        "    return token is not None\n"
+    ) * 50
+    measured_chars_per_token = 3.58
+    real_tokens = len(code) / measured_chars_per_token
+    assert estimate_embedding_tokens(code) >= real_tokens
+
+
+def test_embed_splits_batch_when_request_token_limit_is_rejected() -> None:
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    texts = [f"chunk-{index}" for index in range(8)]
+    http = _SplitOnRequestTokenLimitHttp()
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", http=http)
+    vectors = provider.embed(texts)
+
+    assert len(http.requests) > 1
+    assert len(vectors) == len(texts)
+    for index, vector in enumerate(vectors):
+        assert vector[0] == float(index)
+
+
+def test_embed_ledger_counts_only_accepted_split_batches() -> None:
+    from pr_reviewer.retrieval.embed import EmbeddingCostLedger, embedding_cost_usd_for
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    ledger = EmbeddingCostLedger()
+    http = _SplitOnRequestTokenLimitHttp(tokens_per_success=250)
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", ledger=ledger, http=http)
+    provider.embed([f"chunk-{index}" for index in range(8)])
+
+    assert len(http.requests) > 1
+    expected_tokens = http.successful_requests * 250
+    assert ledger.total_tokens == expected_tokens
+    assert ledger.total_cost_usd == embedding_cost_usd_for(
+        expected_tokens, OPENAI_EMBEDDING_MODEL
+    )
+
+
+def test_embed_does_not_retry_auth_or_unrelated_client_errors() -> None:
+    from pr_reviewer.models.provider import ModelProviderFailure
+    from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
+
+    auth_http = _FixedErrorHttp(
+        401,
+        {"error": {"message": "Incorrect API key provided"}},
+    )
+    provider = OpenAIEmbeddingProvider(api_key="sk-bad", http=auth_http)
+    with pytest.raises(ModelProviderFailure) as exc_info:
+        provider.embed(["one", "two"])
+    assert exc_info.value.status_code == 401
+    assert len(auth_http.requests) == 1
+
+    bad_request_http = _FixedErrorHttp(
+        400,
+        {"error": {"message": "you must provide a model parameter"}},
+    )
+    provider = OpenAIEmbeddingProvider(api_key="sk-test", http=bad_request_http)
+    with pytest.raises(ModelProviderFailure) as exc_info:
+        provider.embed(["one", "two"])
+    assert exc_info.value.status_code == 400
+    assert len(bad_request_http.requests) == 1
+
+
+class _FixedErrorHttp:
+    def __init__(self, status_code: int, payload: dict[str, object]) -> None:
+        self.status_code = status_code
+        self._payload = payload
+        self.requests: list[list[str]] = []
+
+    def post(self, path: str, *, json: object, headers: object, timeout: float) -> object:
+        assert path == "/v1/embeddings"
+        inputs = json["input"] if isinstance(json, dict) else []
+        batch = list(inputs) if isinstance(inputs, list) else [str(inputs)]
+        self.requests.append(batch)
+        return _ErrorEmbeddingResponse(self.status_code, self._payload)
+
+
+class _ErrorEmbeddingResponse:
+    def __init__(self, status_code: int, payload: dict[str, object]) -> None:
+        self.status_code = status_code
+        self._payload = payload
+
+    def json(self) -> dict[str, object]:
+        return self._payload
+
+
+class _SplitOnRequestTokenLimitHttp:
+    def __init__(self, *, tokens_per_success: int = 40) -> None:
+        self.requests: list[list[str]] = []
+        self.successful_requests = 0
+        self._tokens_per_success = tokens_per_success
+        self._next_index = 0
+        self._reject_next_multi = True
+
+    def post(self, path: str, *, json: object, headers: object, timeout: float) -> object:
+        assert path == "/v1/embeddings"
+        inputs = json["input"] if isinstance(json, dict) else []
+        batch = list(inputs) if isinstance(inputs, list) else [str(inputs)]
+        self.requests.append(batch)
+        if self._reject_next_multi and len(batch) > 1:
+            self._reject_next_multi = False
+            return _ErrorEmbeddingResponse(
+                400,
+                {
+                    "error": {
+                        "message": (
+                            "Requested 310681 tokens, max 300000 tokens per request"
+                        )
+                    }
+                },
+            )
+        self.successful_requests += 1
+        start = self._next_index
+        self._next_index += len(batch)
+        return _OrderedEmbeddingResponse(start, len(batch), self._tokens_per_success)
 
 
 class _BatchRecordingEmbeddingHttp:

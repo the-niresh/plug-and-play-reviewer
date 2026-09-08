@@ -22,7 +22,7 @@ _EMBEDDING_PRICE_PER_MILLION: dict[str, Decimal] = {
 }
 DEFAULT_ESTIMATED_SHA_INDEX_TOKENS = 250_000
 MAX_EMBEDDING_TOKENS_PER_INPUT = 8192
-MAX_EMBEDDING_INPUT_CHARS = MAX_EMBEDDING_TOKENS_PER_INPUT * 4
+MAX_EMBEDDING_INPUT_CHARS = MAX_EMBEDDING_TOKENS_PER_INPUT * 3
 
 
 @dataclass
@@ -36,7 +36,7 @@ class EmbeddingCostLedger:
 
 
 def estimate_embedding_tokens(text: str) -> int:
-    return max(1, len(text) // 4)
+    return max(1, len(text) // 3)
 
 
 def embedding_cost_usd_for(token_count: int, model_name: str) -> Decimal:
