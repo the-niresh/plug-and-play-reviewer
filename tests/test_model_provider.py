@@ -309,6 +309,71 @@ def test_prompt_injection_in_a_diff_is_quoted_as_untrusted_data(kind: str, injec
     assert injection in wire[begin:end]
 
 
+def test_review_findings_draft_rejects_wrong_item_shape_at_provider_boundary() -> None:
+    from pr_reviewer.models.provider import (
+        ModelRequest,
+        ModelSchemaMismatch,
+        UntrustedInput,
+        finish_completion,
+    )
+
+    request = ModelRequest(
+        model="gpt-4o-mini",
+        prompt_name="reviewer",
+        prompt_version="1",
+        prompt_content="Review the diff.",
+        schema_name="ReviewFindingsDraft",
+        untrusted_inputs=[UntrustedInput(name="diff", content="+change")],
+        timeout_seconds=5.0,
+        max_output_tokens=512,
+    )
+    payload = {
+        "findings": [
+            {
+                "file": "packages/zod/src/v4/core/util.ts",
+                "line": 288,
+                "rationale": "unsafe cast",
+            }
+        ]
+    }
+    with pytest.raises(ModelSchemaMismatch):
+        finish_completion(
+            vendor="openai",
+            request=request,
+            content=json.dumps(payload),
+            input_tokens=1,
+            output_tokens=1,
+            provider_request_id=None,
+            latency_ms=1,
+        )
+
+
+def test_review_findings_draft_accepts_valid_items_at_provider_boundary() -> None:
+    from pr_reviewer.models.provider import ModelRequest, UntrustedInput, finish_completion
+
+    request = ModelRequest(
+        model="gpt-4o-mini",
+        prompt_name="reviewer",
+        prompt_version="1",
+        prompt_content="Review the diff.",
+        schema_name="ReviewFindingsDraft",
+        untrusted_inputs=[UntrustedInput(name="diff", content="+change")],
+        timeout_seconds=5.0,
+        max_output_tokens=512,
+    )
+    payload = {"findings": [VALID_FINDING]}
+    response = finish_completion(
+        vendor="openai",
+        request=request,
+        content=json.dumps(payload),
+        input_tokens=1,
+        output_tokens=1,
+        provider_request_id=None,
+        latency_ms=1,
+    )
+    assert response.parsed == payload
+
+
 @pytest.mark.parametrize("kind", ["openai", "anthropic"])
 def test_injection_that_asks_to_post_directly_fails_schema_validation(kind: str) -> None:
     from pr_reviewer.models.provider import ModelSchemaMismatch

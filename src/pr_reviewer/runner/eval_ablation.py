@@ -230,6 +230,9 @@ def review_eval_case(
         findings=outcome.candidates,
         cost_usd=outcome.cost_usd,
         latency_ms=outcome.latency_ms,
+        schema_rejected_findings=outcome.schema_rejected_findings,
+        grounding_rejected_findings=outcome.grounding_rejected_findings,
+        duplicate_rejected_findings=outcome.duplicate_rejected_findings,
     )
 
 

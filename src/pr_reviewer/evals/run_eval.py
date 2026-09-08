@@ -11,6 +11,7 @@ from pr_reviewer.evals.metrics import compute_metrics
 from pr_reviewer.evals.types import (
     EvalCase,
     EvalConfig,
+    EvalMetrics,
     EvalReviewResult,
     EvalRun,
     RetrievalAblationResult,
@@ -47,17 +48,30 @@ def run_eval(config: EvalConfig, reviewer: ReviewerCallable) -> EvalRun:
     results: list[MatchResult] = []
     total_cost_usd = 0.0
     total_latency_ms = 0
+    schema_rejected_findings = 0
+    grounding_rejected_findings = 0
+    duplicate_rejected_findings = 0
     for _ in range(config.repeats):
         for case in config.cases:
             review = _normalize_reviewer_output(reviewer(case))
             total_cost_usd += review.cost_usd
             total_latency_ms += review.latency_ms
+            schema_rejected_findings += review.schema_rejected_findings
+            grounding_rejected_findings += review.grounding_rejected_findings
+            duplicate_rejected_findings += review.duplicate_rejected_findings
             results.append(match_findings(case.expected_labels, list(review.findings)))
     metrics = compute_metrics(
         results,
         reviewed_pr_count=len(results),
         latency_ms=total_latency_ms,
         cost_usd=total_cost_usd,
+    )
+    metrics = metrics.model_copy(
+        update={
+            "schema_rejected_findings": schema_rejected_findings,
+            "grounding_rejected_findings": grounding_rejected_findings,
+            "duplicate_rejected_findings": duplicate_rejected_findings,
+        }
     )
     return EvalRun(metrics=metrics)
 
@@ -150,20 +164,43 @@ def run_retrieval_ablation(
     )
 
 
+def _arm_rejection_summary(metrics: EvalMetrics) -> str:
+    return (
+        f"schema_rejected={metrics.schema_rejected_findings}, "
+        f"grounding_rejected={metrics.grounding_rejected_findings}, "
+        f"duplicate_rejected={metrics.duplicate_rejected_findings}"
+    )
+
+
+def _arm_status(metrics: EvalMetrics) -> str | None:
+    if metrics.schema_rejected_findings > 0 and metrics.useful_finding_count == 0:
+        return "all_findings_rejected"
+    return None
+
+
 def format_retrieval_ablation(result: RetrievalAblationResult) -> str:
     diff = result.diff_only.metrics
     retrieval = result.retrieval_backed.metrics
-    return (
+    diff_status = _arm_status(diff)
+    retrieval_status = _arm_status(retrieval)
+    parts = [
         "diff-only precision="
         f"{diff.precision_per_finding:.3f}, recall={diff.recall_per_finding:.3f}, "
-        f"false/pr={diff.false_findings_per_pr:.3f}; "
+        f"false/pr={diff.false_findings_per_pr:.3f}, "
+        f"{_arm_rejection_summary(diff)}",
         "retrieval precision="
         f"{retrieval.precision_per_finding:.3f}, recall={retrieval.recall_per_finding:.3f}, "
-        f"false/pr={retrieval.false_findings_per_pr:.3f}; "
+        f"false/pr={retrieval.false_findings_per_pr:.3f}, "
+        f"{_arm_rejection_summary(retrieval)}",
         "delta precision="
         f"{result.precision_delta:+.3f}, recall={result.recall_delta:+.3f}, "
-        f"false/pr={result.false_findings_per_pr_delta:+.3f}"
-    )
+        f"false/pr={result.false_findings_per_pr_delta:+.3f}",
+    ]
+    if diff_status:
+        parts.append(f"diff-only status={diff_status}")
+    if retrieval_status:
+        parts.append(f"retrieval status={retrieval_status}")
+    return "; ".join(parts)
 
 
 def useful_findings_per_dollar(run: EvalRun) -> float:

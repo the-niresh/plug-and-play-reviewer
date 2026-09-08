@@ -34,6 +34,9 @@ class EvalReviewResult:
     findings: tuple[FindingCandidate, ...]
     cost_usd: float = 0.0
     latency_ms: int = 0
+    schema_rejected_findings: int = 0
+    grounding_rejected_findings: int = 0
+    duplicate_rejected_findings: int = 0
 
 
 ReviewerCallable = Callable[["EvalCase"], EvalReviewResult | Sequence[FindingCandidate]]
@@ -128,6 +131,9 @@ class EvalMetrics(BaseModel):
     needs_human_rate: float = Field(ge=0, le=1)
     reviewed_pr_count: int = Field(ge=0)
     useful_finding_count: int = Field(default=0, ge=0)
+    schema_rejected_findings: int = Field(default=0, ge=0)
+    grounding_rejected_findings: int = Field(default=0, ge=0)
+    duplicate_rejected_findings: int = Field(default=0, ge=0)
     rule_adherence: dict[str, float]
 
 

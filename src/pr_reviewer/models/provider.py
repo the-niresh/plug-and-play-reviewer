@@ -14,7 +14,7 @@ from typing import Any, Literal, Protocol
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from pr_reviewer.contracts.finding_candidate import FindingCandidate
+from pr_reviewer.contracts.finding_candidate import FindingCandidate, FindingDraft
 from pr_reviewer.models.providers import provider_auth_headers
 from pr_reviewer.security.prompt_boundaries import UntrustedText, wrap_untrusted
 
@@ -185,6 +185,11 @@ def finish_completion(
         findings = parsed.get("findings")
         if not isinstance(findings, list):
             raise ModelSchemaMismatch()
+        for item in findings:
+            try:
+                FindingDraft.model_validate(item)
+            except ValidationError:
+                raise ModelSchemaMismatch() from None
     elif request.schema_name == "FindingReflectionScores":
         scores = parsed.get("scores")
         if not isinstance(scores, list):

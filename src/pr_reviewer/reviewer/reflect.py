@@ -15,18 +15,22 @@ from pr_reviewer.models.provider import (
     ModelSchemaMismatch,
     UntrustedInput,
 )
+from pr_reviewer.prompts.reflection_schema import reflection_prompt_schema_section
 
 REFLECTION_PROMPT_NAME = "finding_reflection"
 REFLECTION_DROP_THRESHOLD = 0.0
 
-_REFLECTION_PROMPT = """Score each proposed PR review finding against the packed diff.
-Return JSON {"scores": [...]}.
-Each score must refer to one input finding by zero-based index.
+_REFLECTION_PROMPT = f"""Score each proposed PR review finding against the packed diff.
+{reflection_prompt_schema_section()}
 Score 1.0 for a clear, grounded, actionable defect.
 Score 0.0 for speculation, weak impact, bad grounding, or non-actionable advice.
-Do not add findings. Do not change line numbers. Do not skip input findings.
+Do not add findings. Do not change line numbers.
 """
 REFLECTION_PROMPT_VERSION = hashlib.sha256(_REFLECTION_PROMPT.encode("utf-8")).hexdigest()[:16]
+
+
+def reflection_prompt_text() -> str:
+    return _REFLECTION_PROMPT
 
 
 class ReflectionScore(BaseModel):

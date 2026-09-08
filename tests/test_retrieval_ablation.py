@@ -38,6 +38,66 @@ def test_retrieval_ablation_reports_both_arms_and_the_deltas() -> None:
     assert result.false_findings_per_pr_delta == 0.0
 
 
+def test_retrieval_ablation_format_includes_rejection_counters_per_arm() -> None:
+    from eval_holdout_fixtures import single_holdout_case
+
+    from pr_reviewer.evals.types import EvalReviewResult
+
+    case = single_holdout_case()
+
+    def all_rejected(_case: object) -> EvalReviewResult:
+        return EvalReviewResult(
+            findings=(),
+            schema_rejected_findings=2,
+            grounding_rejected_findings=1,
+            duplicate_rejected_findings=0,
+        )
+
+    result = run_retrieval_ablation(
+        [case],
+        all_rejected,
+        FixtureReviewer.silent(),
+        repeats=1,
+    )
+    text = format_retrieval_ablation(result)
+    assert "schema_rejected=" in text
+    assert "grounding_rejected=" in text
+    assert "duplicate_rejected=" in text
+    assert result.diff_only.metrics.schema_rejected_findings == 2
+    assert result.diff_only.metrics.grounding_rejected_findings == 1
+
+
+def test_all_rejected_ablation_output_differs_from_silent_run() -> None:
+    from eval_holdout_fixtures import single_holdout_case
+
+    from pr_reviewer.evals.types import EvalReviewResult
+
+    case = single_holdout_case()
+
+    def all_rejected(_case: object) -> EvalReviewResult:
+        return EvalReviewResult(findings=(), schema_rejected_findings=3)
+
+    rejected_text = format_retrieval_ablation(
+        run_retrieval_ablation(
+            [case],
+            all_rejected,
+            FixtureReviewer.silent(),
+            repeats=1,
+        )
+    )
+    silent_text = format_retrieval_ablation(
+        run_retrieval_ablation(
+            [case],
+            FixtureReviewer.silent(),
+            FixtureReviewer.silent(),
+            repeats=1,
+        )
+    )
+    assert rejected_text != silent_text
+    assert "all_findings_rejected" in rejected_text
+    assert "all_findings_rejected" not in silent_text
+
+
 def test_retrieval_ablation_format_includes_both_arms_and_deltas() -> None:
     result = run_retrieval_ablation(
         [single_holdout_case()],
