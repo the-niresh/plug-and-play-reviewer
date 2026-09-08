@@ -69,12 +69,6 @@ def resolve_eval_embedder(
 
 
 
-_LOCAL_PGVECTOR_START_HINT = (
-    "Local pgvector is not running. Start it with: "
-    "docker compose -f docker-compose.runner.yml up -d"
-)
-
-
 @contextmanager
 def local_retrieval_connection() -> Iterator[psycopg.Connection[Any]]:
     """Open the runner local pgvector store, migrating it if needed."""
@@ -104,16 +98,22 @@ def local_retrieval_connection() -> Iterator[psycopg.Connection[Any]]:
         try:
             store.start()
         except LocalVectorStoreError as exc:
-            raise EvalAblationConfigurationError(_LOCAL_PGVECTOR_START_HINT) from exc
+            raise EvalAblationConfigurationError(
+                f"Local pgvector failed to start: {exc}"
+            ) from exc
     try:
         store.migrate()
     except LocalVectorStoreError as exc:
-        raise EvalAblationConfigurationError(_LOCAL_PGVECTOR_START_HINT) from exc
+        raise EvalAblationConfigurationError(
+            f"Local pgvector migrations failed: {exc}"
+        ) from exc
     try:
         with psycopg.connect(store.connection_url()) as conn:
             yield conn
     except Exception as exc:
-        raise EvalAblationConfigurationError(_LOCAL_PGVECTOR_START_HINT) from exc
+        raise EvalAblationConfigurationError(
+            f"Local pgvector connection failed: {exc}"
+        ) from exc
 
 
 class EvalRepositoryCache:

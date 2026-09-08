@@ -291,3 +291,234 @@ def test_postgres_module_never_chowns_the_password_file_or_volume() -> None:
     # the test process cannot drop privileges to prove the non-root path.
     source = (SRC_ROOT / "local_store" / "postgres.py").read_text(encoding="utf-8")
     assert "chown" not in source
+
+
+class _ComposeResult:
+    returncode: int
+    stdout: str
+    stderr: str
+
+    def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+class _StatefulRunner:
+    """Simulates docker compose for offline postgres.py tests."""
+
+    def __init__(self, *, running: bool = False) -> None:
+        self.running = running
+        self.calls: list[tuple[str, ...]] = []
+
+    def run(self, args: Sequence[str], *, timeout: float) -> _ComposeResult:
+        del timeout
+        argv = tuple(args)
+        self.calls.append(argv)
+        joined = " ".join(argv)
+        if " ps " in f" {joined} " and "--status" in argv and "running" in argv:
+            stdout = "cid\n" if self.running else ""
+            return _ComposeResult(returncode=0, stdout=stdout, stderr="")
+        return _ComposeResult()
+
+
+def test_second_process_health_reuses_remembered_port_without_start(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pr_reviewer.local_store.postgres import LOCAL_PGVECTOR_SECRET_NAME, LocalVectorStore
+
+    listening_ports: set[int] = set()
+
+    def _fake_port_in_use(host: str, port: int) -> bool:
+        return port in listening_ports
+
+    secrets = FileSecretStore(tmp_path / "secrets")
+    secrets.set(LOCAL_PGVECTOR_SECRET_NAME, "offline-test-password")
+    monkeypatch.setattr("pr_reviewer.local_store.postgres._port_in_use", _fake_port_in_use)
+    runner1 = _StatefulRunner()
+    store1 = LocalVectorStore(
+        secrets=secrets,
+        mode=_full_mode(),
+        work_directory=tmp_path,
+        command_runner=runner1,
+        port=55432,
+    )
+    monkeypatch.setattr(store1, "_can_connect", lambda: True)
+    store1.start()
+    listening_ports.add(55432)
+    assert (tmp_path / "pgvector-port").is_file()
+
+    runner2 = _StatefulRunner(running=True)
+    store2 = LocalVectorStore(
+        secrets=secrets,
+        mode=_full_mode(),
+        work_directory=tmp_path,
+        command_runner=runner2,
+    )
+    monkeypatch.setattr(store2, "_verify_store_at_port", lambda port: port == 55432)
+    monkeypatch.setattr(store2, "_can_connect", lambda: True)
+    status = store2.health()
+
+    assert status.healthy is True
+    assert status.bound_port == 55432
+    assert not any("up" in call for call in runner2.calls)
+
+
+
+def test_cold_start_writes_state_then_fresh_process_reuses_port(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pr_reviewer.local_store.postgres import LOCAL_PGVECTOR_SECRET_NAME, LocalVectorStore
+
+    state_path = tmp_path / "pgvector-port"
+    assert not state_path.exists()
+
+    listening_ports: set[int] = set()
+
+    def _fake_port_in_use(host: str, port: int) -> bool:
+        return port in listening_ports
+
+    secrets = FileSecretStore(tmp_path / "secrets")
+    secrets.set(LOCAL_PGVECTOR_SECRET_NAME, "offline-test-password")
+    monkeypatch.setattr("pr_reviewer.local_store.postgres._port_in_use", _fake_port_in_use)
+
+    runner1 = _StatefulRunner()
+    store1 = LocalVectorStore(
+        secrets=secrets,
+        mode=_full_mode(),
+        work_directory=tmp_path,
+        command_runner=runner1,
+        port=55432,
+    )
+    monkeypatch.setattr(store1, "_can_connect", lambda: True)
+    store1.start()
+    listening_ports.add(55432)
+
+    assert state_path.is_file()
+    assert "port=55432" in state_path.read_text(encoding="utf-8")
+
+    runner2 = _StatefulRunner(running=True)
+    store2 = LocalVectorStore(
+        secrets=secrets,
+        mode=_full_mode(),
+        work_directory=tmp_path,
+        command_runner=runner2,
+    )
+    monkeypatch.setattr(store2, "_verify_store_at_port", lambda port: port == 55432)
+    monkeypatch.setattr(store2, "_can_connect", lambda: True)
+    status = store2.health()
+
+    assert status.healthy is True
+    assert status.bound_port == 55432
+    assert not any("up" in call for call in runner2.calls)
+
+def test_stale_port_state_is_cleared_without_connecting_to_dead_port(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pr_reviewer.local_store.postgres import LocalVectorStore, _project_name
+
+    secrets = FileSecretStore(tmp_path / "secrets")
+    project = _project_name(tmp_path)
+    state_path = tmp_path / "pgvector-port"
+    state_path.write_text(f"project={project}\nport=58888\n", encoding="utf-8")
+
+    attempted_ports: list[int] = []
+
+    def _fake_port_in_use(host: str, port: int) -> bool:
+        return False
+
+    def _fake_connect(*args: object, **kwargs: object) -> object:
+        conninfo = (
+            str(kwargs["conninfo"])
+            if "conninfo" in kwargs
+            else str(args[0]) if args else ""
+        )
+        if ":58888/" in conninfo:
+            attempted_ports.append(58888)
+        raise AssertionError("unexpected connect")
+
+    monkeypatch.setattr("pr_reviewer.local_store.postgres._port_in_use", _fake_port_in_use)
+    monkeypatch.setattr("psycopg.connect", _fake_connect)
+
+    store = LocalVectorStore(
+        secrets=secrets,
+        mode=_full_mode(),
+        work_directory=tmp_path,
+        command_runner=_StatefulRunner(running=True),
+    )
+    status = store.health()
+
+    assert status.healthy is False
+    assert attempted_ports == []
+    assert not state_path.exists()
+
+
+def test_local_retrieval_connection_surfaces_three_distinguishable_failures(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pr_reviewer.local_store.postgres import LocalVectorStoreError
+    from pr_reviewer.runner.eval_ablation import (
+        EvalAblationConfigurationError,
+        local_retrieval_connection,
+    )
+
+    class _FakeStore:
+        def health(self) -> object:
+            return type("S", (), {"healthy": False})()
+
+        def start(self) -> None:
+            raise LocalVectorStoreError("port 127.0.0.1:55432 is already in use")
+
+        def migrate(self) -> None:
+            raise LocalVectorStoreError("no local pgvector migrations found")
+
+        def connection_url(self) -> str:
+            return "postgresql://u:p@127.0.0.1:55432/db"
+
+    class _HealthyStore(_FakeStore):
+        def health(self) -> object:
+            return type("S", (), {"healthy": True})()
+
+    monkeypatch.setattr(
+        "pr_reviewer.local_store.postgres.LocalVectorStore",
+        lambda **kwargs: _FakeStore(),
+    )
+    with (
+        pytest.raises(EvalAblationConfigurationError, match="failed to start") as start_exc,
+        local_retrieval_connection(),
+    ):
+        pass
+    assert isinstance(start_exc.value.__cause__, LocalVectorStoreError)
+
+    class _MigrateFailStore(_HealthyStore):
+        pass
+
+    monkeypatch.setattr(
+        "pr_reviewer.local_store.postgres.LocalVectorStore",
+        lambda **kwargs: _MigrateFailStore(),
+    )
+    with (
+        pytest.raises(EvalAblationConfigurationError, match="migrations failed") as migrate_exc,
+        local_retrieval_connection(),
+    ):
+        pass
+    assert isinstance(migrate_exc.value.__cause__, LocalVectorStoreError)
+
+    class _ConnectFailStore(_HealthyStore):
+        def migrate(self) -> None:
+            return None
+
+    monkeypatch.setattr(
+        "pr_reviewer.local_store.postgres.LocalVectorStore",
+        lambda **kwargs: _ConnectFailStore(),
+    )
+    monkeypatch.setattr(
+        "pr_reviewer.runner.eval_ablation.psycopg.connect",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("connection refused")),
+    )
+    with (
+        pytest.raises(EvalAblationConfigurationError, match="connection failed") as connect_exc,
+        local_retrieval_connection(),
+    ):
+        pass
+    assert isinstance(connect_exc.value.__cause__, OSError)

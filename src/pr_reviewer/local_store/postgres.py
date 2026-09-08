@@ -42,6 +42,8 @@ _MIGRATIONS_DIRECTORY = Path(__file__).with_name("postgres_migrations")
 _PASSWORD_DIR_NAME = "pgvector-password"
 _PASSWORD_FILE_NAME = "postgres_password"
 _PROBE_TABLE = "pr_reviewer_start_probe"
+_PORT_STATE_FILE = "pgvector-port"
+_OWNERSHIP_PROBE_ID = 2
 
 
 class LocalVectorStoreError(RuntimeError):
@@ -146,6 +148,12 @@ class LocalVectorStore:
                 f"select_runtime_mode granted {self._mode.granted_mode!r}"
             )
 
+        self._restore_port_from_state()
+        if self._compose_is_running() and self._port is not None and self._can_connect():
+            self._started = True
+            self._write_port_state(self._port)
+            return self._status(running=True, healthy=True)
+
         port = self._requested_port if self._requested_port is not None else _pick_free_port()
         if _port_in_use("127.0.0.1", port):
             raise LocalVectorStoreError(f"port 127.0.0.1:{port} is already in use")
@@ -169,7 +177,11 @@ class LocalVectorStore:
         self._started = True
         if not self._uses_injected_runner:
             self._wait_until_accepts_connections()
-        return self._status(running=True, healthy=not self._uses_injected_runner)
+            self._stamp_ownership()
+            self._write_port_state(self._port)
+            return self._status(running=True, healthy=True)
+        self._write_port_state(self._port)
+        return self._status(running=True, healthy=False)
 
     def migrate(self) -> None:
         sql_files = sorted(_MIGRATIONS_DIRECTORY.glob("*.sql"))
@@ -181,11 +193,8 @@ class LocalVectorStore:
                 conn.execute(path.read_text(encoding="utf-8"))
 
     def health(self) -> StoreStatus:
-        running = (
-            self._compose_is_running()
-            if self._started or not self._uses_injected_runner
-            else False
-        )
+        self._restore_port_from_state()
+        running = self._compose_is_running()
         healthy = running and self._can_connect()
         return self._status(running=running, healthy=healthy)
 
@@ -197,6 +206,8 @@ class LocalVectorStore:
         args = ["down"] if preserve_data else ["down", "-v", "--remove-orphans"]
         result = self._compose(args, timeout=60.0)
         self._remove_password_file()
+        self._clear_port_state()
+        self._port = None
         self._started = False
         if result.returncode != 0 and not self._uses_injected_runner:
             raise LocalVectorStoreError(
@@ -237,6 +248,98 @@ class LocalVectorStore:
             timeout=15.0,
         )
         return result.returncode == 0
+
+
+    def _port_state_path(self) -> Path:
+        return self._work_directory / _PORT_STATE_FILE
+
+    def _write_port_state(self, port: int) -> None:
+        self._work_directory.mkdir(parents=True, exist_ok=True)
+        self._port_state_path().write_text(
+            f"project={self._project}\nport={port}\n",
+            encoding="utf-8",
+        )
+
+    def _clear_port_state(self) -> None:
+        self._port_state_path().unlink(missing_ok=True)
+
+    def _restore_port_from_state(self) -> None:
+        if self._port is not None:
+            return
+        state_path = self._port_state_path()
+        if state_path.exists():
+            try:
+                values: dict[str, str] = {}
+                for line in state_path.read_text(encoding="utf-8").splitlines():
+                    if "=" in line:
+                        key, value = line.split("=", 1)
+                        values[key.strip()] = value.strip()
+                if values.get("project") != self._project:
+                    self._clear_port_state()
+                    return
+                port = int(values["port"])
+            except (KeyError, ValueError, OSError):
+                self._clear_port_state()
+                return
+            if not _port_in_use("127.0.0.1", port):
+                self._clear_port_state()
+                return
+            if not self._verify_store_at_port(port):
+                self._clear_port_state()
+                return
+            self._port = port
+            return
+        if self._compose_is_running():
+            recovered = self._recover_port_from_compose()
+            if recovered is not None and self._verify_store_at_port(recovered):
+                self._port = recovered
+                self._write_port_state(recovered)
+
+    def _recover_port_from_compose(self) -> int | None:
+        result = self._compose(["port", "-q", "pgvector", "5432"], timeout=15.0)
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        line = result.stdout.strip().splitlines()[-1]
+        if ":" not in line:
+            return None
+        try:
+            return int(line.rsplit(":", 1)[-1])
+        except ValueError:
+            return None
+
+    def _verify_store_at_port(self, port: int) -> bool:
+        password = self._secrets.get(LOCAL_PGVECTOR_SECRET_NAME)
+        if password is None:
+            return False
+        try:
+            with psycopg.connect(
+                f"postgresql://{_PG_USER}:{password}@127.0.0.1:{port}/{_PG_DATABASE}",
+                connect_timeout=1,
+            ) as conn:
+                row = conn.execute(
+                    f"select value from {_PROBE_TABLE} where id = %s",
+                    (_OWNERSHIP_PROBE_ID,),
+                ).fetchone()
+                if row is None:
+                    return self._compose_is_running()
+                return str(row[0]) == self._project
+        except Exception:
+            return False
+
+    def _stamp_ownership(self) -> None:
+        if self._port is None:
+            return
+        with psycopg.connect(self._connection_url(), connect_timeout=1) as conn:
+            conn.execute(
+                f"create table if not exists {_PROBE_TABLE} "
+                "(id integer primary key, value text not null)"
+            )
+            conn.execute(
+                f"insert into {_PROBE_TABLE} (id, value) values (%s, %s) "
+                "on conflict (id) do update set value = excluded.value",
+                (_OWNERSHIP_PROBE_ID, self._project),
+            )
+            conn.commit()
 
     def _write_password_file(self, password: str) -> None:
         path = self.password_file_path
