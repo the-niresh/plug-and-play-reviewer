@@ -45,7 +45,7 @@ export default async function SettingsPage() {
     <main className="mx-auto w-full max-w-3xl px-6 py-14">
       <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
       <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-        Only GitHub can grant or remove repository permission for this App.
+        Only GitHub can add or remove repository access for this App.
       </p>
 
       <Card className="mt-8">
