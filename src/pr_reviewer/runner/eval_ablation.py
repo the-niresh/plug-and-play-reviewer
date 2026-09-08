@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import os
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
+
+import psycopg
 
 from pr_reviewer.context_budget import context_budget_for_model
 from pr_reviewer.contracts.review_context import ReviewContextItem
@@ -63,6 +66,54 @@ def resolve_eval_embedder(
             "OPENAI_API_KEY is required for embedding-backed ablation."
         )
     return OpenAIEmbeddingProvider(api_key=api_key, ledger=active_ledger), False
+
+
+
+_LOCAL_PGVECTOR_START_HINT = (
+    "Local pgvector is not running. Start it with: "
+    "docker compose -f docker-compose.runner.yml up -d"
+)
+
+
+@contextmanager
+def local_retrieval_connection() -> Iterator[psycopg.Connection[Any]]:
+    """Open the runner local pgvector store, migrating it if needed."""
+    from pr_reviewer.local_store.postgres import LocalVectorStore, LocalVectorStoreError
+    from pr_reviewer.runner.modes import ModeDecision
+    from pr_reviewer.runner.secrets import FileSecretStore, default_config_dir
+
+    config_dir = default_config_dir()
+    config_dir.mkdir(parents=True, exist_ok=True)
+    secrets = FileSecretStore(config_dir)
+    store = LocalVectorStore(
+        secrets=secrets,
+        mode=ModeDecision(
+            requested_mode="full",
+            granted_mode="full",
+            retrieval_available=True,
+            verification_available=True,
+            forces_human_approval=False,
+            downgraded=False,
+            disabled_features=(),
+            probe_failures=(),
+        ),
+        work_directory=config_dir,
+    )
+    status = store.health()
+    if not status.healthy:
+        try:
+            store.start()
+        except LocalVectorStoreError as exc:
+            raise EvalAblationConfigurationError(_LOCAL_PGVECTOR_START_HINT) from exc
+    try:
+        store.migrate()
+    except LocalVectorStoreError as exc:
+        raise EvalAblationConfigurationError(_LOCAL_PGVECTOR_START_HINT) from exc
+    try:
+        with psycopg.connect(store.connection_url()) as conn:
+            yield conn
+    except Exception as exc:
+        raise EvalAblationConfigurationError(_LOCAL_PGVECTOR_START_HINT) from exc
 
 
 class EvalRepositoryCache:

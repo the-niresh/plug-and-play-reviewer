@@ -20,6 +20,7 @@ from pr_reviewer.retrieval.chunk_code import ChunkingStrategy, CodeChunk, chunk_
 from pr_reviewer.retrieval.embed import (
     V1_EMBEDDING_DIMENSIONS,
     EmbeddingProvider,
+    assert_local_retrieval_store,
     assert_v1_embedding_contract,
     embed_texts,
 )
@@ -47,6 +48,7 @@ def index_repository(
     generated_paths: Set[str] | None = None,
     ignored_paths: Set[str] | None = None,
 ) -> IndexGeneration:
+    assert_local_retrieval_store(conn)
     assert_v1_embedding_contract(conn)
     chunks = chunk_tree(
         root,

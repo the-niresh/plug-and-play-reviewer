@@ -10,10 +10,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import TextIO
 
-import psycopg
-
 from pr_reviewer.agent_surfaces.backend import resolve_model_provider
-from pr_reviewer.config import get_settings
 from pr_reviewer.evals.run_eval import (
     format_retrieval_ablation,
     load_public_eval_cases,
@@ -28,6 +25,7 @@ from pr_reviewer.runner.eval_ablation import (
     build_eval_ablation_reviewers,
     estimate_ablation_cost_usd,
     format_ablation_cost_summary,
+    local_retrieval_connection,
     resolve_eval_embedder,
 )
 
@@ -118,8 +116,7 @@ def main(
             print("Cancelled.", file=err)
             return 2
 
-    settings = get_settings()
-    with psycopg.connect(settings.database_url) as conn:
+    with local_retrieval_connection() as conn:
         deps = EvalAblationDependencies(
             model=model,
             model_name=model_name,

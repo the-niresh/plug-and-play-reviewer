@@ -317,6 +317,10 @@ class LocalVectorStore:
             time.sleep(0.5)
         raise LocalVectorStoreError("local pgvector did not accept connections in time")
 
+    def connection_url(self) -> str:
+        """Return a psycopg URL after start(). The password stays in memory only."""
+        return self._connection_url()
+
     def _connection_url(self) -> str:
         password = self._secrets.get(LOCAL_PGVECTOR_SECRET_NAME)
         if password is None or self._port is None:

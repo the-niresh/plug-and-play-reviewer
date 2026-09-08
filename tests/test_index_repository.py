@@ -127,6 +127,27 @@ def test_retrieval_tables_do_not_exist_on_the_hosted_schema() -> None:
     assert present == []
 
 
+def test_index_repository_refuses_the_hosted_control_plane_connection(
+    tmp_path: Path,
+) -> None:
+    from pr_reviewer.retrieval.embed import HostedRetrievalIndexError
+    from pr_reviewer.retrieval.index_repository import index_repository
+
+    (tmp_path / "a.py").write_text("def alpha():\n    return 1\n", encoding="utf-8")
+    with (
+        hosted_connection() as conn,
+        pytest.raises(HostedRetrievalIndexError, match="hosted control plane"),
+    ):
+        index_repository(
+            conn,
+            root=tmp_path,
+            installation_id=1,
+            repository_id=2,
+            commit_sha="a" * 40,
+            embedder=FakeEmbedder(),
+        )
+
+
 def test_schema_and_startup_check_enforce_the_v1_1536_contract(
     retrieval_conn: psycopg.Connection[dict[str, object]],
 ) -> None:

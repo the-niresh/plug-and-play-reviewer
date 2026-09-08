@@ -47,6 +47,11 @@ def embedding_cost_usd_for(token_count: int, model_name: str) -> Decimal:
     return (Decimal(token_count) / million) * price
 
 _VECTOR_TYPE = f"vector({V1_EMBEDDING_DIMENSIONS})"
+_HOSTED_CONTROL_PLANE_TABLES = ("review_jobs", "github_deliveries")
+
+
+class HostedRetrievalIndexError(RuntimeError):
+    """Raised when indexing is attempted against the hosted control plane."""
 
 
 class EmbeddingContractError(RuntimeError):
@@ -62,6 +67,27 @@ class EmbeddingProvider(Protocol):
     dimensions: int
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]: ...
+
+
+
+
+def assert_local_retrieval_store(conn: Connection[Any]) -> None:
+    """Refuse to write retrieval indexes into the hosted control plane database."""
+    row = conn.execute(
+        """
+        select 1
+        from information_schema.tables
+        where table_schema = 'public'
+          and table_name = any(%s)
+        limit 1
+        """,
+        (list(_HOSTED_CONTROL_PLANE_TABLES),),
+    ).fetchone()
+    if row is not None:
+        raise HostedRetrievalIndexError(
+            "the retrieval index may never live on the hosted control plane; "
+            "connect to the local runner pgvector store instead"
+        )
 
 
 def assert_v1_embedding_contract(conn: Connection[Any]) -> None:
