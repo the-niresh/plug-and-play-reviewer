@@ -44,12 +44,18 @@ from pr_reviewer.github.post_review import (
     submit_review_to_github,
 )
 from pr_reviewer.github.pull_request import PullRequestSnapshot
+from pr_reviewer.local_store.repo_config import default_repo_config_path
 from pr_reviewer.local_store.sqlite import LocalStore
 from pr_reviewer.models.anthropic_provider import AnthropicProvider
 from pr_reviewer.models.catalogue import default_model_for
 from pr_reviewer.reviewer.diff_budget import pack_diff
 from pr_reviewer.reviewer.hunk_format import render_hunks
 from pr_reviewer.reviewer.review_pull_request import review_pull_request
+from pr_reviewer.reviewer.specialists import (
+    BuiltinSpecialistReviewers,
+    apply_enabled_specialists,
+    get_enabled_specialists,
+)
 from pr_reviewer.runner.client import RunnerClient
 from pr_reviewer.runner.daemon import ReviewExecutor, RunnerDaemon, open_or_recover_local_store
 from pr_reviewer.runner.github_access import fetch_job_snapshot
@@ -316,14 +322,28 @@ class DiffOnlyRunnerReviewExecutor:
             snapshot = fetch_job_snapshot(job, token)
             model_name = default_model_for(_DEFAULT_REVIEW_MODEL_PROVIDER)
             packed = pack_diff(snapshot, context_budget_for_model(model_name), _count_tokens)
+            model = AnthropicProvider(model_key)
             outcome = review_pull_request(
                 snapshot,
                 packed,
                 [],
-                AnthropicProvider(model_key),
+                model,
                 model_name=model_name,
                 heartbeat=lambda: self._heartbeat(job),
             )
+            config_path = default_repo_config_path()
+            if get_enabled_specialists(config_path, job.repository_id):
+                tracker = BuiltinSpecialistReviewers(model, model_name)
+                outcome = apply_enabled_specialists(
+                    outcome,
+                    snapshot,
+                    packed,
+                    [],
+                    config_path=config_path,
+                    github_repository_id=job.repository_id,
+                    reviewers=tracker.reviewers,
+                    cost_tracker=tracker,
+                )
             if outcome.cancelled:
                 return _failed_ack(job=job, started=started, error_class="cancelled")
             self._post_review_outcome(

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from pathlib import Path
 from typing import Protocol
 
 from pr_reviewer.agent_surfaces.core import (
@@ -33,6 +34,7 @@ from pr_reviewer.context_budget import context_budget_for_model
 from pr_reviewer.contracts.github import PullRequestRef
 from pr_reviewer.contracts.review_context import ContextBudget, PackedDiff, ReviewContextItem
 from pr_reviewer.github.pull_request import PullRequestSnapshot, fetch_pull_request
+from pr_reviewer.local_store.repo_config import default_repo_config_path
 from pr_reviewer.models.anthropic_provider import AnthropicProvider
 from pr_reviewer.models.catalogue import default_model_for, is_known_provider_model
 from pr_reviewer.models.openai_provider import OpenAIProvider
@@ -41,6 +43,11 @@ from pr_reviewer.models.providers import ProviderName
 from pr_reviewer.retrieval.executor import IndexedRetrievalExecutor
 from pr_reviewer.reviewer.diff_budget import pack_diff
 from pr_reviewer.reviewer.review_pull_request import review_pull_request
+from pr_reviewer.reviewer.specialists import (
+    BuiltinSpecialistReviewers,
+    apply_enabled_specialists,
+    get_enabled_specialists,
+)
 
 GITHUB_TOKEN_ENV = "PR_REVIEWER_GITHUB_TOKEN"
 ANTHROPIC_KEY_ENV = "ANTHROPIC_API_KEY"
@@ -111,11 +118,17 @@ class NullRetrievalExecutor:
 class LiveAgentReviewBackend:
     """Fetches one real PR and runs the reviewer with locally retrieved context."""
 
-    def __init__(self, *, retrieval: RetrievalExecutor | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        retrieval: RetrievalExecutor | None = None,
+        repo_config_path: Path | None = None,
+    ) -> None:
         self._reviews: dict[str, SurfaceReview] = {}
         self._retrieval: RetrievalExecutor = (
             retrieval if retrieval is not None else IndexedRetrievalExecutor()
         )
+        self._repo_config_path = repo_config_path
 
     def github_connection_state(self) -> GitHubConnectionState:
         if not os.environ.get(GITHUB_TOKEN_ENV):
@@ -157,6 +170,22 @@ class LiveAgentReviewBackend:
         context = self._retrieval.retrieve(snapshot, packed, budget)
 
         outcome = review_pull_request(snapshot, packed, context, model, model_name=model_name)
+        repo_id = (
+            snapshot.identity.repository_id if snapshot.identity is not None else None
+        )
+        config_path = self._repo_config_path or default_repo_config_path()
+        if repo_id is not None and get_enabled_specialists(config_path, repo_id):
+            tracker = BuiltinSpecialistReviewers(model, model_name)
+            outcome = apply_enabled_specialists(
+                outcome,
+                snapshot,
+                packed,
+                context,
+                config_path=config_path,
+                github_repository_id=repo_id,
+                reviewers=tracker.reviewers,
+                cost_tracker=tracker,
+            )
 
         findings = tuple(
             SurfaceFinding(
