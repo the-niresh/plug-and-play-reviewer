@@ -16,6 +16,44 @@ class _Hunk:
     lines: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class PatchHunk:
+    new_start: int
+    new_end: int
+    text: str
+
+
+def split_patch_hunks(patch: str) -> tuple[PatchHunk, ...]:
+    hunks: list[PatchHunk] = []
+    header_line = ""
+    new_start = 1
+    new_count = 1
+    body: list[str] = []
+    in_hunk = False
+    for line in patch.splitlines():
+        header = _HUNK_HEADER.match(line)
+        if header is not None:
+            if in_hunk:
+                hunks.append(_patch_hunk(new_start, new_count, header_line, body))
+            new_start = int(header.group(3))
+            new_count = int(header.group(4) or "1")
+            header_line = line
+            body = []
+            in_hunk = True
+            continue
+        if in_hunk:
+            body.append(line)
+    if in_hunk:
+        hunks.append(_patch_hunk(new_start, new_count, header_line, body))
+    return tuple(hunks)
+
+
+def _patch_hunk(new_start: int, new_count: int, header_line: str, body: list[str]) -> PatchHunk:
+    new_end = new_start + max(new_count, 1) - 1
+    text = "\n".join([header_line, *body])
+    return PatchHunk(new_start=new_start, new_end=new_end, text=text)
+
+
 def render_hunks(file_patch: FilePatch) -> str:
     new_header = f"NEW {file_patch.path}"
     old_header = f"OLD {file_patch.previous_path or file_patch.path}"

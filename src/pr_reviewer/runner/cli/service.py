@@ -50,7 +50,8 @@ from pr_reviewer.models.anthropic_provider import AnthropicProvider
 from pr_reviewer.models.catalogue import default_model_for
 from pr_reviewer.reviewer.diff_budget import pack_diff
 from pr_reviewer.reviewer.hunk_format import render_hunks
-from pr_reviewer.reviewer.review_pull_request import review_pull_request
+from pr_reviewer.reviewer.incremental import incremental_review_pull_request
+from pr_reviewer.reviewer.review_cache import LocalReviewCache
 from pr_reviewer.reviewer.specialists import (
     BuiltinSpecialistReviewers,
     apply_enabled_specialists,
@@ -323,12 +324,14 @@ class DiffOnlyRunnerReviewExecutor:
             model_name = default_model_for(_DEFAULT_REVIEW_MODEL_PROVIDER)
             packed = pack_diff(snapshot, context_budget_for_model(model_name), _count_tokens)
             model = AnthropicProvider(model_key)
-            outcome = review_pull_request(
+            store = open_or_recover_local_store(default_config_dir() / _LOCAL_STATE_DB_NAME)
+            outcome = incremental_review_pull_request(
                 snapshot,
-                packed,
-                [],
                 model,
                 model_name=model_name,
+                cache=LocalReviewCache(store),
+                installation_id=job.installation_id,
+                repository_id=job.repository_id,
                 heartbeat=lambda: self._heartbeat(job),
             )
             config_path = default_repo_config_path()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -29,7 +29,11 @@ from pr_reviewer.prompts.diff_only import DIFF_ONLY_PROMPT
 from pr_reviewer.reliability.budget import BudgetLimit, CostEstimate, require_within_budget
 from pr_reviewer.reviewer.diff_budget import omission_prompt_section
 from pr_reviewer.reviewer.reflect import reflect_findings
-from pr_reviewer.security.prompt_boundaries import UntrustedText, wrap_untrusted_review_inputs
+from pr_reviewer.security.prompt_boundaries import (
+    UntrustedText,
+    wrap_untrusted,
+    wrap_untrusted_review_inputs,
+)
 
 MAX_FINDING_DRAFTS = 32
 MAX_OUTPUT_TOKENS = 2048
@@ -62,6 +66,7 @@ def review_pull_request(
     model_name: str,
     heartbeat: Callable[[], LeaseState] | None = None,
     budget: BudgetLimit | None = None,
+    prior_findings: Sequence[UntrustedText] = (),
 ) -> ReviewOutcome:
     if heartbeat is not None:
         lease = heartbeat()
@@ -85,12 +90,13 @@ def review_pull_request(
         review_comments=(),
         retrieved_chunks=tuple(UntrustedText(item.content) for item in context),
     )
+    prior_sections = [wrap_untrusted("prior_finding", item) for item in prior_findings]
     prompt_content = (
         DIFF_ONLY_PROMPT.content
         + "\n"
         + omission_prompt_section(packed)
         + "\n\n"
-        + "\n\n".join(sections)
+        + "\n\n".join((*sections, *prior_sections))
     )
     response = _complete_generate(
         model, prompt_content, model_name=model_name, budget=budget

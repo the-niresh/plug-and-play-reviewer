@@ -164,7 +164,7 @@ def test_redelivered_webhook_does_not_post_a_second_comment(
     monkeypatch.setattr(service, "fetch_job_snapshot", lambda _job, _token: snapshot)
     monkeypatch.setattr(
         service,
-        "review_pull_request",
+        "incremental_review_pull_request",
         lambda *_args, **_kwargs: ReviewOutcome(
             candidates=(
                 FindingCandidate(
