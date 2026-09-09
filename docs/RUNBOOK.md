@@ -27,6 +27,19 @@ The hosted schema still must not hold source, diffs, or model keys. Finding
 titles and rationale may sit on Neon so the dashboard can show them. See
 [DATA_BOUNDARIES.md](DATA_BOUNDARIES.md).
 
+## Operator feedback command
+
+Captured replies can be inspected from an operator shell:
+
+```bash
+reviewer feedback candidates
+reviewer feedback candidates --json
+```
+
+This is a read-only report. It turns public review-comment replies into
+human-reviewable improvement candidates. It does not edit prompts, eval labels,
+model choice, routing, or policy.
+
 ## What still needs the owner
 
 - Point the GitHub App homepage, callback, and webhook at

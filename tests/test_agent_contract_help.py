@@ -15,6 +15,7 @@ def test_reviewer_help_lists_agent_commands_outputs_and_exit_codes(
     captured = capsys.readouterr()
     assert captured.err == ""
     assert "reviewer review owner/repo#pr --json" in captured.out
+    assert "reviewer feedback candidates [--json]" in captured.out
     assert "reviewer mcp" in captured.out
     assert "JSON result statuses: ok, refused, error" in captured.out
     assert "exit codes:" in captured.out

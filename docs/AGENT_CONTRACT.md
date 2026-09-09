@@ -15,6 +15,15 @@ The agent-facing review surfaces are:
 
 The terminal UI starts with `reviewer` when stdin is a terminal. It is for humans, not for agent automation.
 
+Operator-only feedback inspection uses:
+
+- `reviewer feedback candidates`
+- `reviewer feedback candidates --json`
+
+This command reads captured GitHub review-comment replies from the hosted
+database and prints human-reviewable improvement candidates. It is read-only. It
+does not rewrite prompts, eval labels, model choice, routing, or policy.
+
 ## Exit Codes
 
 `reviewer review` uses distinct exit codes:

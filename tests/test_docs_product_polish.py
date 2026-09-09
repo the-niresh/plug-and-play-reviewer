@@ -17,6 +17,7 @@ SECURITY = ROOT / "docs" / "SECURITY.md"
 ARCHITECTURE = ROOT / "docs" / "ARCHITECTURE.md"
 DEMO = ROOT / "docs" / "DEMO.md"
 BOUNDARIES = ROOT / "docs" / "DATA_BOUNDARIES.md"
+AGENT_CONTRACT = ROOT / "docs" / "AGENT_CONTRACT.md"
 
 PUBLIC_DOCS = (
     README,
@@ -165,3 +166,14 @@ def test_release_doc_describes_checksum_install_path() -> None:
     assert "install-from-release.sh" in release
     assert "install-from-release.sh" in install
     assert "release.md" in install
+
+
+def test_operator_feedback_command_is_documented_as_read_only() -> None:
+    blob = "\n".join(_text(path) for path in (RUNBOOK, AGENT_CONTRACT)).lower()
+    assert "reviewer feedback candidates" in blob
+    assert "--json" in blob
+    assert "read-only" in blob
+    assert "human-reviewable improvement candidates" in blob
+    assert "does not rewrite prompts" in blob or "does not edit prompts" in blob
+    assert "model choice" in blob
+    assert "eval labels" in blob
