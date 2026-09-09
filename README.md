@@ -33,7 +33,7 @@ There are no prices in this repository.
   `/ready` today.
 - A GitHub App pointed at that origin if you want live pull request events
 
-One-click Render or Railway still needs your own secrets and database. A
+One-click Render or Railway still needs your own secrets and database.
 Install the runner with [docs/INSTALL.md](docs/INSTALL.md) (`scripts/install-reviewer.sh`). A GitHub Release checksum asset is not published yet.
 
 Start here: [Install](docs/INSTALL.md). Then [Deploy](docs/DEPLOY.md) if you
@@ -62,8 +62,7 @@ a result.
   documented in [docs/INSTALL.md](docs/INSTALL.md).
 - A new Render or Railway URL was not created. That needs the owner's
   account, Neon `DATABASE_URL`, and GitHub App secrets.
-- A first live comment on a real pull request still needs the App URLs, a
-  paired runner, a model key, and a human approve.
+- Live GitHub loop proof is recorded in [docs/reports/live-github-loop-proof.md](docs/reports/live-github-loop-proof.md).
 
 The reviewer does not learn from human replies yet.
 

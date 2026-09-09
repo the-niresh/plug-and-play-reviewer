@@ -24,6 +24,9 @@ run:
 curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
 ```
 
+If that `curl` command returns **404**, the install script is not on GitHub `main`
+yet. Use the manual `uv tool install` command below until `origin/main` is updated.
+
 Or, from a git checkout:
 
 ```sh
@@ -74,7 +77,7 @@ hosted control-plane deploy, not for installing the `reviewer` runner command.
 ## Setup
 
 ```sh
-reviewer setup --hosted-origin https://control.example.test
+reviewer setup --hosted-origin https://reviewer.niresh.tech
 ```
 
 `--hosted-origin` is the public control-plane site. Hidden input collects the model key. Slack secrets, if used, are also hidden. The command rejects secret-bearing flags.

@@ -208,3 +208,9 @@ def test_install_docs_list_reviewer_install_command() -> None:
     assert "curl -fsSL" in text
     assert "reviewer --help" in text
 
+def test_install_docs_note_curl_404_fallback() -> None:
+    text = (REPO / "docs" / "INSTALL.md").read_text(encoding="utf-8")
+    assert "404" in text
+    assert "uv tool install" in text
+    assert "reviewer.niresh.tech" in text
+
