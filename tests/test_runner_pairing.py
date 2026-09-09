@@ -345,6 +345,11 @@ def test_exchange_refuses_a_repository_already_assigned_to_another_runner(
 
     installation_id = 5008
     insert_installation(installation_id)
+    with connection() as conn, conn.transaction():
+        conn.execute(
+            "update installations set access_tier = %s where id = %s",
+            ("team", installation_id),
+        )
     access = make_verified_installation_access(42, installation_id, {778900: "widgets"})
 
     first_challenge = create_pairing_code("laptop-one", sha256_hex("v1"))

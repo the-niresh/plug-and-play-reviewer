@@ -199,6 +199,11 @@ def test_unassigned_runner_sees_no_job_even_when_one_exists(
     assigned_repo = 81002
     other_repo = 81003
     insert_installation(installation_id)
+    with connection() as conn, conn.transaction():
+        conn.execute(
+            "update installations set access_tier = %s where id = %s",
+            ("team", installation_id),
+        )
     assigned = pair_runner_assigned_to_repo(
         installation_id, assigned_repo, make_verified_installation_access, "assigned"
     )

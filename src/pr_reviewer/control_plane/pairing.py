@@ -27,6 +27,10 @@ from pr_reviewer.contracts.runner import (
     RunnerCredential,
     VerifiedInstallationAccess,
 )
+from pr_reviewer.control_plane.access_policy import (
+    free_tier_pairing_denial,
+    free_tier_repository_uuids_denial,
+)
 from pr_reviewer.control_plane.repository_policy import (
     assign_repository_to_runner,
     hash_runner_credential,
@@ -161,6 +165,15 @@ def approve_pairing_by_hash(
             if github_repository_id not in access.repositories:
                 return PairingDenied(reason="repository_not_in_installation")
 
+        denial = free_tier_pairing_denial(
+            conn,
+            installation_id=access.installation_id,
+            github_user_id=access.github_user_id,
+            github_repository_ids=repository_ids,
+        )
+        if denial is not None:
+            return PairingDenied(reason=denial)
+
         repository_uuids = [
             _upsert_repository(
                 conn,
@@ -219,6 +232,15 @@ def exchange_pairing_code(
                 ).fetchone()
                 if pairing_row is None:
                     return PairingDenied(reason="invalid_or_expired_code")
+
+                denial = free_tier_repository_uuids_denial(
+                    conn,
+                    installation_id=int(pairing_row["installation_id"]),
+                    github_user_id=int(pairing_row["github_user_id"]),
+                    repository_uuids=pairing_row["repository_ids"] or [],
+                )
+                if denial is not None:
+                    return PairingDenied(reason=denial)
 
                 credential = secrets.token_urlsafe(32)
                 runner_id = register_runner(

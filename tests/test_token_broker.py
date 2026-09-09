@@ -202,6 +202,11 @@ def test_wrong_runner_cannot_mint_a_token_for_someone_elses_job(
     owner_repo = 92101
     intruder_repo = 92102
     insert_installation(installation_id)
+    with connection() as conn, conn.transaction():
+        conn.execute(
+            "update installations set access_tier = %s where id = %s",
+            ("team", installation_id),
+        )
     owner = pair_runner_assigned_to_repo(
         installation_id, owner_repo, make_verified_installation_access, "owner"
     )
@@ -233,6 +238,11 @@ def test_runner_no_longer_assigned_to_the_repository_is_denied_a_token(
     installation_id = 9202
     github_repository_id = 92201
     insert_installation(installation_id)
+    with connection() as conn, conn.transaction():
+        conn.execute(
+            "update installations set access_tier = %s where id = %s",
+            ("team", installation_id),
+        )
     original = pair_runner_assigned_to_repo(
         installation_id, github_repository_id, make_verified_installation_access, "original"
     )

@@ -4,6 +4,7 @@ import uuid
 from decimal import Decimal
 from typing import Literal
 
+from pr_reviewer.control_plane.access_policy import free_tier_enqueue_allowed
 from pr_reviewer.db.client import connection
 
 EnqueueReviewJobResult = Literal["enqueued", "duplicate", "ignored"]
@@ -61,6 +62,13 @@ def enqueue_review_job(
                 (delivery_id,),
             )
             return "enqueued"
+
+        if not free_tier_enqueue_allowed(
+            conn,
+            installation_id=installation_id,
+            github_repository_id=github_repository_id,
+        ):
+            return "ignored"
 
         conn.execute(
             """

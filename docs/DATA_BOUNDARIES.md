@@ -48,6 +48,7 @@ must stay that way -- see Exemptions below.
 | `finding_context_sources` | `reference` | A pointer into a context source (e.g. a chunk id or graph node id), an identifier, never the chunk's own text or the diff itself. |
 | `github_deliveries` | `event_name` | GitHub webhook event name, a fixed enum (e.g. pull_request). |
 | `github_deliveries` | `id` | GitHub's own delivery id: an opaque identifier, not content. |
+| `installations` | `access_tier` | Product tier enum ('free' or 'team') set by the control plane only, never derived from repository or review content. |
 | `installations` | `account_login` | GitHub account or org login: a public identifier GitHub itself shows on every page of the installation, not review content. |
 | `model_calls` | `model_name` | Model name from our own configured model list (e.g. gpt-5-mini), an identifier, not review content. |
 | `model_calls` | `provider` | Fixed enum ('openai', 'anthropic'), an identifier for which model API served the call, not review content. |

@@ -2,8 +2,9 @@
 
 docs/DATA_BOUNDARIES.md is the human-readable half of this contract; this module is the enforced
 half. assert_no_private_columns reads the live hosted schema, never a hand-maintained table list,
-and fails loudly if any column could hold source, a diff, a finding, rationale, a sandbox log, or
-an embedding. It is meant to run at process startup and in CI, not on a request path.
+and fails loudly if any column could hold source, a diff, evidence, a sandbox log, an embedding,
+or a model key. Finding title and rationale are allowlisted hosted text on review_findings, not
+an exemption. It is meant to run at process startup and in CI, not on a request path.
 
 Detection is scoped by column TYPE, not by name. A handful of scalar types (uuid, timestamptz,
 integer, bigint, boolean, numeric) can never hold free text, so they are auto-permitted. Every
@@ -59,6 +60,10 @@ ALLOWLIST: dict[tuple[str, str], str] = {
     ("installations", "account_login"): (
         "GitHub account or org login: a public identifier GitHub itself shows on every page of "
         "the installation, not review content."
+    ),
+    ("installations", "access_tier"): (
+        "Product tier enum ('free' or 'team') set by the control plane only, never derived from "
+        "repository or review content."
     ),
     ("oauth_states", "state_hash"): (
         "A one-way hash of the OAuth state value. The state itself is never stored, so this "
