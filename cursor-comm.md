@@ -1673,4 +1673,18 @@ red proof: prior curl returned 404 before push; after push curl HTTP 200 and ins
 gate numbers: n/a (live proof only)
 what I did: Re-ran clean install from public curl one-liner in fresh temp HOME/bin. Built from git 40a9f85. reviewer --help and reviewer doctor --yes passed. Updated docs/reports/clean-machine-install-proof.md to PASS.
 blockers: None for install proof. Next: real user install + live PR review from public install only.
+## 2026-09-10T01:35:54+05:30 | public-install-live-review-proof | pass with fix
+status: DONE
+commit sha: 96eb40b fix: read model key from secret store in agent backend
+red proof: public install at 40a9f85 failed review_jobs with TypeError resolve_model_provider() takes 0 positional arguments but 1 was given
+gate numbers: test_model_key_storage 6 passed; package boundaries + hosted boundary passed
+what I did: Proved live loop from fresh uv-tool reviewer install after 96eb40b. PR #9, job 37329c7a succeeded, GitHub review 5159297169 comment 3972527103. Documented curl blocker until 96eb40b on origin/main.
+blockers: Owner must push 96eb40b to origin/main before public curl one-liner passes live review.
+## 2026-09-10T01:40:49+05:30 | launch-readiness-audit | report
+status: DONE
+commit sha: pending
+red proof: n/a (audit only)
+gate numbers: hygiene+install+free_tier+context_cache+docs_polish+pairing+boundary tests pass; review_comment_feedback 6 failed on shared postgres during audit run
+what I did: Audited 12 launch areas against live proofs, live health checks, and targeted tests. Wrote docs/reports/launch-readiness-audit.md with PASS/PARTIAL/BLOCKED verdicts and next task list.
+blockers: Public launch blocked on quality baseline, unpushed docs, release asset, marketing metadata; beta ready for owner-operated path.
 
