@@ -1,6 +1,6 @@
 """Local signed-webhook to human-decision path.
 
-Hosted health is live. A first comment still needs the owner.
+Hosted health is live. A live GitHub loop proof is recorded in docs/DEMO.md.
 """
 
 from __future__ import annotations
@@ -209,11 +209,17 @@ def test_local_webhook_to_human_decision_path(
     assert len(github.submissions) == 1
 
 
-def test_demo_says_hosted_health_is_live_and_a_comment_needs_the_owner() -> None:
+def test_demo_documents_live_github_loop_proof() -> None:
     text = (REPO / "docs" / "DEMO.md").read_text(encoding="utf-8")
+    lowered = text.lower()
     assert "DNS A record" not in text
     assert "https://reviewer.niresh.tech/api/github/webhook" in text
     assert "GET https://reviewer.niresh.tech/health" in text
     assert "GET https://reviewer.niresh.tech/ready" in text
-    assert "A first live comment on a real pull request still" in text
-    assert "needs the owner" in text
+    assert "live-github-loop-proof.md" in text
+    assert "yeahscene-ai/pull/8" in lowered
+    assert "5158722711" in text
+    assert "review_comment_feedback" in lowered
+    assert "not a published baseline" in lowered or "not a baseline" in lowered
+    assert "self-improving" not in lowered
+    assert "render" in lowered and "railway" in lowered

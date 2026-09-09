@@ -114,3 +114,12 @@ def test_public_docs_do_not_claim_self_improving() -> None:
     for path in PUBLIC_DOCS:
         lowered = _text(path).lower()
         assert "self-improving" not in lowered, path.name
+
+
+def test_demo_records_live_github_proof_without_eval_baseline() -> None:
+    text = _text(DEMO)
+    lowered = text.lower()
+    assert "live-github-loop-proof.md" in text
+    assert "review_comment_feedback" in lowered
+    assert "not a baseline" in lowered or "not a published baseline" in lowered
+    assert "self-improving" not in lowered
