@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Atkinson_Hyperlegible, IBM_Plex_Mono, Newsreader } from "next/font/google";
 
 import "./globals.css";
+import { ClientRuntime } from "@/components/ClientRuntime";
 import { siteOrigin } from "@/lib/site";
 
 const landingSans = Atkinson_Hyperlegible({
@@ -46,7 +47,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       className={`${landingSans.variable} ${landingDisplay.variable} ${landingMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <ClientRuntime />
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,3 +1,5 @@
+import { cookieHeaderHasSignIn } from "@/lib/session";
+
 /** Shared shapes and fetch for the hosted control plane's /api/reviews surface. Every
  *  /dashboard/* page reads through fetchReviews so "not signed in", "could not load", and
  *  "loaded, and there is nothing here yet" stay three distinct, honest outcomes everywhere
@@ -202,6 +204,9 @@ export type FetchReviewResult =
  *  reshaped into an empty result: an empty dashboard and a broken one must never look
  *  the same. */
 export async function fetchReviews(cookieHeader: string): Promise<FetchReviewsResult> {
+  if (!cookieHeaderHasSignIn(cookieHeader)) {
+    return { kind: "unauthenticated" };
+  }
   let response: Response;
   try {
     response = await fetch(`${CONTROL_PLANE_ORIGIN}/api/reviews`, {
@@ -228,6 +233,9 @@ export async function fetchReview(
   cookieHeader: string,
   reviewJobId: string,
 ): Promise<FetchReviewResult> {
+  if (!cookieHeaderHasSignIn(cookieHeader)) {
+    return { kind: "unauthenticated" };
+  }
   let response: Response;
   try {
     response = await fetch(

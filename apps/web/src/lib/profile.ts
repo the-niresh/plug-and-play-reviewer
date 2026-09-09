@@ -1,4 +1,5 @@
 import { CONTROL_PLANE_ORIGIN } from "@/lib/reviews";
+import { cookieHeaderHasSignIn } from "@/lib/session";
 
 export type Profile = {
   github_user_id: number;
@@ -13,6 +14,9 @@ export type FetchProfileResult =
 /** Backs /dashboard/profile. Same three-outcome shape as fetchReviews: signed-out and
  *  broken must never render the same way. */
 export async function fetchProfile(cookieHeader: string): Promise<FetchProfileResult> {
+  if (!cookieHeaderHasSignIn(cookieHeader)) {
+    return { kind: "unauthenticated" };
+  }
   let response: Response;
   try {
     response = await fetch(`${CONTROL_PLANE_ORIGIN}/api/profile`, {

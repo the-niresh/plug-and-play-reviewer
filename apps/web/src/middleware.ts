@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { SIGN_IN_COOKIE_NAME } from "@/lib/session";
+
 // A signed-in visitor landing on "/" gets bounced straight to the dashboard: showing the
 // sign-in button again "as if nothing happened" (see apps/web/src/app/page.tsx) is exactly
 // the confusion task 4 rules out. Matches the OAuth callback's own destination
@@ -10,10 +12,8 @@ import { NextResponse, type NextRequest } from "next/server";
 // real, cryptographic check /dashboard's own server component already runs via
 // fetchReviews/fetchProfile: an expired or tampered cookie just falls through to that
 // page's own sign-in prompt instead of ever granting anything here.
-const SIGN_IN_COOKIE = "gh_live_sign_in";
-
 export function middleware(request: NextRequest) {
-  if (request.cookies.has(SIGN_IN_COOKIE)) {
+  if (request.cookies.has(SIGN_IN_COOKIE_NAME)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
   return NextResponse.next();

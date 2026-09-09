@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .next/
+.next-dev/
 coverage/
 playwright-report/
 test-results/
@@ -30,3 +31,4 @@ TODO.md
 CODEX-START.md
 .cursor/
 GOALS.md
+.gstack/
