@@ -1,6 +1,6 @@
 # Live GitHub loop proof
 
-Date: 2026-09-09 (UTC)
+Date: 2026-09-09 / 2026-09-10 (UTC)
 Hosted origin: https://reviewer.niresh.tech
 Test PR: https://github.com/the-niresh/YeahScene-AI/pull/8
 Repository: the-niresh/YeahScene-AI (github_repository_id 931464048)
@@ -8,9 +8,15 @@ Installation: 158479604 (the-niresh)
 
 ## Verdict
 
-**Partial proof.** Webhook, enqueue, runner claim, and local review completed under budget.
-GitHub review posting and human reply feedback capture are **blocked** on an owner GitHub App
-installation step. Three code bugs that prevented a fair live run were fixed in this repo.
+**Live GitHub smoke-test: PASS.** Full loop verified on the live hosted plane:
+
+PR webhook -> job enqueue -> runner claim -> review -> human gate -> GitHub review comment ->
+human reply -> `review_comment_feedback` row.
+
+Budget for the first model call on this PR: **USD 0.000309** (well under the USD 0.05 cap).
+Successful re-run heads used the local review cache (USD 0 incremental).
+
+Commit with code fixes: `a20c026` (`fix: unblock live runner claim post and review model`).
 
 ## GitHub App preflight
 
@@ -18,88 +24,54 @@ installation step. Three code bugs that prevented a fair live run were fixed in 
 |---|---|---|
 | Homepage | https://reviewer.niresh.tech | https://reviewer.niresh.tech |
 | OAuth callback | https://reviewer.niresh.tech/api/auth/github/callback | Live sign-in redirect_uri matches |
-| Webhook URL | https://reviewer.niresh.tech/api/github/webhook | Matches app hook config |
-| Webhook secret | Matches hosted GITHUB_WEBHOOK_SECRET | Deliveries accepted (202/200) |
-| Permissions (app manifest) | metadata read, contents read, pull_requests write | App manifest has write |
-| Events (app manifest) | pull_request, pull_request_review_comment | App lists both |
-| Installation permissions | pull_requests write effective | **read only on installation** |
-| Installation events | both PR events | **pull_request only on installation** |
+| Webhook URL | https://reviewer.niresh.tech/api/github/webhook | Deliveries accepted |
+| Permissions (installation) | pull_requests write | **write** (after owner approval) |
+| Events (installation) | pull_request, pull_request_review_comment | **both subscribed** |
+| Runner credential | claim succeeds on hosted | 200, not 401 |
 
-## Loop evidence
+## Successful loop run (2026-09-09T19:10Z)
 
-### 1. Webhook delivery observed
+Head SHA: `ca5bea07fb590d54f204de09cafb2891c0aa687b`
+Job: `ad096d75-679d-4916-9e24-14dc0b1e9541`
+Runner: `1f901404-5c8c-4614-a9a8-263908698e1d`
 
-- `f66878c0-ac7c-11f1-8a79-5b14025a9599` pull_request opened (2026-09-09T18:33:35Z)
-- `7d72c8c0-ac7d-11f1-9de8-ec146846efc5` pull_request synchronize (2026-09-09T18:37:24Z)
+| Step | Evidence |
+|---|---|
+| 1. Webhook | `github_deliveries` `114eaa10-ac82-11f1-90bc-3afaab9480bb` event `pull_request` |
+| 2. Enqueue | `review_jobs` row `ad096d75-679d-4916-9e24-14dc0b1e9541` status **succeeded** |
+| 3. Runner claim | `locked_by` runner `1f901404-5c8c-4614-a9a8-263908698e1d` |
+| 4. Review | Finding: Division by zero potential on `lib/live_loop_proof.ts` (cache carry-forward) |
+| 5. Human gate | Non-security finding routed with `allow_public_post=True` |
+| 6. GitHub post | Review id **5158722711**, inline comment **3972082930** by `pr-reviewer-niresh[bot]` |
+| 7. Reply feedback | Human reply comment **3972088937**; webhook `3a534e20-ac82-11f1-9e72-44e72ea18866`; `review_comment_feedback` classification **wrong** for finding `ad096d75-679d-4916-9e24-14dc0b1e9541:1` |
+| 8. Cost | First review head `26f3a804...`: USD **0.000309**; pass head used cache (USD 0) |
 
-Both rows in `github_deliveries`.
+Live PR: https://github.com/the-niresh/YeahScene-AI/pull/8#discussion_r3972082937
 
-### 2. Review job enqueued
+## Bugs found and fixed (before pass)
 
-- First job `3e064158-685c-4718-ae9d-39985805c784` was wrongly marked succeeded in ~2s (see bugs).
-- Second job `02f88384-c5d5-41be-8c1d-b24b8767bd05` for head `26f3a80434007d423ee93fdc4a3d8cbeaf5cdda9`.
+1. **Hosted worker stole runner jobs.** Worker now claims only jobs missing PR identity.
+2. **Runner hard-coded Anthropic with an OpenAI key.** Uses `resolve_model_provider` + repo_config.
+3. **Post reused read-only job token.** Added `/api/runner/jobs/{id}/post-token` with `pull_requests: write`.
 
-### 3. Runner claimed the job
+## Operational notes from re-run
 
-Job `02f88384-c5d5-41be-8c1d-b24b8767bd05` locked_by runner `1f901404-5c8c-4614-a9a8-263908698e1d`.
+- Stale long-lived `reviewer start` process did not call `post-token`; restarting the runner was required after deploy.
+- Installation `pull_requests: write` had to be approved at https://github.com/settings/installations/158479604 before post-token mint returned 201.
 
-### 4. Review completed (local runner)
+## Earlier partial attempts (same PR)
 
-Finding cached locally:
-
-- Title: Division by zero potential
-- File: lib/live_loop_proof.ts line 9
-- Concern: correctness, severity high
-
-### 5. Human gate path
-
-Daemon routing (`runner/cli/service.py:_findings_with_route_decisions`) set `allow_public_post=True`
-and `verified=True` for this correctness finding (non-security). Post was attempted; gate did not
-block. Security findings would remain `allow_public_post=False`.
-
-### 6. GitHub review comment posted
-
-**Not achieved.** Post failed with `HTTPStatusError` (GitHub 403: Resource not accessible by
-integration). Root cause: installation grants only `pull_requests: read`. Minting a write token
-returns HTTP 422 from GitHub.
-
-### 7. Human reply feedback capture
-
-**Not achieved.** Depends on a posted review comment and `pull_request_review_comment` webhook.
-
-### 8. Exact API cost
-
-From `review_cache_heads` for this PR head:
-
-- **USD 0.00030869999999999997** (~0.031 cents), well under the $0.05 budget.
-
-Model: gpt-4o-mini via OpenAI key (repo_config for repository 931464048).
-
-## Bugs found and fixed (this session)
-
-1. **Hosted worker stole runner jobs.** `claim_review_job` claimed full PR jobs and the worker stub
-   marked them succeeded without running a review. Fixed: worker only claims jobs missing PR identity.
-2. **Runner used Anthropic hard-coded with an OpenAI key.** Fixed: `resolve_model_provider` +
-   per-repo `repo_config` model choice (gpt-4o-mini).
-3. **Post step reused read-only job token.** Fixed: new `/api/runner/jobs/{id}/post-token` mints
-   `pull_requests: write` for `submit_review_to_github` only.
-
-## Owner steps to finish the loop
-
-1. Open https://github.com/settings/installations/158479604
-2. Approve the pending permission upgrade so the installation grants **Pull requests: Read and write**
-   (GitHub API currently returns 422 when requesting write).
-3. Confirm the installation subscribes to **Pull request review comments** (app manifest already does;
-   installation events currently list only `pull_request`).
-4. Redeploy hosted api/worker images with this commit (worker claim fix + post-token route).
-5. Re-run: push an empty commit on PR #8 (or open a fresh PR), ensure local `reviewer start` is
-   running, approve/post if needed, reply to the bot comment, confirm `review_comment_feedback`.
+| Head | Job | Result |
+|---|---|---|
+| `26f3a804...` | `02f88384-...` | Review OK; post failed (installation read-only) |
+| `a2c20a2...` | `bc0e5c2b-...` | Review OK (cache); post failed (read-only + stale runner) |
+| `9600f12...` | `55f5b17c-...` | Failed `HTTPStatusError` (stale runner, no post-token) |
 
 ## Re-run checklist
 
 ```bash
-docker stop pr-reviewer-worker-1   # until redeployed with worker fix
 cd plug-and-play-reviewer && set -a && source .env && set +a
 uv run reviewer start --host 127.0.0.1 --port 8765
-# push to PR branch, watch review_jobs and GitHub PR reviews
+# push to PR branch; confirm review_jobs succeeded and GitHub review appears
+# reply to bot inline comment; confirm review_comment_feedback row
 ```
