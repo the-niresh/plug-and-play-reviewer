@@ -103,3 +103,61 @@ def test_fence_breaking_suggestion_is_dropped() -> None:
     assert "```suggestion" not in body
     assert "Return value changed" in body
     assert result.suggestion_dropped_count == 1
+
+
+REVIEWER_UAT_PATCH = (
+    "@@ -0,0 +1,10 @@\n"
+    "+def risky():\n"
+    "+    value = 0\n"
+    "+    return 1 / value\n"
+    "+    return None\n"
+    "+    return 0\n"
+    "+    return 1\n"
+    "+    return 2\n"
+    "+    return 3\n"
+    "+    return 4\n"
+    "+    return 5\n"
+    "+    return 6\n"
+)
+
+
+def test_uat_shape_wide_span_single_line_suggestion_is_dropped() -> None:
+    """Stranger UAT: finding span +1..+10 but suggested_fix replaces one line only."""
+    from pr_reviewer.contracts.review_context import FilePatch
+
+    github = FakeGitHub()
+    finding = _finding(
+        file_path="reviewer_uat_bug.py",
+        line_start=1,
+        line_end=10,
+        title="Division by zero in risky()",
+        suggested_fix="    return 1 / value if value else None",
+    )
+    patch = FilePatch(path="reviewer_uat_bug.py", patch=REVIEWER_UAT_PATCH, previous_path=None)
+    result = _post(github, [(finding, _decision())], patches=[patch])
+    comment = github.submissions[0].comments[0]
+    assert comment.line == 1
+    assert comment.start_line is None
+    assert "```suggestion" not in comment.body
+    assert "Division by zero" in comment.body
+    assert result.suggestion_dropped_count == 1
+
+
+def test_multi_line_suggestion_must_match_span_exactly() -> None:
+    from pr_reviewer.contracts.review_context import FilePatch
+
+    github = FakeGitHub()
+    finding = _finding(
+        file_path="reviewer_uat_bug.py",
+        line_start=1,
+        line_end=3,
+        title="Guard the divide",
+        suggested_fix="def risky():\n    value = 0\n    return 1 / value if value else None",
+    )
+    patch = FilePatch(path="reviewer_uat_bug.py", patch=REVIEWER_UAT_PATCH, previous_path=None)
+    _post(github, [(finding, _decision())], patches=[patch])
+    comment = github.submissions[0].comments[0]
+    assert comment.start_line == 1
+    assert comment.line == 3
+    assert "```suggestion" in comment.body
+    assert "return 1 / value if value else None" in comment.body

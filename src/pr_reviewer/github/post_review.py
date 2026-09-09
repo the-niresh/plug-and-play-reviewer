@@ -264,6 +264,11 @@ def _suggestion_applies_cleanly(finding: Finding, numbers: set[int]) -> bool:
         return False
     if not text.strip() or "```" in text:
         return False
+    span = finding.line_end - finding.line_start + 1
+    replacement = text.rstrip("\n")
+    replacement_line_count = len(replacement.splitlines()) if replacement else 0
+    if replacement_line_count != span:
+        return False
     return all(line in numbers for line in range(finding.line_start, finding.line_end + 1))
 
 
