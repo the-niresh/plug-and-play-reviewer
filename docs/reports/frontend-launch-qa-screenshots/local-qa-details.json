@@ -1,0 +1,21 @@
+{
+  "overlap": [],
+  "focused": [
+    "a:/:PR Reviewer",
+    "a:#how-a-review-moves:Skip to how a review moves",
+    "a:/:PR Reviewer",
+    "a:/docs:Docs",
+    "a:/scorecard:Scorecard",
+    "a:/dashboard:Dashboard",
+    "a:https://render.com/deploy?repo=https://github.com/the-niresh/plug-and-play-reviewer:Deploy on Render",
+    "a:/api/auth/github/sign-in?return_to=/dashboard:Sign in with GitHub",
+    "a:#how-a-review-moves:See how a review moves",
+    "a:/scorecard:Open the scorecard",
+    "nextjs-portal:",
+    "body:PR ReviewerSkip to how a review movesPR ",
+    "a:/:PR Reviewer",
+    "a:#how-a-review-moves:Skip to how a review moves",
+    "a:/:PR Reviewer"
+  ],
+  "scorecardNumeric": false
+}
