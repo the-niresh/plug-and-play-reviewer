@@ -79,7 +79,9 @@ def test_live_agent_backend_uses_the_requested_model_and_its_budget(monkeypatch:
     monkeypatch.setattr(backend, "pack_diff", fake_pack_diff)
     monkeypatch.setattr(backend, "review_pull_request", fake_review_pull_request)
 
-    review = backend.LiveAgentReviewBackend().start_review(
+    review = backend.LiveAgentReviewBackend(
+        retrieval=backend.NullRetrievalExecutor()
+    ).start_review(
         AgentReviewRequest(
             owner="acme",
             repository="widgets",

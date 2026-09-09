@@ -14,7 +14,6 @@ from typing import Any, cast
 import psycopg
 
 from pr_reviewer.context_budget import context_budget_for_model
-from pr_reviewer.contracts.review_context import ReviewContextItem
 from pr_reviewer.evals.eval_snapshot import snapshot_from_eval_case
 from pr_reviewer.evals.types import EvalCase, EvalReviewResult, ReviewerCallable
 from pr_reviewer.models.provider import ModelProvider
@@ -27,7 +26,7 @@ from pr_reviewer.retrieval.embed import (
     embedding_cost_usd_for,
     estimate_embedding_tokens,
 )
-from pr_reviewer.retrieval.hybrid_search import RetrievalQuery, RetrievedChunk, retrieve_context
+from pr_reviewer.retrieval.executor import retrieve_indexed_context
 from pr_reviewer.retrieval.index_repository import index_repository
 from pr_reviewer.retrieval.openai_embeddings import OpenAIEmbeddingProvider
 from pr_reviewer.reviewer.diff_budget import pack_diff
@@ -123,7 +122,7 @@ class EvalRepositoryCache:
     def __init__(self, root: Path) -> None:
         self._root = root
         self._root.mkdir(parents=True, exist_ok=True)
-        self._indexed: set[tuple[str, str]] = set()
+        self._indexed: set[tuple[str, str, int, int]] = set()
 
     def ensure_checkout(self, repository: str, sha: str) -> Path:
         slug = repository.replace("/", "__")
@@ -145,15 +144,20 @@ class EvalRepositoryCache:
         sha: str,
         checkout: Path,
         embedder: EmbeddingProvider,
+        installation_id: int = EVAL_INSTALLATION_ID,
+        repository_id: int | None = None,
     ) -> None:
-        key = (repository, sha)
+        resolved_repository_id = (
+            repository_id if repository_id is not None else EVAL_REPOSITORY_IDS[repository]
+        )
+        key = (repository, sha, installation_id, resolved_repository_id)
         if key in self._indexed:
             return
         index_repository(
             conn,
             root=checkout,
-            installation_id=EVAL_INSTALLATION_ID,
-            repository_id=EVAL_REPOSITORY_IDS[repository],
+            installation_id=installation_id,
+            repository_id=resolved_repository_id,
             commit_sha=sha,
             embedder=embedder,
         )
@@ -169,20 +173,6 @@ class EvalAblationDependencies:
     embedder: EmbeddingProvider | None = None
     embedding_ledger: EmbeddingCostLedger = field(default_factory=EmbeddingCostLedger)
     offline_embeddings: bool = False
-
-
-def context_items_from_chunks(chunks: Sequence[RetrievedChunk]) -> list[ReviewContextItem]:
-    return [
-        ReviewContextItem(
-            source_kind="diff_file",
-            file_path=chunk.file_path,
-            line_start=chunk.line_start,
-            line_end=chunk.line_end,
-            content=chunk.content,
-            content_hash=chunk.content_hash,
-        )
-        for chunk in chunks
-    ]
 
 
 def review_eval_case(
@@ -201,22 +191,16 @@ def review_eval_case(
             checkout=checkout,
             embedder=embedder,
         )
-        query = RetrievalQuery(
+        context = retrieve_indexed_context(
+            packed=packed,
+            conn=deps.conn,
+            embedder=embedder,
             installation_id=EVAL_INSTALLATION_ID,
             repository_id=EVAL_REPOSITORY_IDS[case.repository],
             commit_sha=case.sha,
-            text="\n".join(item.content for item in packed.items),
-        )
-        chunks = retrieve_context(
-            query,
-            deps.conn,
-            embedder,
-            packed=packed,
             budget=budget,
             count_tokens=_count_tokens,
-            enabled=True,
         )
-        context = context_items_from_chunks(chunks)
     else:
         context = []
     outcome = review_pull_request(

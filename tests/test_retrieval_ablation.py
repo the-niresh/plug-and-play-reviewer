@@ -174,7 +174,7 @@ def test_eval_ablation_arms_forward_different_context_lengths(
             latency_ms=1,
         )
 
-    monkeypatch.setattr("pr_reviewer.runner.eval_ablation.retrieve_context", fake_retrieve)
+    monkeypatch.setattr("pr_reviewer.retrieval.hybrid_search.retrieve_context", fake_retrieve)
     monkeypatch.setattr("pr_reviewer.runner.eval_ablation.review_pull_request", spy_review)
     monkeypatch.setattr(
         EvalRepositoryCache,

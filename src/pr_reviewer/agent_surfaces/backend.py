@@ -1,4 +1,4 @@
-"""The one concrete AgentReviewBackend: a live, synchronous, diff-only review.
+"""The one concrete AgentReviewBackend: a live, synchronous review with local retrieval.
 
 Every agent surface (cli_json, mcp_server, a2a, acp) is driven by an AgentReviewBackend Protocol
 (core.py), so any of them can be tested against a fake. This module is the real implementation
@@ -9,7 +9,7 @@ It never touches the hosted database or control plane, and it never imports pr_r
 operator package): it only ever calls GitHub with a token the caller already holds
 (PR_REVIEWER_GITHUB_TOKEN) and the user's own model provider key (ANTHROPIC_API_KEY or
 OPENAI_API_KEY), matching the product's hard rule that source, diffs and keys never cross to the
-hosted plane. It reuses the same diff packer and diff-only reviewer the rest of the runner uses
+hosted plane. It reuses the same diff packer and reviewer the rest of the runner uses
 (reviewer.diff_budget.pack_diff, reviewer.review_pull_request.review_pull_request) rather than
 building a second review pipeline.
 """
@@ -31,13 +31,14 @@ from pr_reviewer.agent_surfaces.core import (
 )
 from pr_reviewer.context_budget import context_budget_for_model
 from pr_reviewer.contracts.github import PullRequestRef
-from pr_reviewer.contracts.review_context import PackedDiff, ReviewContextItem
+from pr_reviewer.contracts.review_context import ContextBudget, PackedDiff, ReviewContextItem
 from pr_reviewer.github.pull_request import PullRequestSnapshot, fetch_pull_request
 from pr_reviewer.models.anthropic_provider import AnthropicProvider
 from pr_reviewer.models.catalogue import default_model_for, is_known_provider_model
 from pr_reviewer.models.openai_provider import OpenAIProvider
 from pr_reviewer.models.provider import ModelProvider
 from pr_reviewer.models.providers import ProviderName
+from pr_reviewer.retrieval.executor import IndexedRetrievalExecutor
 from pr_reviewer.reviewer.diff_budget import pack_diff
 from pr_reviewer.reviewer.review_pull_request import review_pull_request
 
@@ -83,33 +84,37 @@ def _count_tokens(text: str) -> int:
 class RetrievalExecutor(Protocol):
     """Turns a fetched PR into repository context the diff alone does not show.
 
-    A real executor runs retrieve_context (retrieval/hybrid_search.py) against a
-    prebuilt index and converts the RetrievedChunk results into ReviewContextItem,
-    the same shape review_pull_request already wraps as untrusted input. There is
-    no wired index yet, so NullRetrievalExecutor is the default: it fails open to
-    a diff-only review instead of failing the request.
+    The default executor is IndexedRetrievalExecutor: checkout, index into the local
+    pgvector store, then retrieve_context with enabled=True. NullRetrievalExecutor is
+    kept so tests can opt into a diff-only review.
     """
 
     def retrieve(
-        self, snapshot: PullRequestSnapshot, packed: PackedDiff
+        self,
+        snapshot: PullRequestSnapshot,
+        packed: PackedDiff,
+        budget: ContextBudget | None = None,
     ) -> list[ReviewContextItem]: ...
 
 
 class NullRetrievalExecutor:
     def retrieve(
-        self, snapshot: PullRequestSnapshot, packed: PackedDiff
+        self,
+        snapshot: PullRequestSnapshot,
+        packed: PackedDiff,
+        budget: ContextBudget | None = None,
     ) -> list[ReviewContextItem]:
-        del snapshot, packed
+        del snapshot, packed, budget
         return []
 
 
 class LiveAgentReviewBackend:
-    """Fetches one real PR diff over the network and runs the diff-only reviewer against it."""
+    """Fetches one real PR and runs the reviewer with locally retrieved context."""
 
     def __init__(self, *, retrieval: RetrievalExecutor | None = None) -> None:
         self._reviews: dict[str, SurfaceReview] = {}
         self._retrieval: RetrievalExecutor = (
-            retrieval if retrieval is not None else NullRetrievalExecutor()
+            retrieval if retrieval is not None else IndexedRetrievalExecutor()
         )
 
     def github_connection_state(self) -> GitHubConnectionState:
@@ -149,7 +154,7 @@ class LiveAgentReviewBackend:
 
         budget = context_budget_for_model(model_name)
         packed = pack_diff(snapshot, budget, _count_tokens)
-        context = self._retrieval.retrieve(snapshot, packed)
+        context = self._retrieval.retrieve(snapshot, packed, budget)
 
         outcome = review_pull_request(snapshot, packed, context, model, model_name=model_name)
 
