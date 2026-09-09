@@ -2,66 +2,91 @@
 
 Date: 2026-09-10
 Scope: Public frontend before any announcement (v0.1.0 is a **proof release**, not public launch)
-Hosted origin checked: https://reviewer.niresh.tech
-Local preview: `main` branch via `next dev` and Playwright on http://127.0.0.1:3000
+Hosted origin: https://reviewer.niresh.tech
+Repo commit deployed to UI: `7f55471`
 
 ## Executive verdict
 
 | Surface | Verdict | Notes |
 |---|---|---|
-| **Production (`reviewer.niresh.tech`)** | **BLOCKED** | Deploy is behind `main`. Metadata routes 404, scorecard still refuses, landing copy stale |
-| **Local preview (`main`)** | **PASS** | Routes, copy, scorecard numbers, metadata, keyboard nav, mobile layout all good |
+| **Production (`reviewer.niresh.tech`)** | **PASS** (re-checked 2026-09-10 after UI redeploy) | All launch QA blockers cleared |
+| **Local preview (`main`)** | **PASS** | Matches production after redeploy |
 | **Automated tests / typecheck** | **PASS** | 59 pytest + Playwright metadata test + `tsc --noEmit` |
 
-**No frontend code fixes were required.** The blocker is redeploying the web app so production matches `main` (through at least `428d0f4`).
+## Production redeploy (2026-09-10)
 
-## Route checks
+**Root cause:** Traefik still routed UI traffic to stale `pr-reviewer-ui-1` (4 days old,
+project `pr-reviewer`) while API had already moved to `plug-and-play-reviewer-api-1`.
 
-| Route | Live HTTP | Live QA | Local QA | Screenshot |
-|---|---|---|---|---|
-| `/` landing | 200 | **BLOCKED** stale copy | PASS | [live](frontend-launch-qa-screenshots/live/desktop-landing.png) · [local](frontend-launch-qa-screenshots/desktop-landing.png) |
-| `/` mobile | 200 | **BLOCKED** stale copy | PASS (no overlap) | [live](frontend-launch-qa-screenshots/live/mobile-landing.png) · [local](frontend-launch-qa-screenshots/mobile-landing.png) |
-| `/docs` | 200 | PASS | PASS | [live](frontend-launch-qa-screenshots/live/desktop-docs.png) · [local](frontend-launch-qa-screenshots/desktop-docs.png) |
-| `/docs/agents` | 200 | PASS | PASS | [live](frontend-launch-qa-screenshots/live/desktop-docs-agents.png) · [local](frontend-launch-qa-screenshots/desktop-docs-agents.png) |
-| `/scorecard` | 200 | **BLOCKED** refusal strings | PASS numeric baseline | [live](frontend-launch-qa-screenshots/live/desktop-scorecard.png) · [local](frontend-launch-qa-screenshots/desktop-scorecard.png) |
-| `/connect` | 200 | PASS (install CTA present) | PASS | [live](frontend-launch-qa-screenshots/live/desktop-connect.png) · [local](frontend-launch-qa-screenshots/desktop-connect.png) |
-| `/dashboard` auth | 200 | **BLOCKED** sign-in only (expected without OAuth) | PASS sign-in gate | [live](frontend-launch-qa-screenshots/live/desktop-dashboard.png) · [local](frontend-launch-qa-screenshots/desktop-dashboard.png) |
-| `/opengraph-image` | **404** | **BLOCKED** | PASS 200 | n/a (live 404) |
-| `/sitemap.xml` | **404** | **BLOCKED** | PASS 200 | [live status](frontend-launch-qa-screenshots/live/metadata-status.json) |
-| `/robots.txt` | **404** | **BLOCKED** | PASS 200 | same |
+**Action taken on host `76.13.243.12`:**
 
-## Copy and claims audit (local `main`)
+```sh
+docker stop pr-reviewer-ui-1 && docker rm pr-reviewer-ui-1
+cd /root/claude/projects/plug-and-play-reviewer
+docker compose -f compose.release.yml -f docker-compose.hosted.yml build ui
+docker compose -f compose.release.yml -f docker-compose.hosted.yml up -d ui
+```
+
+New container: `plug-and-play-reviewer-ui-1` (image built from `7f55471`).
+
+No application code changes. No scorecard number changes.
+
+## Production re-check (post-redeploy)
+
+| Check | Result | Evidence |
+|---|---|---|
+| `/opengraph-image` | PASS 200 | [metadata-status.json](frontend-launch-qa-screenshots/live-post-redeploy/metadata-status.json) |
+| `/sitemap.xml` | PASS 200 | same |
+| `/robots.txt` | PASS 200 | same |
+| `/scorecard` shows gpt-4o-mini + 7 Zod holdout | PASS | curl grep on live HTML |
+| Landing: free tier, team, no self-improvement, baseline | PASS | curl grep on live HTML |
+| `/dashboard` sign-in gate when logged out | PASS | "Sign in with GitHub" in HTML |
+| `/connect` repository picker | PASS | "Choose repositories on GitHub" |
+
+Post-redeploy screenshots: [live-post-redeploy/](frontend-launch-qa-screenshots/live-post-redeploy/)
+
+```sh
+curl -fsSL -o /dev/null -w "og:%{http_code} sitemap:%{http_code} robots:%{http_code}\n" \
+  https://reviewer.niresh.tech/opengraph-image \
+  https://reviewer.niresh.tech/sitemap.xml \
+  https://reviewer.niresh.tech/robots.txt
+# og:200 sitemap:200 robots:200
+```
+
+## Route checks (initial QA, pre-redeploy)
+
+The first QA pass on 2026-09-10 found production **BLOCKED** because the UI container
+was stale. Evidence kept under [live/](frontend-launch-qa-screenshots/live/) for comparison.
+
+| Route | Pre-redeploy | Post-redeploy |
+|---|---|---|
+| Metadata routes | 404 | 200 |
+| Scorecard | refusal strings | numeric baseline |
+| Landing copy | stale | updated sections live |
+| Docs / connect | PASS | PASS |
+
+Local preview screenshots: [frontend-launch-qa-screenshots/](frontend-launch-qa-screenshots/)
+
+## Copy and claims audit (production, post-redeploy)
 
 | Check | Result |
 |---|---|
 | No stale "install/release/proof missing" copy | PASS |
-| Holdout baseline honest (7 Zod cases only) | PASS on landing + scorecard sample line |
+| Holdout baseline honest (7 Zod cases only) | PASS on landing + scorecard |
 | No unsupported self-improvement claim | PASS ("does not learn from human replies yet") |
-| Team vs free-tier wording clear | PASS (one GitHub user, one repo; team path described) |
-| v0.1.0 framed as proof release | PASS in repo docs; live landing not yet updated |
-
-Live landing is missing sections present on `main` (for example "What the evals show", "What teams can change", holdout honesty block). Live scorecard still shows `holdout is empty; refusing to report`.
+| Team vs free-tier wording clear | PASS |
+| v0.1.0 framed as proof release | PASS in repo docs |
 
 ## Auth / connect flow (no secrets)
 
 | Step | Result |
 |---|---|
-| Sign-in link on landing | PASS live + local (`/api/auth/github/sign-in?return_to=/dashboard`) |
-| Full GitHub OAuth completion | **BLOCKED** (needs human GitHub login; not run) |
-| `/connect` repository picker CTA | PASS live (GitHub App install link renders) |
-| Dashboard without session | PASS (sign-in prompt; no data leak in HTML) |
+| Sign-in link on landing | PASS |
+| Full GitHub OAuth completion | **BLOCKED** for automated QA (needs human login; see owner-browser-uat) |
+| `/connect` repository picker CTA | PASS |
+| Dashboard without session | PASS (sign-in prompt only) |
 
-## Keyboard navigation
-
-Local tab order reaches skip link, site nav (Docs, Scorecard, Dashboard), deploy link, and sign-in. See [keyboard-tab-order-local.json](frontend-launch-qa-screenshots/keyboard-tab-order-local.json).
-
-Live tab order on current deploy only cycles sign-in and body ([keyboard-tab-order-live.json](frontend-launch-qa-screenshots/keyboard-tab-order-live.json)). This matches the older landing without full nav focus targets.
-
-## Mobile layout
-
-Playwright overlap scan at 390px width on local landing: **0 overlapping text nodes**. Screenshots at 390px for landing and scorecard captured.
-
-## Tests run
+## Tests run (initial QA)
 
 ```text
 uv run pytest -q tests/test_site_metadata.py tests/test_docs_product_polish.py \
@@ -70,43 +95,25 @@ uv run pytest -q tests/test_site_metadata.py tests/test_docs_product_polish.py \
   tests/test_web_agent_surfaces_docs.py tests/test_web_dashboard.py
 # 59 passed
 
-cd apps/web && bunx tsc --noEmit -p tsconfig.json
-# exit 0
-
 cd apps/web && bunx playwright test tests/launch-qa-screenshots.spec.ts
-# 3 passed (desktop routes, mobile, metadata routes on local dev)
+# 3 passed
 ```
 
-Constraints honored: no evals, no ablate, no scorecard number changes, no backend edits.
+Constraints honored: no evals, no ablate, no scorecard number changes, no backend code edits.
 
 ## Fixes and commits
 
-| Fix | Commit |
+| Fix | Commit / action |
 |---|---|
-| None (production redeploy required) | n/a |
+| Frontend launch QA report + screenshots | `7f55471` |
+| Production UI redeploy | Docker on host (no git commit) |
+| Production re-check report update | this commit |
 
-This QA commit adds the report, screenshots, and a Playwright spec for local regression.
-
-## Owner action to clear production BLOCKED items
-
-Redeploy the web app on `reviewer.niresh.tech` from current `main` so production includes:
-
-- `sitemap.ts`, `robots.ts`, `opengraph-image.tsx`
-- Updated landing copy (holdout honesty, free tier, no self-improvement)
-- Published `docs/reports/scorecard.json` on `/scorecard`
-
-After redeploy, re-check:
-
-```sh
-curl -fsSL -o /dev/null -w "og:%{http_code}\n" https://reviewer.niresh.tech/opengraph-image
-curl -fsSL https://reviewer.niresh.tech/sitemap.xml | head
-curl -fsSL https://reviewer.niresh.tech/scorecard | grep -E "gpt-4o-mini|7 holdout"
-```
-
-## Remaining launch blockers (unchanged)
+## Remaining launch blockers
 
 1. ~~Published release install~~ verified in `428d0f4`
-2. Stranger-only install + browser pairing (no owner DB shortcuts)
-3. Optional OG card validator (after redeploy makes `/opengraph-image` live)
-4. Feedback-to-eval loop (optional product story)
-5. **Production web redeploy** (new from this QA)
+2. ~~Production web redeploy~~ done 2026-09-10
+3. **Owner browser UAT** - login, dashboard, GitHub pairing, runner flow from real site
+4. Stranger-only install + browser pairing (no owner DB shortcuts)
+5. Optional OG card validator (route now live; external validator not run here)
+6. Feedback-to-eval loop (optional product story)
