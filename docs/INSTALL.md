@@ -3,7 +3,7 @@
 ## What you need before you start
 
 - A machine you control. The runner reads source and diffs there.
-- Python 3.12 and [uv](https://docs.astral.sh/uv/) if you run from this repo.
+- [uv](https://docs.astral.sh/uv/) to install the `reviewer` command.
 - Docker if you want full mode with sandbox checks.
 - A model key. Enter it during `reviewer setup`. It stays on this machine.
 - A hosted origin to pair with. `https://reviewer.niresh.tech` answers
@@ -15,48 +15,61 @@ The installer never asks for hosted-plane credentials. Model keys are read with
 hidden input and stored in the OS secret store, or in `~/.config/pr-reviewer`
 mode `0600` when that store is missing.
 
-## Install a versioned release
+## Install the reviewer command
 
-1. Download the release archive and its `SHA256SUMS` file.
-2. Verify and copy it:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first, then
+run:
 
 ```sh
-sh scripts/install.sh --archive pr-reviewer --checksum-file SHA256SUMS --prefix "$HOME/.local/bin"
+curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
 ```
 
-The script copies the archive into the prefix only after `sha256sum -c` succeeds.
+Or, from a git checkout:
 
-## Local versioned asset proof (2026-09-01)
-
-A GitHub-hosted release asset is still unproven. Nothing was pushed and no
-GitHub Release was created. That sub-step stays unfinished.
-
-Local build and clean-container install on this machine:
-
-```
-$ sh scripts/build-local-release.sh /tmp/pr-reviewer-local-release
-asset=/tmp/pr-reviewer-local-release/pr-reviewer-0.1.0-compose.release.yml
-checksum_file=/tmp/pr-reviewer-local-release/SHA256SUMS
-d1d71b483178c847dd9e4e359cfd548b4d85563c47c01e4b29e74246b2e67425  pr-reviewer-0.1.0-compose.release.yml
+```sh
+sh scripts/install-reviewer.sh
 ```
 
-```
-$ docker run --rm --user 65532:65532 \
-    -v "$PWD/scripts/install.sh:/install.sh:ro" \
-    -v /tmp/pr-reviewer-local-release/pr-reviewer-0.1.0-compose.release.yml:/pr-reviewer-0.1.0-compose.release.yml:ro \
-    -v /tmp/pr-reviewer-local-release/SHA256SUMS:/SHA256SUMS:ro \
-    busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662 \
-    sh /install.sh \
-      --archive /pr-reviewer-0.1.0-compose.release.yml \
-      --checksum-file /SHA256SUMS \
-      --prefix /tmp/prefix
-pr-reviewer-0.1.0-compose.release.yml: OK
+The script runs `uv tool install` from the public GitHub repository and puts
+`reviewer` on your PATH (usually `~/.local/bin`). No model key or GitHub secret
+is required for install.
+
+Equivalent manual command:
+
+```sh
+uv tool install --from git+https://github.com/the-niresh/plug-and-play-reviewer.git plug-and-play-reviewer
 ```
 
-Repeat in the same image after install: file size 1951 bytes, digest matches
-`SHA256SUMS`. Exit code 0. No secrets in that output.
+After install:
 
-⬜ Install from a GitHub-hosted release URL. Blocked: nothing is pushed.
+```sh
+reviewer --help
+```
+
+## Verified locally (2026-09-10)
+
+From a clean temp directory on this machine, with isolated tool paths:
+
+```sh
+PR_REVIEWER_INSTALL_SOURCE=/path/to/plug-and-play-reviewer \
+  UV_TOOL_DIR=/tmp/pr-reviewer-tools \
+  UV_TOOL_BIN_DIR=/tmp/pr-reviewer-bin \
+  sh scripts/install-reviewer.sh
+/tmp/pr-reviewer-bin/reviewer --help
+```
+
+Exit code 0. The `reviewer setup` command appears in help output.
+
+⬜ GitHub Release checksum asset for offline install. Blocked: no release is
+published yet. Owner steps: tag a version, attach build output from
+`scripts/build-local-release.sh`, enable the release workflow, then update
+`scripts/install.sh` docs with the download URL.
+
+## Hosted deploy artifact (not the CLI)
+
+To copy a pinned `compose.release.yml` with checksum verification, use
+`scripts/build-local-release.sh` and `scripts/install.sh`. That path is for
+hosted control-plane deploy, not for installing the `reviewer` runner command.
 
 ## Setup
 
@@ -79,11 +92,13 @@ reviewer stop
 
 ## Uninstall
 
+Remove the uv tool install:
+
 ```sh
-sh scripts/uninstall.sh
+uv tool uninstall plug-and-play-reviewer
 ```
 
-Data is kept by default. Deleting reviews and secrets needs both flags:
+Remove local runner data only when you mean it:
 
 ```sh
 sh scripts/uninstall.sh --delete-data --confirm-delete

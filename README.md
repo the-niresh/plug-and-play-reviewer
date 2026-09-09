@@ -34,7 +34,7 @@ There are no prices in this repository.
 - A GitHub App pointed at that origin if you want live pull request events
 
 One-click Render or Railway still needs your own secrets and database. A
-public GitHub Release install asset is not published yet.
+Install the runner with [docs/INSTALL.md](docs/INSTALL.md) (`scripts/install-reviewer.sh`). A GitHub Release checksum asset is not published yet.
 
 Start here: [Install](docs/INSTALL.md). Then [Deploy](docs/DEPLOY.md) if you
 want your own hosted instance. [Runbook](docs/RUNBOOK.md) says what is proved

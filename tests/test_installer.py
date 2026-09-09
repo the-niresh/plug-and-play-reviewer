@@ -155,3 +155,56 @@ def test_reviewer_entry_routes_setup() -> None:
     from pr_reviewer.reviewer_entry import _USAGE
 
     assert "setup" in _USAGE
+
+def test_install_reviewer_script_uses_uv_tool_install() -> None:
+    script = REPO / "scripts" / "install-reviewer.sh"
+    assert script.is_file()
+    text = script.read_text(encoding="utf-8")
+    assert "uv tool install" in text
+    assert "plug-and-play-reviewer" in text
+    for flag in HOSTED_FLAGS:
+        assert flag not in text
+
+
+def test_install_reviewer_script_installs_reviewer_command(tmp_path: Path) -> None:
+    import os
+
+    if shutil.which("uv") is None:
+        pytest.skip("uv is required for the reviewer install proof")
+    script = REPO / "scripts" / "install-reviewer.sh"
+    tool_dir = tmp_path / "tools"
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    env = {
+        **os.environ,
+        "PR_REVIEWER_INSTALL_SOURCE": str(REPO),
+        "UV_TOOL_DIR": str(tool_dir),
+        "UV_TOOL_BIN_DIR": str(bin_dir),
+    }
+    result = subprocess.run(
+        ["sh", str(script)],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr + result.stdout
+    reviewer = bin_dir / "reviewer"
+    assert reviewer.is_file()
+    help_result = subprocess.run(
+        [str(reviewer), "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert help_result.returncode == 0
+    assert "reviewer setup" in help_result.stdout
+
+def test_install_docs_list_reviewer_install_command() -> None:
+    text = (REPO / "docs" / "INSTALL.md").read_text(encoding="utf-8")
+    assert "install-reviewer.sh" in text
+    assert "uv tool install" in text
+    assert "curl -fsSL" in text
+    assert "reviewer --help" in text
+
