@@ -5,12 +5,9 @@ services:
     dockerContext: .
     dockerfilePath: ./Dockerfile
     dockerCommand: /app/.venv/bin/pr-reviewer-api
+    preDeployCommand: /app/.venv/bin/pr-reviewer-db-migrate
     healthCheckPath: /health
     autoDeploy: true
-    disk:
-      name: reviewer-secrets
-      mountPath: /run/secrets/pr-reviewer
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -26,5 +23,3 @@ services:
         sync: false
       - key: PR_REVIEWER_HOSTED_ORIGIN
         sync: false
-      - key: PR_REVIEWER_SECRET_FILES_DIR
-        value: /run/secrets/pr-reviewer

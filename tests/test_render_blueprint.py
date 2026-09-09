@@ -8,6 +8,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 RENDER_BLUEPRINT = REPO / "deploy" / "render.yaml"
 RAILWAY_TEMPLATE = REPO / "deploy" / "railway.json"
+DEPLOY_GUIDE = REPO / "docs" / "DEPLOY.md"
 
 REQUIRED_BOOT_ENV = (
     "DATABASE_URL",
@@ -20,36 +21,45 @@ REQUIRED_BOOT_ENV = (
 )
 
 FORBIDDEN_RUNTIME_SECRET_ENV = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "MODEL_KEY")
+MIGRATE = "/app/.venv/bin/pr-reviewer-db-migrate"
+API = "/app/.venv/bin/pr-reviewer-api"
 
 
 def test_render_blueprint_uses_one_web_process_with_boot_config_only() -> None:
     text = RENDER_BLUEPRINT.read_text(encoding="utf-8")
     assert text.count("- type: web") == 1
     assert "name: reviewer" in text
-    assert "/app/.venv/bin/pr-reviewer-api" in text
+    assert API in text
+    assert f"preDeployCommand: {MIGRATE}" in text
     assert "NEXT_PUBLIC_CONTROL_PLANE_ORIGIN" not in text
     assert "Access-Control-Allow-Origin" not in text
     assert "cors" not in text.lower()
     for key in REQUIRED_BOOT_ENV:
         assert f"key: {key}" in text
-    assert "key: PR_REVIEWER_SECRET_FILES_DIR" in text
-    assert "value: /run/secrets/pr-reviewer" in text
+    assert "key: PR_REVIEWER_SECRET_FILES_DIR" not in text
+    assert "disk:" not in text
     for key in FORBIDDEN_RUNTIME_SECRET_ENV:
         assert f"key: {key}" not in text
-    assert "mountPath: /run/secrets/pr-reviewer" in text
 
 
-def test_railway_template_uses_one_service_and_no_browser_to_api_split() -> None:
+def test_railway_template_matches_the_railway_schema_and_migrates_on_deploy() -> None:
     payload = json.loads(RAILWAY_TEMPLATE.read_text(encoding="utf-8"))
-    service = payload["service"]
-    assert service["name"] == "reviewer"
-    assert service["startCommand"] == "/app/.venv/bin/pr-reviewer-api"
-    assert service["healthcheckPath"] == "/health"
-    environment = service["environment"]
-    for key in REQUIRED_BOOT_ENV:
-        assert key in environment
-    assert environment["PR_REVIEWER_SECRET_FILES_DIR"] == "/run/secrets/pr-reviewer"
+    assert "service" not in payload
+    assert "volumes" not in payload
+    deploy = payload["deploy"]
+    assert deploy["startCommand"] == API
+    assert deploy["healthcheckPath"] == "/health"
+    assert deploy["preDeployCommand"] == MIGRATE
+    environment = payload.get("deploy", {}).get("environment", {})
     for key in FORBIDDEN_RUNTIME_SECRET_ENV:
         assert key not in environment
-    assert "NEXT_PUBLIC_CONTROL_PLANE_ORIGIN" not in environment
-    assert payload["volumes"][0]["mountPath"] == "/run/secrets/pr-reviewer"
+    assert "NEXT_PUBLIC_CONTROL_PLANE_ORIGIN" not in json.dumps(payload)
+
+
+def test_deploy_guide_names_every_boot_env_and_the_health_paths() -> None:
+    guide = DEPLOY_GUIDE.read_text(encoding="utf-8")
+    for key in REQUIRED_BOOT_ENV:
+        assert key in guide
+    assert "/health" in guide
+    assert "/ready" in guide
+    assert "pr-reviewer-db-migrate" in guide
