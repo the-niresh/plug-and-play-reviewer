@@ -19,7 +19,7 @@ from collections.abc import Sequence
 
 _USAGE = (
     "usage: reviewer <setup|login|logout|doctor|trace|start|stop|status|open|update|uninstall"
-    "|review|ablate|mcp|a2a|acp> [args...]"
+    "|review|ablate|feedback|mcp|a2a|acp> [args...]"
 )
 
 _HELP = """\
@@ -46,6 +46,8 @@ Commands:
                                 Run a PR review from the terminal.
   reviewer ablate [--repeats N] [--json]
                                 Run a retrieval ablation over the holdout.
+  reviewer feedback candidates [--json]
+                                Print human-reviewable improvement candidates from feedback.
   reviewer mcp                  Serve MCP tools over newline JSON-RPC on stdio.
   reviewer a2a                  Serve A2A JSON-RPC on stdio.
   reviewer acp                  Serve ACP messages on stdio.
@@ -145,6 +147,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         from pr_reviewer.runner.cli.ablate import main as ablate_main
 
         return ablate_main(rest)
+
+    if subcommand == "feedback":
+        from pr_reviewer.cli.feedback import main as feedback_main
+
+        return feedback_main(rest)
 
     if subcommand == "mcp":
         from pr_reviewer.runner.cli.mcp import main as mcp_main
