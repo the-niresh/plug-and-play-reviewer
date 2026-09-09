@@ -29,7 +29,7 @@ from pr_reviewer.contracts.runner import (
 )
 from pr_reviewer.control_plane.repository_policy import hash_runner_credential, revoke_runner
 from pr_reviewer.control_plane.runner_auth import authenticate_runner
-from pr_reviewer.control_plane.token_broker import issue_job_token
+from pr_reviewer.control_plane.token_broker import issue_job_post_token, issue_job_token
 from pr_reviewer.db.client import connection
 from pr_reviewer.events.record_event import JsonObject, serialize_json_object
 from pr_reviewer.jobs.claim_review_job import REVIEW_JOB_LEASE_INTERVAL
@@ -115,6 +115,19 @@ def issue_job_token_route(
     runner = _authenticate_bearer(authorization)
     try:
         return issue_job_token(runner.runner_id, job_id, body.lease_token)
+    except JobProtocolDenied as denied:
+        raise HTTPException(status_code=409, detail=denied.reason) from denied
+
+
+@router.post("/jobs/{job_id}/post-token")
+def issue_job_post_token_route(
+    job_id: uuid.UUID,
+    body: _LeaseTokenBody,
+    authorization: str | None = Header(default=None),
+) -> GitHubJobToken:
+    runner = _authenticate_bearer(authorization)
+    try:
+        return issue_job_post_token(runner.runner_id, job_id, body.lease_token)
     except JobProtocolDenied as denied:
         raise HTTPException(status_code=409, detail=denied.reason) from denied
 

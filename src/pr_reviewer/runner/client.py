@@ -91,6 +91,17 @@ class RunnerClient:
         response.raise_for_status()
         return GitHubJobToken.model_validate(response.json())
 
+    def issue_job_post_token(self, job_id: str, lease_token: str) -> GitHubJobToken:
+        response = self._http.post(
+            f"/api/runner/jobs/{job_id}/post-token",
+            headers=self._auth_headers(),
+            json={"lease_token": lease_token},
+        )
+        if response.status_code == 409 or _detail_reason(response) == "invalid_or_expired":
+            raise JobProtocolDenied(reason="invalid_or_expired")
+        response.raise_for_status()
+        return GitHubJobToken.model_validate(response.json())
+
     def log_out(self) -> None:
         response = self._http.post("/api/runner/logout", headers=self._auth_headers())
         response.raise_for_status()

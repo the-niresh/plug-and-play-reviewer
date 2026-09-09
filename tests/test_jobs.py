@@ -48,6 +48,38 @@ def test_claim_complete_and_renew_job() -> None:
     assert row["locked_by"] is None
 
 
+def test_hosted_worker_does_not_claim_runner_owned_pull_request_jobs() -> None:
+    with connection() as conn, conn.transaction():
+        conn.execute(
+            "insert into installations (id, account_login) values (%s, %s) on conflict do nothing",
+            (8501, "acme"),
+        )
+    payload = {
+        "action": "opened",
+        "installation": {"id": 8501},
+        "repository": {"id": 95001, "name": "YeahScene-AI"},
+        "pull_request": {
+            "number": 99,
+            "draft": False,
+            "head": {"sha": "b" * 40},
+            "base": {"sha": "a" * 40},
+        },
+    }
+    assert enqueue_review_job("delivery-runner-owned", "pull_request", payload) == "enqueued"
+
+    assert claim_review_job("worker-1") is None
+
+    with connection() as conn:
+        row = conn.execute(
+            "select status, locked_by from review_jobs where delivery_id = %s",
+            ("delivery-runner-owned",),
+        ).fetchone()
+
+    assert row is not None
+    assert row["status"] == "pending"
+    assert row["locked_by"] is None
+
+
 def test_fail_job_schedules_retry_and_records_event() -> None:
     enqueue_review_job("delivery-3", "pull_request", {})
     job = claim_review_job("worker-1")

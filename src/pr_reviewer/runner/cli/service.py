@@ -28,6 +28,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Literal, cast
 
+from pr_reviewer.agent_surfaces.backend import resolve_model_provider
 from pr_reviewer.containers.runtime import ContainerProbe
 from pr_reviewer.context_budget import context_budget_for_model
 from pr_reviewer.contracts.finding import Finding
@@ -44,10 +45,8 @@ from pr_reviewer.github.post_review import (
     submit_review_to_github,
 )
 from pr_reviewer.github.pull_request import PullRequestSnapshot
-from pr_reviewer.local_store.repo_config import default_repo_config_path
+from pr_reviewer.local_store.repo_config import RepoConfigStore, default_repo_config_path
 from pr_reviewer.local_store.sqlite import LocalStore
-from pr_reviewer.models.anthropic_provider import AnthropicProvider
-from pr_reviewer.models.catalogue import default_model_for
 from pr_reviewer.reviewer.diff_budget import pack_diff
 from pr_reviewer.reviewer.hunk_format import render_hunks
 from pr_reviewer.reviewer.incremental import incremental_review_pull_request
@@ -71,7 +70,6 @@ _RUNNER_CREDENTIAL_SECRET = "runner_credential"
 _LOCAL_STATE_DB_NAME = "local_state.sqlite3"
 _RUNNER_STOP_DEADLINE_SECONDS = 1.0
 _RUNNER_POLL_INTERVAL_SECONDS = 0.1
-_DEFAULT_REVIEW_MODEL_PROVIDER = "anthropic"
 
 logger = logging.getLogger(__name__)
 
@@ -321,9 +319,15 @@ class DiffOnlyRunnerReviewExecutor:
         try:
             token = self._runner_client.issue_job_token(str(job.job_id), job.lease_token)
             snapshot = fetch_job_snapshot(job, token)
-            model_name = default_model_for(_DEFAULT_REVIEW_MODEL_PROVIDER)
+            resolved = resolve_model_provider(self._secrets)
+            if resolved is None:
+                return _failed_ack(job=job, started=started, error_class="missing_model_key")
+            _provider_name, model = resolved
+            choice = RepoConfigStore(default_repo_config_path()).get_model_choice(
+                job.repository_id
+            )
+            model_name = choice.model_id
             packed = pack_diff(snapshot, context_budget_for_model(model_name), _count_tokens)
-            model = AnthropicProvider(model_key)
             store = open_or_recover_local_store(default_config_dir() / _LOCAL_STATE_DB_NAME)
             outcome = incremental_review_pull_request(
                 snapshot,
@@ -349,10 +353,13 @@ class DiffOnlyRunnerReviewExecutor:
                 )
             if outcome.cancelled:
                 return _failed_ack(job=job, started=started, error_class="cancelled")
+            post_token = self._runner_client.issue_job_post_token(
+                str(job.job_id), job.lease_token
+            )
             self._post_review_outcome(
                 job=job,
                 snapshot=snapshot,
-                token=token.token,
+                token=post_token.token,
                 outcome=outcome,
             )
         except Exception as exc:  # noqa: BLE001

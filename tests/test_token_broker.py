@@ -573,3 +573,35 @@ def test_issued_token_is_never_persisted_in_neon(
     assert token.token == secret_marker
 
     assert_value_not_persisted_anywhere(secret_marker)
+
+
+def test_post_token_requests_pull_request_write(
+    make_verified_installation_access: VerifiedAccessFactory,
+) -> None:
+    from pr_reviewer.control_plane.token_broker import issue_job_post_token
+
+    installation_id = 9211
+    github_repository_id = 93101
+    insert_installation(installation_id)
+    credential = pair_runner_assigned_to_repo(
+        installation_id, github_repository_id, make_verified_installation_access
+    )
+    enqueue_pull_request_job("delivery-post-token", installation_id, github_repository_id)
+    runner = authenticate(credential.credential)
+    envelope = claim_job(runner)
+    assert isinstance(envelope, JobEnvelope)
+
+    app_client, capturing = capturing_app_client(
+        {"token": "ghs_post", "expires_at": "2026-01-01T00:10:00Z"}
+    )
+
+    token = issue_job_post_token(
+        runner.runner_id, envelope.job_id, envelope.lease_token, app_client=app_client
+    )
+
+    assert len(capturing.calls) == 1
+    body = capturing.calls[0]["json"]
+    assert isinstance(body, dict)
+    permissions = body["permissions"]
+    assert permissions == {"contents": "read", "pull_requests": "write"}
+    assert token.token == "ghs_post"

@@ -53,8 +53,15 @@ def claim_review_job(
             with next_job as (
               select id
               from review_jobs
-              where (status = 'pending' and available_at <= now())
-                 or (status = 'running' and locked_until <= now())
+              where (
+                      (status = 'pending' and available_at <= now())
+                      or (status = 'running' and locked_until <= now())
+                    )
+                and (
+                      installation_id is null
+                      or github_repository_id is null
+                      or pull_request_number is null
+                    )
               order by available_at asc, created_at asc
               for update skip locked
               limit 1

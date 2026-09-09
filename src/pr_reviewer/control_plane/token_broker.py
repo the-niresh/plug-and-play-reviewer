@@ -36,6 +36,8 @@ INVALID_OR_EXPIRED: Literal["invalid_or_expired"] = "invalid_or_expired"
 # pull_requests:read for PR metadata and files, contents:read for repository file content beyond
 # a diff hunk. No write, no admin: this is the full read set fetch_job_snapshot uses.
 TOKEN_PERMISSIONS: dict[str, str] = {"contents": "read", "pull_requests": "read"}
+# pull_requests:write is the minimum set submit_review_to_github needs.
+POST_TOKEN_PERMISSIONS: dict[str, str] = {"contents": "read", "pull_requests": "write"}
 
 
 def _app_settings() -> GitHubAppSettings:
@@ -46,13 +48,11 @@ def _app_settings() -> GitHubAppSettings:
     )
 
 
-def issue_job_token(
+def _validated_job_scope(
     runner_id: uuid.UUID,
     job_id: uuid.UUID,
     lease_token: str,
-    *,
-    app_client: GitHubAppClient | None = None,
-) -> GitHubJobToken:
+) -> tuple[int, int]:
     token_hash = hash_runner_credential(lease_token)
 
     with connection() as conn:
@@ -82,15 +82,46 @@ def issue_job_token(
     authorization = authorize_repository(int(installation_id), int(github_repository_id), runner_id)
     if isinstance(authorization, AuthorizationDenied):
         raise JobProtocolDenied(reason=INVALID_OR_EXPIRED)
+    return int(installation_id), int(github_repository_id)
 
+
+def issue_job_token(
+    runner_id: uuid.UUID,
+    job_id: uuid.UUID,
+    lease_token: str,
+    *,
+    app_client: GitHubAppClient | None = None,
+) -> GitHubJobToken:
+    installation_id, github_repository_id = _validated_job_scope(runner_id, job_id, lease_token)
     client = app_client or GitHubAppClient(settings=_app_settings())
     minted = client.create_installation_token(
-        int(installation_id),
-        repository_ids=[int(github_repository_id)],
+        installation_id,
+        repository_ids=[github_repository_id],
         permissions=TOKEN_PERMISSIONS,
     )
     return GitHubJobToken(
         token=minted.token,
-        github_repository_id=int(github_repository_id),
+        github_repository_id=github_repository_id,
+        expires_at=minted.expires_at,
+    )
+
+
+def issue_job_post_token(
+    runner_id: uuid.UUID,
+    job_id: uuid.UUID,
+    lease_token: str,
+    *,
+    app_client: GitHubAppClient | None = None,
+) -> GitHubJobToken:
+    installation_id, github_repository_id = _validated_job_scope(runner_id, job_id, lease_token)
+    client = app_client or GitHubAppClient(settings=_app_settings())
+    minted = client.create_installation_token(
+        installation_id,
+        repository_ids=[github_repository_id],
+        permissions=POST_TOKEN_PERMISSIONS,
+    )
+    return GitHubJobToken(
+        token=minted.token,
+        github_repository_id=github_repository_id,
         expires_at=minted.expires_at,
     )
