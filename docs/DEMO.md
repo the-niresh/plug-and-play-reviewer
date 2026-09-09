@@ -73,7 +73,7 @@ It asserts: a signed webhook creates one installation-scoped job, a paired
 runner claims it over `/api/runner/jobs/claim`, analysis-only forces human
 approval, the gate holds the finding so mock GitHub stays empty, a human
 `allow_public_post` posts once, and a newer head SHA supersedes the job so a
-stale post does not fire. Runtime Task 10 is still not done.
+stale post does not fire. A live GitHub delivery still needs owner App URLs.
 
 ## Hosted health on reviewer.niresh.tech - ✅ live
 

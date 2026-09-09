@@ -1,4 +1,7 @@
-"""Local signed-webhook to human-decision path. Runtime Task 10 hostname parts stay unfinished."""
+"""Local signed-webhook to human-decision path.
+
+Hosted health is live. A first comment still needs the owner.
+"""
 
 from __future__ import annotations
 
@@ -206,9 +209,11 @@ def test_local_webhook_to_human_decision_path(
     assert len(github.submissions) == 1
 
 
-def test_runtime_task_10_hosted_parts_stay_unfinished() -> None:
+def test_demo_says_hosted_health_is_live_and_a_comment_needs_the_owner() -> None:
     text = (REPO / "docs" / "DEMO.md").read_text(encoding="utf-8")
+    assert "DNS A record" not in text
     assert "https://reviewer.niresh.tech/api/github/webhook" in text
-    assert "DNS A record" in text
-    assert "GitHub App homepage, callback, and webhook URLs" in text
-    assert "Runtime Task 10" in text
+    assert "GET https://reviewer.niresh.tech/health" in text
+    assert "GET https://reviewer.niresh.tech/ready" in text
+    assert "A first live comment on a real pull request still" in text
+    assert "needs the owner" in text

@@ -1,4 +1,4 @@
-"""Hosted Traefik overlay is present, valid, and not a live deploy."""
+"""Hosted Traefik overlay is present and valid. The runbook says what is live."""
 
 from __future__ import annotations
 
@@ -19,15 +19,16 @@ SECRET_MARKERS = (
 )
 
 
-def test_runbook_says_nothing_is_applied() -> None:
+def test_runbook_separates_live_host_from_owner_setup() -> None:
     text = (REPO / "docs" / "RUNBOOK.md").read_text(encoding="utf-8")
-    first = text.splitlines()[0]
-    assert first.startswith("Nothing in this file is applied.")
-    assert "reviewer.niresh.tech" in text
-    assert "76.13.243.12" in text
-    assert "4771544" in text
+    assert "Nothing in this file is applied." not in text
+    assert "https://reviewer.niresh.tech" in text
+    assert "GET /health" in text
+    assert "GET /ready" in text
     assert "https://reviewer.niresh.tech/api/auth/github/callback" in text
     assert "https://reviewer.niresh.tech/api/github/webhook" in text
+    assert "Point the GitHub App homepage, callback, and webhook" in text
+    assert "Render or Railway" in text
 
 
 def test_traefik_file_defines_reviewer_router_and_service() -> None:
