@@ -1,0 +1,56 @@
+name: Bug report
+description: Install, pairing, review, dashboard, or webhook trouble
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For prompt injection or data-boundary bugs, use private reporting:
+        https://github.com/the-niresh/plug-and-play-reviewer/security/advisories/new
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Commands you ran and the smallest repo or PR that shows the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Paste the real error text. Do not paraphrase.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did this happen?
+      options:
+        - Local runner
+        - Hosted control plane
+        - Web dashboard
+        - GitHub App / webhook
+        - Installer or doctor
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Extra context
+      description: Model and provider if review-related. Hosted origin if not reviewer.niresh.tech.
+    validations:
+      required: false

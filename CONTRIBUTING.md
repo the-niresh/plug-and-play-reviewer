@@ -109,6 +109,5 @@ text. If it involves a review, say which model and provider you used.
 
 ## Security
 
-If you find a way to make the reviewer act on an instruction hidden in a pull request, or a way to
-get private data onto the hosted plane, please report it privately by email rather than opening a
-public issue.
+If you find prompt injection or a data-boundary bug, report it privately. See
+[SECURITY.md](SECURITY.md). Do not open a public issue for those reports.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report (private)
+    url: https://github.com/the-niresh/plug-and-play-reviewer/security/advisories/new
+    about: Prompt injection or data-boundary bugs. Do not post secrets in public issues.
+  - name: Contributing guide
+    url: https://github.com/the-niresh/plug-and-play-reviewer/blob/main/CONTRIBUTING.md
+    about: Setup, tests, and pull request rules
