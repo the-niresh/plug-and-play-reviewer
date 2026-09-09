@@ -18,8 +18,8 @@ import sys
 from collections.abc import Sequence
 
 _USAGE = (
-    "usage: reviewer <setup|login|logout|doctor|trace|start|stop|status|open|update|uninstall"
-    "|review|ablate|feedback|mcp|a2a|acp> [args...]"
+    "usage: reviewer <setup|login|logout|doctor|trace|start|stop|status|open|service|update"
+    "|uninstall|review|ablate|feedback|mcp|a2a|acp> [args...]"
 )
 
 _HELP = """\
@@ -40,6 +40,10 @@ Commands:
   reviewer stop                 Stop the local onboarding server.
   reviewer status               Print whether the local onboarding server is running.
   reviewer open                 Open or print the local onboarding URL.
+  reviewer service install      Install login autostart (Windows Scheduled Task).
+  reviewer service start        Start the autostart runner now.
+  reviewer service stop         Stop the autostart runner.
+  reviewer service uninstall    Remove login autostart.
   reviewer update               Apply a checked runner update artifact.
   reviewer uninstall            Remove the local runner, preserving data by default.
   reviewer review owner/repo#pr --json
@@ -127,6 +131,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         from pr_reviewer.runner.cli.service import main as service_main
 
         return service_main([subcommand, *rest])
+
+    if subcommand == "service":
+        from pr_reviewer.runner.cli.runner_autostart import main as autostart_main
+
+        return autostart_main(rest)
 
     if subcommand == "update":
         from pr_reviewer.runner.cli.update import main as update_main

@@ -110,6 +110,22 @@ reviewer setup --hosted-origin https://reviewer.niresh.tech
 
 `--hosted-origin` is the public control-plane site. Hidden input collects the model key. Slack secrets, if used, are also hidden. The command rejects secret-bearing flags.
 
+## Windows autostart after setup
+
+After `reviewer setup`, install a per-user Scheduled Task so the runner starts at login.
+No administrator rights are required. The task stores no model key or runner credential;
+it only runs `reviewer start` with your hosted origin.
+
+```powershell
+reviewer service install --hosted-origin https://reviewer.niresh.tech --host 127.0.0.1 --port 8799
+reviewer service start
+reviewer service stop
+reviewer service uninstall
+```
+
+You can set `PR_REVIEWER_HOSTED_ORIGIN` instead of passing `--hosted-origin` each time.
+Re-running `reviewer service install` updates the same task.
+
 Then:
 
 ```sh
