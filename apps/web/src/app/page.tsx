@@ -320,6 +320,8 @@ export default function HomePage() {
             </h2>
             <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
               A single person running a local reviewer can stay on a simple path.
+              The free tier allows one GitHub user and one repository per
+              installation.
             </p>
             <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
               Team controls, shared prompts, and extra repositories are the paid path.
@@ -342,11 +344,12 @@ export default function HomePage() {
             What the evals show
           </h2>
           <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-            Dev evals exist as working notes. They are not a baseline.
+            Dev eval notes are working notes. They are not a published baseline.
           </p>
           <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-            The scorecard page refuses a number until a measured run exists. Do not
-            quote an internal note as a launch score.
+            The published scorecard measures 7 human-judged holdout cases from the
+            Zod repository only (gpt-4o-mini, diff-only). That sample is not proof
+            on every language or repo.
           </p>
           <a
             href="/scorecard"
@@ -397,8 +400,8 @@ export default function HomePage() {
               The reviewer does not learn from human replies yet.
             </p>
             <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              Public scorecard publishing is still refused. Do not treat internal eval
-              notes as a launch number.
+              The published scorecard is a narrow holdout sample, not a guarantee on
+              your repository.
             </p>
             <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
               An empty-generate retry exists but stays off. It raised false findings

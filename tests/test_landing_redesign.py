@@ -105,7 +105,16 @@ def test_landing_does_not_call_evals_a_baseline() -> None:
     source = landing_source()
     lowered = source.lower()
     assert "not a baseline" in lowered or "not a published baseline" in lowered
+    assert "zod" in lowered
+    assert "7" in source or "seven" in lowered
     assert "self-improving" not in lowered
+
+
+def test_landing_states_free_tier_without_checkout() -> None:
+    source = landing_source().lower()
+    assert "free tier" in source
+    assert "one github user" in source or "one repository" in source
+    assert "$" not in source.split("what stays free")[1].split("what the evals")[0]
 
 
 def test_landing_does_not_use_a_purple_gradient_hero() -> None:

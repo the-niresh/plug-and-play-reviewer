@@ -9,8 +9,11 @@
 
 Walk a signed webhook through to a human decision using commands that run
 on this machine. The hosted origin `https://reviewer.niresh.tech` answers
-`/health` and `/ready`. A full live GitHub loop on a real pull request was
-proved on 2026-09-10. See [live-github-loop-proof.md](reports/live-github-loop-proof.md).
+`/health` and `/ready`. Live proofs from 2026-09-10:
+
+- [clean-machine-install-proof.md](reports/clean-machine-install-proof.md)
+- [public-install-live-review-proof.md](reports/public-install-live-review-proof.md)
+- [live-github-loop-proof.md](reports/live-github-loop-proof.md)
 
 ## Screenshots captured today - ✅
 
@@ -86,6 +89,14 @@ The GitHub App webhook is pointed at
 on the live instance. See [RUNBOOK.md](RUNBOOK.md) for owner setup on a new
 host.
 
+## Public curl install - ✅ live
+
+Recorded in [clean-machine-install-proof.md](reports/clean-machine-install-proof.md)
+and [public-install-live-review-proof.md](reports/public-install-live-review-proof.md).
+
+The GitHub `main` install script returns HTTP 200. A fresh temp home can run
+`reviewer --help`, pair, and complete a live review on PR #9.
+
 ## Live GitHub loop on a real pull request - ✅ live
 
 Recorded in [live-github-loop-proof.md](reports/live-github-loop-proof.md)
@@ -111,11 +122,17 @@ still needs the owner's Neon `DATABASE_URL`, GitHub App secrets, and
 dashboard env vars. The live compose host at `reviewer.niresh.tech` is
 separate from a fresh one-click deploy.
 
+## Published holdout baseline - ✅ measured
+
+Recorded in [holdout-quality-baseline.md](reports/holdout-quality-baseline.md).
+Seven human-judged holdout cases from the Zod repository only (gpt-4o-mini,
+diff-only). That sample is not proof on every language or repo. See
+[/scorecard](https://reviewer.niresh.tech/scorecard).
+
 ## What this demo is not
 
 - It is not a 14-day FoodSpector shadow.
-- It does not report precision, recall, or cost per PR. Dev eval notes are
-  not a baseline.
+- Dev eval notes are not a published baseline.
 - It does not use Redis.
 - It is not automatic self-improvement from human feedback.
 

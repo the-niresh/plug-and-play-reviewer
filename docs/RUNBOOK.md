@@ -11,9 +11,17 @@ owner. It is not a launch scorecard.
 - `GET /ready` returns `200` and `{"status":"ok"}`. That check talks to
   Postgres.
 
-Those two checks prove the hosted control plane process and its database
-path. They do not prove a GitHub webhook, a model call, or a posted
-comment.
+Recorded proofs (2026-09-10):
+
+| Proof | Report |
+|---|---|
+| Public curl install | [clean-machine-install-proof.md](reports/clean-machine-install-proof.md) |
+| Install from curl through live review | [public-install-live-review-proof.md](reports/public-install-live-review-proof.md) |
+| GitHub webhook to bot review comment | [live-github-loop-proof.md](reports/live-github-loop-proof.md) |
+| Holdout quality baseline (7 Zod cases) | [holdout-quality-baseline.md](reports/holdout-quality-baseline.md) |
+
+The health checks alone do not prove a GitHub webhook or a model call. The
+reports above do.
 
 The hosted schema still must not hold source, diffs, or model keys. Finding
 titles and rationale may sit on Neon so the dashboard can show them. See
@@ -53,6 +61,7 @@ Until those match, live events will not reach this instance.
 
 ## What this runbook does not claim
 
-- It does not publish an eval baseline.
-- It does not prove a comment on a real pull request.
+- The published scorecard is 7 Zod holdout cases only. It is not broad proof
+  on every repository.
 - It does not set prices for the later team paid path.
+- It does not prove a cold stranger path with no owner help at pairing time.

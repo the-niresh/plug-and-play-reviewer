@@ -24,8 +24,8 @@ run:
 curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
 ```
 
-If that `curl` command returns **404**, the install script is not on GitHub `main`
-yet. Use the manual `uv tool install` command below until `origin/main` is updated.
+That one-liner returns **HTTP 200** on GitHub `main` today (verified 2026-09-10).
+See [clean-machine-install-proof.md](reports/clean-machine-install-proof.md).
 
 Or, from a git checkout:
 

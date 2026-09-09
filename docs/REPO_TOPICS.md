@@ -17,6 +17,11 @@ Apply these topics on `the-niresh/plug-and-play-reviewer`:
 - [ ] `postgres`
 - [ ] `security`
 
+## Product name for listings
+
+Use **PR Reviewer** on the site, README, and Product Hunt. The GitHub repository
+name stays `plug-and-play-reviewer` (uv package name matches).
+
 ## Set topics with gh
 
 You need admin access on the repository.

@@ -120,6 +120,39 @@ def test_demo_records_live_github_proof_without_eval_baseline() -> None:
     text = _text(DEMO)
     lowered = text.lower()
     assert "live-github-loop-proof.md" in text
+    assert "public-install-live-review-proof.md" in text
+    assert "clean-machine-install-proof.md" in text
     assert "review_comment_feedback" in lowered
     assert "not a baseline" in lowered or "not a published baseline" in lowered
     assert "self-improving" not in lowered
+
+
+def test_readme_names_the_narrow_published_baseline() -> None:
+    text = _text(README).lower()
+    assert "zod" in text
+    assert "holdout" in text
+    assert "7" in text or "seven" in text
+    assert "not proof on every" in text or "not proof on every language" in text
+
+
+def test_install_does_not_document_stale_curl_404_fallback() -> None:
+    text = _text(INSTALL)
+    assert "returns **404**" not in text
+    assert "http 200" in text.lower() or "200" in text
+
+
+def test_runbook_links_live_proof_reports() -> None:
+    text = _text(RUNBOOK)
+    for report in (
+        "clean-machine-install-proof.md",
+        "public-install-live-review-proof.md",
+        "live-github-loop-proof.md",
+        "holdout-quality-baseline.md",
+    ):
+        assert report in text
+
+
+def test_readme_states_free_tier_without_prices() -> None:
+    text = _text(README).lower()
+    assert "free tier" in text
+    assert "one github user" in text or "one repository" in text

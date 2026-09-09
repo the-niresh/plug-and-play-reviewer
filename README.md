@@ -21,9 +21,10 @@ a laptop or a server you run.
 - Extra specialist reviewers are opt-in per repository. They are off by default.
 - Custom agents and prompts stay private to that repository.
 
-A single person running a local reviewer can stay on a simple path. Team
-controls, shared prompts, and extra repositories are the paid path later.
-There are no prices in this repository.
+A single person running a local reviewer can stay on a simple path. The free tier
+allows one GitHub user and one repository per installation. Team controls,
+shared prompts, and extra repositories are the paid path later. There are no
+prices in this repository.
 
 ## What you need
 
@@ -45,6 +46,10 @@ and what still needs the owner.
 | Claim | Where |
 |---|---|
 | Hosted `/health` and `/ready` on `reviewer.niresh.tech` | [docs/DEPLOY.md](docs/DEPLOY.md) |
+| Public curl install on GitHub `main` | [docs/reports/clean-machine-install-proof.md](docs/reports/clean-machine-install-proof.md) |
+| Live install plus review on a real PR | [docs/reports/public-install-live-review-proof.md](docs/reports/public-install-live-review-proof.md) |
+| Live GitHub webhook to review comment | [docs/reports/live-github-loop-proof.md](docs/reports/live-github-loop-proof.md) |
+| Published holdout scorecard (7 Zod cases, gpt-4o-mini) | [docs/reports/holdout-quality-baseline.md](docs/reports/holdout-quality-baseline.md), [/scorecard](https://reviewer.niresh.tech/scorecard) |
 | Hosted schema cannot hold source, diffs, or model keys | `uv run python scripts/generate_data_boundaries_doc.py --check` |
 | Finding title and rationale are allowlisted hosted text | [docs/DATA_BOUNDARIES.md](docs/DATA_BOUNDARIES.md) |
 | Backend tests | `flock -w 3600 /tmp/pr-reviewer-pytest.lock uv run pytest -q` |
@@ -56,13 +61,14 @@ a result.
 
 ## What is not proved
 
-- There is no published eval baseline. Dev notes exist. They are not a
-  baseline. The scorecard page refuses a number until a measured run exists.
+- The published scorecard is **7 human-judged holdout cases from the Zod
+  repository only**. It is not proof on every language, repo, or pull request.
+  Dev eval notes are working notes, not a published baseline.
 - A GitHub-hosted release asset is not published. Local checksum install is
   documented in [docs/INSTALL.md](docs/INSTALL.md).
 - A new Render or Railway URL was not created. That needs the owner's
   account, Neon `DATABASE_URL`, and GitHub App secrets.
-- Live GitHub loop proof is recorded in [docs/reports/live-github-loop-proof.md](docs/reports/live-github-loop-proof.md).
+- No stranger-only end-to-end proof without owner-side pairing shortcuts.
 
 The reviewer does not learn from human replies yet.
 
