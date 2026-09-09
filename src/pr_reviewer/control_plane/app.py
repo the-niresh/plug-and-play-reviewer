@@ -22,6 +22,9 @@ from pr_reviewer.control_plane.oauth_api import router as oauth_router
 from pr_reviewer.control_plane.ops import router as ops_router
 from pr_reviewer.control_plane.pairing_api import router as pairing_router
 from pr_reviewer.control_plane.profile_api import router as profile_router
+from pr_reviewer.control_plane.review_comment_feedback import (
+    handle_pull_request_review_comment,
+)
 from pr_reviewer.control_plane.review_projection import router as reviews_router
 from pr_reviewer.control_plane.runner_jobs import router as runner_jobs_router
 from pr_reviewer.github import verify_github_signature
@@ -81,6 +84,10 @@ async def github_webhook(request: Request) -> JSONResponse:
     if event_name == "installation_repositories":
         handle_installation_repositories_event(payload)
         return JSONResponse({"result": "processed"}, status_code=200)
+
+    if event_name == "pull_request_review_comment":
+        result = handle_pull_request_review_comment(delivery_id, payload)
+        return JSONResponse({"result": result}, status_code=200)
 
     if event_name != "pull_request":
         ignored = enqueue_review_job(delivery_id, event_name, payload)

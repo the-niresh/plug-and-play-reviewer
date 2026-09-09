@@ -295,6 +295,16 @@ def test_restricted_finding_is_absent_not_redacted_when_mixed_with_public() -> N
     assert "exploit steps" not in blob
     assert "redacted" not in blob.lower()
     assert "Return value changed" in blob
+    assert "<!-- pr-reviewer:finding:finding-public -->" in blob
+
+
+def test_posted_inline_comment_includes_finding_marker() -> None:
+    github = FakeGitHub()
+    finding = _finding(id="finding-marker-1", title="Return value changed")
+    _post(github, [(finding, _decision())])
+    body = github.submissions[0].comments[0].body
+    assert "<!-- pr-reviewer:finding:finding-marker-1 -->" in body
+    assert "Return value changed" in body
 
 
 def test_rejected_and_unverified_findings_never_enter_the_public_body() -> None:

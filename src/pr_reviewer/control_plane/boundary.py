@@ -266,6 +266,29 @@ ALLOWLIST: dict[tuple[str, str], str] = {
         "A pointer into a context source (e.g. a chunk id or graph node id), an identifier, "
         "never the chunk's own text or the diff itself."
     ),
+    # Human reply feedback capture, not self-improvement. These columns are never read by
+    # prompt registry, eval labels, or model settings.
+    ("review_comment_posts", "finding_id"): (
+        "Our own finding id copied from the HTML marker on a comment we posted, an opaque "
+        "identifier, never source or a diff."
+    ),
+    ("review_comment_feedback", "delivery_id"): (
+        "References github_deliveries.id, GitHub's opaque delivery id, not content."
+    ),
+    ("review_comment_feedback", "finding_id"): (
+        "Our own finding id copied from the parent review_comment_posts row, an opaque "
+        "identifier, never source or a diff."
+    ),
+    ("review_comment_feedback", "classification"): (
+        "Fixed enum ('useful', 'wrong', 'unclear', 'follow_up', 'unknown'), set by keyword "
+        "rules in control_plane/review_comment_feedback.py, never by a model."
+    ),
+    ("review_comment_feedback", "reply_text"): (
+        "Public PR review-comment reply text, already visible on GitHub, stored only after "
+        "wrap_untrusted. Feedback capture, not self-improvement: this column is never read "
+        "to edit prompts, eval labels, or model settings. Never a diff hunk, source, "
+        "embedding, evidence, or a model key."
+    ),
 }
 
 

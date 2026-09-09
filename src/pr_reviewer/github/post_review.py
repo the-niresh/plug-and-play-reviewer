@@ -24,6 +24,7 @@ Confidentiality = Literal["restricted", "ordinary"]
 CommentSide = Literal["RIGHT", "LEFT"]
 _NEW_LINE = re.compile(r"^(\d+)\| ")
 _MARKER_PREFIX = "<!-- pr-reviewer:post:"
+_FINDING_MARKER = "<!-- pr-reviewer:finding:{finding_id} -->"
 
 
 class StalePullRequestHead(RuntimeError):
@@ -266,11 +267,16 @@ def _suggestion_applies_cleanly(finding: Finding, numbers: set[int]) -> bool:
     return all(line in numbers for line in range(finding.line_start, finding.line_end + 1))
 
 
+def _finding_marker(finding_id: str) -> str:
+    return _FINDING_MARKER.format(finding_id=finding_id)
+
+
 def _comment_body(finding: Finding, *, include_suggestion: bool) -> str:
+    marker = _finding_marker(finding.id)
     if not include_suggestion or finding.suggested_fix is None:
-        return finding.title
+        return f"{finding.title}\n\n{marker}"
     replacement = finding.suggested_fix.rstrip("\n")
-    return f"{finding.title}\n\n```suggestion\n{replacement}\n```"
+    return f"{finding.title}\n\n```suggestion\n{replacement}\n```\n\n{marker}"
 
 
 def _new_side_numbers(rendered: str) -> set[int]:

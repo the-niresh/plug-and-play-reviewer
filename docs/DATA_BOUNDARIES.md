@@ -18,6 +18,11 @@ In plain words: the hosted site can show finding titles and rationale. It
 cannot hold your source, your diffs, or your model key. Retrieval chunks
 and sandbox logs stay on the runner.
 
+Human replies to our review comments are **feedback capture**, not
+self-improvement. Hosted may store the public reply text after
+`wrap_untrusted`. That text does not change prompts, eval labels, or model
+settings.
+
 ## Hosted (control plane, Neon)
 
 Every column on every hosted table is one of two things: an auto-permitted scalar type that
@@ -64,6 +69,11 @@ must stay that way -- see Exemptions below.
 | `prompt_versions` | `version` | Version label for one of our own prompt templates. |
 | `repositories` | `name` | GitHub repository name: an identifier, not repository content. |
 | `repository_budget_reservations` | `status` | Fixed enum ('held', 'released', 'committed'), whether one job still holds a slice of the repository budget. Not review content. |
+| `review_comment_feedback` | `classification` | Fixed enum ('useful', 'wrong', 'unclear', 'follow_up', 'unknown'), set by keyword rules in control_plane/review_comment_feedback.py, never by a model. |
+| `review_comment_feedback` | `delivery_id` | References github_deliveries.id, GitHub's opaque delivery id, not content. |
+| `review_comment_feedback` | `finding_id` | Our own finding id copied from the parent review_comment_posts row, an opaque identifier, never source or a diff. |
+| `review_comment_feedback` | `reply_text` | Public PR review-comment reply text, already visible on GitHub, stored only after wrap_untrusted. Feedback capture, not self-improvement: this column is never read to edit prompts, eval labels, or model settings. Never a diff hunk, source, embedding, evidence, or a model key. |
+| `review_comment_posts` | `finding_id` | Our own finding id copied from the HTML marker on a comment we posted, an opaque identifier, never source or a diff. |
 | `review_findings` | `category` | A short finding category label (e.g. 'null-check'), not the finding's source or diff. |
 | `review_findings` | `command_id` | Opaque identifier for the specific command inside the sandbox run, not review content. |
 | `review_findings` | `concern` | Fixed enum ('security', 'correctness', 'tests', 'docs', 'maintainability'), enforced by a check constraint, not free text. |

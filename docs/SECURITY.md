@@ -152,6 +152,16 @@ Hosted HTTP routes share one in-process sliding window per client address
 `{"error": "rate_limited"}` and no internal detail. `/health` and `/ready`
 are not limited (`tests/test_hosted_rate_limit.py`).
 
+## 11 - ✅ Human reply feedback capture
+
+The control plane accepts `pull_request_review_comment` webhooks. A reply to
+one of our posted review comments is stored as **feedback capture**, not
+self-improvement (`tests/test_review_comment_feedback.py`). The row does not
+edit prompts, eval labels, or model settings. Reply text is wrapped with
+`wrap_untrusted` before it is stored. It is public PR comment text, the same
+class as finding title: already visible on GitHub. Hosted still rejects
+source, diffs, evidence, embeddings, and model keys.
+
 ## Settled - ✅
 
 - ✅ Installation, repository, and runner are distinct axes.
@@ -160,6 +170,8 @@ are not limited (`tests/test_hosted_rate_limit.py`).
 - ✅ Hosted Neon stores finding title and rationale. It does not store source,
   diffs, or model keys.
 - ✅ Hosted HTTP is rate limited except `/health` and `/ready`.
+- ✅ Human replies to our review comments are feedback capture, not
+  self-improvement. They do not edit prompts or model settings.
 
 ## Open Decisions - ❓
 
