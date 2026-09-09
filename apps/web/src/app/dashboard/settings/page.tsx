@@ -6,7 +6,9 @@ import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { fetchReviews } from "@/lib/reviews";
 
 export const metadata = {
-  title: "Settings",
+  title: "Settings | PR Reviewer",
+  description:
+    "See which repositories the GitHub App may read, and change that on GitHub.",
 };
 
 // GitHub is the only place that can grant or remove repository permission for this App;

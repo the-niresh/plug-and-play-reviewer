@@ -14,7 +14,9 @@ import {
 } from "@/lib/reviews";
 
 export const metadata = {
-  title: "Dashboard",
+  title: "Dashboard | PR Reviewer",
+  description:
+    "Recent reviews and severity for repositories this GitHub App can see.",
 };
 
 const RECENT_REVIEW_COUNT = 5;

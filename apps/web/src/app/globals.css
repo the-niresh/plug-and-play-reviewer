@@ -105,3 +105,22 @@
     max-width: 100%;
   }
 }
+
+.landing-root {
+  font-family: var(--font-landing-sans), var(--font-sans);
+  background-image:
+    linear-gradient(to right, oklch(30% 0.02 260 / 0.22) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(30% 0.02 260 / 0.22) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-attachment: fixed;
+}
+
+.landing-root .landing-display {
+  font-family: var(--font-landing-display), ui-serif, serif;
+  font-feature-settings: "opsz" 72;
+}
+
+.landing-root .font-mono,
+.landing-root .landing-stage {
+  font-family: var(--font-landing-mono), var(--font-mono);
+}

@@ -1,7 +1,8 @@
 import { ConnectDoneCountdown } from "@/components/ConnectDoneCountdown";
 
 export const metadata = {
-  title: "You're all set",
+  title: "Signed in | PR Reviewer",
+  description: "GitHub sign-in finished. Go back to the terminal to start a review.",
 };
 
 // Sign-in and repository permission are both finished here, but the review itself only

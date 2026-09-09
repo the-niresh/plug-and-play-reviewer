@@ -3,6 +3,12 @@ import path from "node:path";
 
 import { Badge } from "@/components/ui/badge";
 
+export const metadata = {
+  title: "Scorecard | PR Reviewer",
+  description:
+    "Measured quality, or a real refusal. This page does not invent a baseline.",
+};
+
 type Scorecard = {
   precision_per_finding: number | string;
   precision_per_case: number | string;

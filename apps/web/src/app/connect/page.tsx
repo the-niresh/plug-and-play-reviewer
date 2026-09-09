@@ -14,7 +14,8 @@ const APP_SLUG = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG ?? "";
 const INSTALL_URL = APP_SLUG ? `https://github.com/apps/${APP_SLUG}/installations/new` : "";
 
 export const metadata = {
-  title: "Choose repositories",
+  title: "Choose repositories | PR Reviewer",
+  description: "Pick the repositories this GitHub App is allowed to read.",
 };
 
 export default function ConnectPage() {

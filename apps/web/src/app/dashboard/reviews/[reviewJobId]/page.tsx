@@ -8,7 +8,8 @@ import { ReviewBehaviorPanels } from "@/components/ReviewBehaviorPanels";
 import { fetchReview } from "@/lib/reviews";
 
 export const metadata = {
-  title: "Review",
+  title: "Review | PR Reviewer",
+  description: "Findings, cost, and behavior for one review job.",
 };
 
 type PageProps = {

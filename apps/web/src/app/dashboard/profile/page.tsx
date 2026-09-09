@@ -6,7 +6,8 @@ import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { fetchProfile } from "@/lib/profile";
 
 export const metadata = {
-  title: "Profile",
+  title: "Profile | PR Reviewer",
+  description: "The GitHub account signed in to this control plane.",
 };
 
 export default async function ProfilePage() {

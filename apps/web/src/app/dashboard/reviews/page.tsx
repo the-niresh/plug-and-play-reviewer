@@ -6,7 +6,9 @@ import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { fetchReviews, severityTone, worstSeverity } from "@/lib/reviews";
 
 export const metadata = {
-  title: "Reviews",
+  title: "Reviews | PR Reviewer",
+  description:
+    "Every review job the runner has finished for your connected repositories.",
 };
 
 export default async function ReviewsPage() {

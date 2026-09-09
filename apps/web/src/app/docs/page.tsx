@@ -2,6 +2,12 @@ import Link from "next/link";
 
 import { SiteNav } from "@/components/SiteNav";
 
+export const metadata = {
+  title: "Docs | PR Reviewer",
+  description:
+    "Install the runner, connect GitHub, add a model key, and use the agent plugin.",
+};
+
 const SECTIONS = [
   {
     tag: "Install",

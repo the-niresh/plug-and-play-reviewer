@@ -5,7 +5,8 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { fetchProfile } from "@/lib/profile";
 
 export const metadata = {
-  title: "Review dashboard",
+  title: "Dashboard | PR Reviewer",
+  description: "Signed-in review jobs, findings, and repository connections.",
 };
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
