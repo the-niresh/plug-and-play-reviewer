@@ -1,78 +1,59 @@
 # Release checksum install proof
 
 Date: 2026-09-10
-Version: 0.1.0 (from pyproject.toml)
+Version: 0.1.0
+Release: https://github.com/the-niresh/plug-and-play-reviewer/releases/tag/v0.1.0
 
-## Published GitHub Release (2026-09-10 check)
+## Published GitHub Release (2026-09-10 re-check)
 
 | Check | Result | Evidence |
 |---|---|---|
-| Tag `v0.1.0` on GitHub | PASS | `refs/tags/v0.1.0` -> `5198c25` |
-| GitHub Release record | **FAIL** | `GET /releases/tags/v0.1.0` -> 404; release list count 0 |
-| Asset `pr-reviewer-0.1.0-compose.release.yml` | **FAIL** | download URL -> 404 |
-| Asset `SHA256SUMS` | **FAIL** | download URL -> 404 |
-| `install-from-release.sh` from public main | **FAIL** | script fetch OK; install exits 22 on asset 404 |
-| CI release workflow | **FAIL** | [run 34402098194](https://github.com/the-niresh/plug-and-play-reviewer/actions/runs/34402098194): `build images` failed; publish skipped |
+| GitHub Release `v0.1.0` | PASS | published 2026-09-09T20:44:34Z |
+| Asset `pr-reviewer-0.1.0-compose.release.yml` | PASS | 2034 bytes on release |
+| Asset `SHA256SUMS` | PASS | 104 bytes on release |
+| `install-from-release.sh` from public main | PASS | shallow clone of `main`, script run exit 0 |
+| SHA256SUMS verify during install | PASS | `pr-reviewer-0.1.0-compose.release.yml: OK` |
+| Installed file under fresh temp prefix | PASS | `/tmp/pr-reviewer-pub-prefix-*/pr-reviewer-0.1.0-compose.release.yml` |
+| No secrets used | PASS | public git clone + release download URLs only |
+| Evals run | PASS (none) | |
+| Scorecard changed | PASS (none) | `docs/reports/scorecard.json` untouched |
 
-Public install attempt (no secrets, fresh prefix):
+Public install proof (fresh clone + fresh prefix):
 
 ```sh
-PREFIX="/tmp/pr-reviewer-pub-proof-$$"
-curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-from-release.sh \
-  -o /tmp/install-from-release-pub.sh
-sh /tmp/install-from-release-pub.sh --version 0.1.0 --prefix "$PREFIX"
-# curl: (22) The requested URL returned error: 404
-# exit=22
+PROOF_DIR=$(mktemp -d /tmp/pr-reviewer-pub-verify-XXXXXX)
+PREFIX=$(mktemp -d /tmp/pr-reviewer-pub-prefix-XXXXXX)
+git clone --depth 1 https://github.com/the-niresh/plug-and-play-reviewer.git "$PROOF_DIR/repo"
+sh "$PROOF_DIR/repo/scripts/install-from-release.sh" --version 0.1.0 --prefix "$PREFIX"
+# pr-reviewer-0.1.0-compose.release.yml: OK
+# Installed verified release asset to $PREFIX/pr-reviewer-0.1.0-compose.release.yml
+# exit=0
 ```
 
-**Verdict:** checksum install path is implemented and proved locally, but **published
-release install is not verified** because no release assets exist on GitHub yet.
+**Verdict:** published release checksum install is verified end to end.
+
+## Published SHA256SUMS
+
+```
+393de36c6c0f1f3fc337582ceb02b206e782e859c05dd335ba269330dda63f9e  pr-reviewer-0.1.0-compose.release.yml
+```
+
+Installed file hash matched the published digest on 2026-09-10.
 
 ## Local build proof (still PASS)
 
 | Step | Result |
 |---|---|
 | `sh scripts/build-local-release.sh dist` | PASS |
-| `dist/SHA256SUMS` written | PASS |
 | `sh scripts/install-from-release.sh --dist dist --prefix /tmp/pr-reviewer-pub-local-$$` | PASS |
-| sha256sum verify output | `pr-reviewer-0.1.0-compose.release.yml: OK` |
-| Installed file under fresh prefix | PASS |
 
-## SHA256SUMS (2026-09-10 local build)
+## CI note
 
-```
-393de36c6c0f1f3fc337582ceb02b206e782e859c05dd335ba269330dda63f9e  pr-reviewer-0.1.0-compose.release.yml
-```
+Tag push workflow [34402098194](https://github.com/the-niresh/plug-and-play-reviewer/actions/runs/34402098194)
+failed at `build images`. Release assets were published manually by the owner.
+Future tag releases should fix CI or continue manual publish per [RELEASE.md](../RELEASE.md).
 
-Digest changes when `compose.release.yml` or rendered config changes. Do not
-treat this line as permanent.
+## Scope
 
-## Owner action to unblock published proof
-
-The tag exists but the release workflow failed before assets were uploaded.
-Fix the workflow (likely `docker compose -f compose.release.yml build` in CI)
-or publish manually:
-
-```sh
-sh scripts/build-local-release.sh dist
-gh auth login
-gh release create v0.1.0 dist/pr-reviewer-0.1.0-compose.release.yml dist/SHA256SUMS \
-  --repo the-niresh/plug-and-play-reviewer --title "v0.1.0"
-```
-
-Re-run public proof after assets exist:
-
-```sh
-PREFIX="/tmp/pr-reviewer-pub-proof-$$"
-curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-from-release.sh \
-  | sh -s -- --version 0.1.0 --prefix "$PREFIX"
-ls "$PREFIX/pr-reviewer-0.1.0-compose.release.yml"
-```
-
-## Scope and constraints
-
-- No secrets used in this check (public API + curl only).
-- No evals run.
-- `docs/reports/scorecard.json` unchanged.
-- This path verifies and installs the **hosted deploy compose file**. The
-  `reviewer` CLI still installs via `install-reviewer.sh` or `uv tool install`.
+This path verifies and installs the **hosted deploy compose file**. The
+`reviewer` CLI still installs via `install-reviewer.sh` or `uv tool install`.
