@@ -7,8 +7,8 @@ they share when actually invoked -- `reviewer review`, `reviewer mcp`, `reviewer
 
 It never touches the hosted database or control plane, and it never imports pr_reviewer.cli (the
 operator package): it only ever calls GitHub with a token the caller already holds
-(PR_REVIEWER_GITHUB_TOKEN) and the user's own model provider key (ANTHROPIC_API_KEY or
-OPENAI_API_KEY), matching the product's hard rule that source, diffs and keys never cross to the
+(PR_REVIEWER_GITHUB_TOKEN) and the user's own model provider key from the local secret store,
+matching the product's hard rule that source, diffs and keys never cross to the
 hosted plane. It reuses the same diff packer and reviewer the rest of the runner uses
 (reviewer.diff_budget.pack_diff, reviewer.review_pull_request.review_pull_request) rather than
 building a second review pipeline.
@@ -48,10 +48,10 @@ from pr_reviewer.reviewer.specialists import (
     apply_enabled_specialists,
     get_enabled_specialists,
 )
+from pr_reviewer.runner.secrets import SecretStore, default_config_dir, get_secret_store
 
 GITHUB_TOKEN_ENV = "PR_REVIEWER_GITHUB_TOKEN"
-ANTHROPIC_KEY_ENV = "ANTHROPIC_API_KEY"
-OPENAI_KEY_ENV = "OPENAI_API_KEY"
+MODEL_KEY_SECRET = "model_key"
 
 # ponytail: a plain 4-chars-per-token heuristic, not a real tokenizer. This only decides how much
 # diff the packer includes before the same budget the model itself will enforce; swap for a real
@@ -74,14 +74,21 @@ class _StaticTokenProvider:
         return self._token
 
 
-def resolve_model_provider() -> tuple[ProviderName, ModelProvider] | None:
-    anthropic_key = os.environ.get(ANTHROPIC_KEY_ENV)
-    if anthropic_key:
-        return "anthropic", AnthropicProvider(anthropic_key)
-    openai_key = os.environ.get(OPENAI_KEY_ENV)
-    if openai_key:
-        return "openai", OpenAIProvider(openai_key)
-    return None
+def resolve_model_provider(
+    secrets: SecretStore | None = None,
+) -> tuple[ProviderName, ModelProvider] | None:
+    store = secrets if secrets is not None else _default_secret_store()
+    key = store.get(MODEL_KEY_SECRET)
+    if not key or not key.strip():
+        return None
+    cleaned = key.strip()
+    if cleaned.startswith("sk-ant-"):
+        return "anthropic", AnthropicProvider(cleaned)
+    return "openai", OpenAIProvider(cleaned)
+
+
+def _default_secret_store() -> SecretStore:
+    return get_secret_store(file_fallback_directory=default_config_dir())
 
 
 def _count_tokens(text: str) -> int:
@@ -143,7 +150,7 @@ class LiveAgentReviewBackend:
         if provider_choice is None:
             raise AgentSurfaceRefusal(
                 "no_model_key",
-                f"Set {ANTHROPIC_KEY_ENV} or {OPENAI_KEY_ENV} before requesting a review.",
+                "Store a model key with reviewer setup, then retry the review.",
             )
         provider_name, model = provider_choice
         model_name = request.model or default_model_for(provider_name)
