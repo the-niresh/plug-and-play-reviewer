@@ -17,6 +17,10 @@ _PROMPT_FIELD_HELP: dict[str, str] = {
     "rationale": "why this matters on the changed lines",
     "evidence": "non-empty list of strings quoting the changed lines",
     "confidence": "number from 0 to 1",
+    "suggested_fix": (
+        "optional replacement text for the cited new-side lines. GitHub posts this as a "
+        "one-click suggestion block. omit when you have no concrete fix"
+    ),
 }
 
 
@@ -34,7 +38,10 @@ def finding_draft_prompt_schema_section() -> str:
         field_lines.append(f"- {name}: {help_text}")
     return "\n".join(
         [
-            'Return JSON {"findings": [...]} where each finding object has exactly these fields:',
+            (
+                'Return JSON {"findings": [...]} where each finding object has exactly '
+                "these fields (suggested_fix is optional):"
+            ),
             *field_lines,
             "",
             "Example finding:",
@@ -43,7 +50,8 @@ def finding_draft_prompt_schema_section() -> str:
                 '"file_path": "src/app.py", "line_start": 12, "line_end": 12, '
                 '"title": "Missing null guard", '
                 '"rationale": "value can be None before it is used", '
-                '"evidence": ["12|    return value.upper()"], "confidence": 0.85}'
+                '"evidence": ["12|    return value.upper()"], "confidence": 0.85, '
+                '"suggested_fix": "    return value.upper() if value is not None else \\"\\""}'
             ),
         ]
     )

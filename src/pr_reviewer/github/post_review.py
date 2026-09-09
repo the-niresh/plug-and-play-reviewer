@@ -44,6 +44,7 @@ class ReviewComment:
     line: int
     side: CommentSide
     body: str
+    start_line: int | None = None
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class PostedReview:
     comments: tuple[ReviewComment, ...]
     summary_only: bool = False
     idempotency_key: str = ""
+    suggestion_dropped_count: int = 0
 
 
 def submit_review_to_github(
@@ -86,13 +88,7 @@ def submit_review_to_github(
             "event": "COMMENT",
             "body": submission.body,
             "comments": [
-                {
-                    "path": comment.path,
-                    "line": comment.line,
-                    "side": comment.side,
-                    "body": comment.body,
-                }
-                for comment in submission.comments
+                _comment_payload(comment) for comment in submission.comments
             ],
         },
         timeout=timeout_seconds,
@@ -175,8 +171,11 @@ def post_review(
     if not public:
         return None
 
-    comments = tuple(_anchor(finding, patches, render_hunks) for finding, _decision in public)
-    inline = tuple(comment for comment in comments if comment is not None)
+    comments = tuple(
+        _anchor(finding, patches, render_hunks) for finding, _decision in public
+    )
+    inline = tuple(comment for comment, _dropped in comments if comment is not None)
+    suggestion_dropped_count = sum(1 for _comment, dropped in comments if dropped)
     titles = [finding.title for finding, _decision in public]
     body = f"{_marker(idempotency_key)}\n" + "\n".join(f"- {title}" for title in titles)
     submission = ReviewSubmission(commit_id=head_sha, body=body, comments=inline)
@@ -201,11 +200,24 @@ def post_review(
         summary_only=len(inline) == 0,
         body=posted.body or body,
         comments=posted.comments or inline,
+        suggestion_dropped_count=suggestion_dropped_count,
     )
     if record_post is not None:
         record_post(posted)
     _emit(record_event, findings, posted)
     return posted
+
+
+def _comment_payload(comment: ReviewComment) -> dict[str, str | int]:
+    payload: dict[str, str | int] = {
+        "path": comment.path,
+        "line": comment.line,
+        "side": comment.side,
+        "body": comment.body,
+    }
+    if comment.start_line is not None:
+        payload["start_line"] = comment.start_line
+    return payload
 
 
 def _is_public(finding: Finding, decision: RouteDecision) -> bool:
@@ -220,19 +232,45 @@ def _anchor(
     finding: Finding,
     patches: Sequence[FilePatch],
     render_hunks: Callable[[FilePatch], str],
-) -> ReviewComment | None:
+) -> tuple[ReviewComment | None, bool]:
     patch = next((item for item in patches if item.path == finding.file_path), None)
     if patch is None:
-        return None
+        return None, finding.suggested_fix is not None
     numbers = _new_side_numbers(render_hunks(patch))
     if finding.line_start not in numbers:
-        return None
-    return ReviewComment(
-        path=patch.path,
-        line=finding.line_start,
-        side="RIGHT",
-        body=finding.title,
+        return None, finding.suggested_fix is not None
+    include_suggestion = _suggestion_applies_cleanly(finding, numbers)
+    dropped = finding.suggested_fix is not None and not include_suggestion
+    return (
+        ReviewComment(
+            path=patch.path,
+            line=finding.line_end if include_suggestion else finding.line_start,
+            side="RIGHT",
+            body=_comment_body(finding, include_suggestion=include_suggestion),
+            start_line=(
+                finding.line_start
+                if include_suggestion and finding.line_end > finding.line_start
+                else None
+            ),
+        ),
+        dropped,
     )
+
+
+def _suggestion_applies_cleanly(finding: Finding, numbers: set[int]) -> bool:
+    text = finding.suggested_fix
+    if text is None:
+        return False
+    if not text.strip() or "```" in text:
+        return False
+    return all(line in numbers for line in range(finding.line_start, finding.line_end + 1))
+
+
+def _comment_body(finding: Finding, *, include_suggestion: bool) -> str:
+    if not include_suggestion or finding.suggested_fix is None:
+        return finding.title
+    replacement = finding.suggested_fix.rstrip("\n")
+    return f"{finding.title}\n\n```suggestion\n{replacement}\n```"
 
 
 def _new_side_numbers(rendered: str) -> set[int]:

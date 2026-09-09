@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Concern = Literal["security", "correctness", "tests", "docs", "maintainability"]
 Severity = Literal["critical", "high", "medium", "low", "info"]
@@ -25,8 +25,14 @@ class FindingDraft(BaseModel):
     rationale: str = Field(min_length=1)
     evidence: list[str] = Field(min_length=1)
     confidence: float = Field(ge=0, le=1)
+    suggested_fix: str | None = None
     reflection_score: float | None = Field(default=None, ge=0, le=1)
     reflection_reason: str | None = Field(default=None, min_length=1)
+
+    @field_validator("suggested_fix", mode="before")
+    @classmethod
+    def blank_suggested_fix_is_none(cls, value: object) -> object:
+        return _blank_suggested_fix_is_none(value)
 
     @model_validator(mode="after")
     def validate_line_range(self) -> FindingDraft:
@@ -48,6 +54,12 @@ class FindingCandidate(BaseModel):
     rationale: str = Field(min_length=1)
     evidence: list[str] = Field(min_length=1)
     confidence: float = Field(ge=0, le=1)
+    suggested_fix: str | None = None
+
+    @field_validator("suggested_fix", mode="before")
+    @classmethod
+    def blank_suggested_fix_is_none(cls, value: object) -> object:
+        return _blank_suggested_fix_is_none(value)
 
     @model_validator(mode="after")
     def validate_line_range(self) -> FindingCandidate:
@@ -71,6 +83,12 @@ class ConsensusFinding(FindingCandidate):
     agreement_count: int = Field(ge=1)
     model_reasoning: tuple[ModelReasoning, ...] = Field(min_length=1)
     needs_human_match: bool = False
+
+
+def _blank_suggested_fix_is_none(value: object) -> object:
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
 
 
 _SECURITY_TEXT_MARKERS = (
@@ -100,4 +118,5 @@ def candidate_from_draft(draft: FindingDraft) -> FindingCandidate:
         rationale=draft.rationale,
         evidence=list(draft.evidence),
         confidence=draft.confidence,
+        suggested_fix=draft.suggested_fix,
     )

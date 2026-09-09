@@ -513,6 +513,7 @@ def _findings_with_route_decisions(
             verification_method="static",
             public_safe=allow_public_post,
             status="draft",
+            suggested_fix=candidate.suggested_fix,
         )
         mapped.append(
             (
