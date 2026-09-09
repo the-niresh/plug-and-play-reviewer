@@ -1,4 +1,7 @@
 {
+  "model": "gpt-4o-mini",
+  "measured_at": "2026-09-10",
+  "sample_limitation": "7 holdout cases, all from the Zod repository",
   "precision_per_finding": 0.6666666666666666,
   "precision_per_case": 0.5714285714285714,
   "recall_per_finding": 0.5714285714285714,

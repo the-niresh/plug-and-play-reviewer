@@ -31,6 +31,9 @@ ZERO_COST_SCORECARD_REFUSAL = (
 class Scorecard(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    model: str | None = None
+    measured_at: str | None = None
+    sample_limitation: str | None = None
     precision_per_finding: float | str
     precision_per_case: float | str
     recall_per_finding: float | str
@@ -38,6 +41,44 @@ class Scorecard(BaseModel):
     false_findings_per_pr: float | str
     cost_usd: float | str
     reviewed_pr_count: int | str
+
+
+_METRIC_FIELDS = (
+    "precision_per_finding",
+    "precision_per_case",
+    "recall_per_finding",
+    "recall_per_case",
+    "false_findings_per_pr",
+    "cost_usd",
+    "reviewed_pr_count",
+)
+
+
+def is_scorecard_refusal(scorecard: Scorecard) -> bool:
+    """True when every metric field is a refusal string, not a measured number."""
+    return all(isinstance(getattr(scorecard, field), str) for field in _METRIC_FIELDS)
+
+
+def validate_published_scorecard(scorecard: Scorecard) -> None:
+    """Require provenance fields when the on-disk scorecard holds a live baseline."""
+    if is_scorecard_refusal(scorecard):
+        return
+    missing = [
+        name
+        for name, value in (
+            ("model", scorecard.model),
+            ("measured_at", scorecard.measured_at),
+            ("sample_limitation", scorecard.sample_limitation),
+        )
+        if not value
+    ]
+    if missing:
+        joined = ", ".join(missing)
+        raise ValueError(f"published scorecard missing required fields: {joined}")
+    if not isinstance(scorecard.cost_usd, (int, float)) or scorecard.cost_usd <= 0:
+        raise ValueError("published scorecard cost_usd must be a positive number")
+    if not isinstance(scorecard.reviewed_pr_count, int) or scorecard.reviewed_pr_count <= 0:
+        raise ValueError("published scorecard reviewed_pr_count must be a positive integer")
 
 
 def generate_scorecard(

@@ -9,7 +9,7 @@ export const metadata = {
     "Measured quality, or a real refusal. This page does not invent a baseline.",
 };
 
-type Scorecard = {
+type ScorecardMetrics = {
   precision_per_finding: number | string;
   precision_per_case: number | string;
   recall_per_finding: number | string;
@@ -19,13 +19,19 @@ type Scorecard = {
   reviewed_pr_count: number | string;
 };
 
+type Scorecard = ScorecardMetrics & {
+  model?: string;
+  measured_at?: string;
+  sample_limitation?: string;
+};
+
 type FeatureFlag = {
   name: string;
   enabled: boolean;
   measurement: string;
 };
 
-const METRIC_LABELS: Record<keyof Scorecard, string> = {
+const METRIC_LABELS: Record<keyof ScorecardMetrics, string> = {
   precision_per_finding: "Precision, per finding",
   precision_per_case: "Precision, per case",
   recall_per_finding: "Recall, per finding",
@@ -42,6 +48,10 @@ const FLAG_LABELS: Record<string, string> = {
   langgraph: "LangGraph",
 };
 
+function isRefusalScorecard(scorecard: Scorecard): boolean {
+  return typeof scorecard.precision_per_finding === "string";
+}
+
 function readJson<T>(relativePath: string): T {
   const filePath = path.join(process.cwd(), "..", "..", relativePath);
   return JSON.parse(readFileSync(filePath, "utf-8")) as T;
@@ -50,7 +60,7 @@ function readJson<T>(relativePath: string): T {
 export default function ScorecardPage() {
   const scorecard = readJson<Scorecard>("docs/reports/scorecard.json");
   const flags = readJson<FeatureFlag[]>("docs/reports/feature_flags.json");
-  const metricKeys = Object.keys(METRIC_LABELS) as (keyof Scorecard)[];
+  const metricKeys = Object.keys(METRIC_LABELS) as (keyof ScorecardMetrics)[];
 
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-14">
@@ -58,6 +68,28 @@ export default function ScorecardPage() {
       <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
         Measured quality, or the real refusal. Nothing below is a placeholder.
       </p>
+
+      {!isRefusalScorecard(scorecard) ? (
+        <>
+          <h2 className="mt-12 mb-4 text-xs font-medium tracking-[0.14em] uppercase">
+            Measurement
+          </h2>
+          <dl className="overflow-hidden rounded-lg border">
+            <div className="bg-card flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b px-4 py-3">
+              <dt className="text-sm">Model</dt>
+              <dd className="font-mono text-sm tabular-nums">{scorecard.model}</dd>
+            </div>
+            <div className="bg-card flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b px-4 py-3">
+              <dt className="text-sm">Measured</dt>
+              <dd className="font-mono text-sm tabular-nums">{scorecard.measured_at}</dd>
+            </div>
+            <div className="bg-card flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 px-4 py-3">
+              <dt className="text-sm">Sample</dt>
+              <dd className="max-w-prose text-sm">{scorecard.sample_limitation}</dd>
+            </div>
+          </dl>
+        </>
+      ) : null}
 
       <h2 className="mt-12 mb-4 text-xs font-medium tracking-[0.14em] uppercase">
         Quality
