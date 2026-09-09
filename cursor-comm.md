@@ -1666,4 +1666,11 @@ red proof: curl install-reviewer.sh on public main returned HTTP 404 before push
 gate numbers: installer+docs tests pending; dash grep pending
 what I did: Ran clean install in fresh temp HOME with manual uv tool install from public git. reviewer --help and reviewer doctor --yes passed. Documented PARTIAL PASS in docs/reports/clean-machine-install-proof.md. Fixed INSTALL.md curl 404 fallback and live hosted origin in setup example; README grammar and stale live-comment line.
 blockers: Owner must push main to origin before public curl one-liner works for strangers.
+## 2026-09-10T00:59:42+05:30 | clean-machine-install-proof | pass after push
+status: DONE
+commit sha: doc update pending
+red proof: prior curl returned 404 before push; after push curl HTTP 200 and install exit 0
+gate numbers: n/a (live proof only)
+what I did: Re-ran clean install from public curl one-liner in fresh temp HOME/bin. Built from git 40a9f85. reviewer --help and reviewer doctor --yes passed. Updated docs/reports/clean-machine-install-proof.md to PASS.
+blockers: None for install proof. Next: real user install + live PR review from public install only.
 
