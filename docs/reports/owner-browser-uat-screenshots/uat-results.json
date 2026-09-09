@@ -1,0 +1,49 @@
+[
+  {
+    "check": "1-landing-desktop",
+    "status": "PASS",
+    "url": "https://reviewer.niresh.tech/"
+  },
+  {
+    "check": "5-free-tier-copy",
+    "status": "PASS"
+  },
+  {
+    "check": "2-github-sign-in-redirect",
+    "status": "BLOCKED",
+    "url": "https://github.com/login?client_id=Iv23lixZE1IwHodCw7y2&return_to=%2Flogin%2Foauth%2Fauthorize%3Fclient_id%3DIv23lixZE1IwHodCw7y2%26redirect_uri%3Dhttps%253A%252F%252Freviewer.niresh.tech%252Fapi%252Fauth%252Fgithub%252Fcallback%26state%3DQ45WZlhKIcjhVo7-hhMpi_jqPFZQHz3syH4fuPKPO7M"
+  },
+  {
+    "check": "3-dashboard-after-sign-in",
+    "status": "BLOCKED",
+    "reason": "Complete GitHub login in browser (owner credentials required)"
+  },
+  {
+    "check": "4-connect-page",
+    "status": "PASS"
+  },
+  {
+    "check": "docs",
+    "status": "PASS"
+  },
+  {
+    "check": "docs-agents",
+    "status": "PASS"
+  },
+  {
+    "check": "scorecard",
+    "status": "PASS"
+  },
+  {
+    "check": "baseline-honesty",
+    "status": "PASS"
+  },
+  {
+    "check": "9-live-review-traceable",
+    "status": "PASS",
+    "refs": [
+      "PR #8 review 5158722711",
+      "PR #9 review 5159297169"
+    ]
+  }
+]
