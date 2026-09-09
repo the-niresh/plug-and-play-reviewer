@@ -1,66 +1,58 @@
-Nothing in this file is applied. DNS, Traefik, Compose, and GitHub App 4771544 are unchanged.
+# Runbook
 
-# reviewer.niresh.tech deployment runbook
+This is the operator page. It says what is live and what still needs the
+owner. It is not a launch scorecard.
 
-This is preparation only. No DNS record is created. No container is started.
-No Traefik command is changed. No GitHub App setting is edited.
+## What is proved
 
-## DNS A record (not created)
+`https://reviewer.niresh.tech` answers today.
 
-Name: `reviewer.niresh.tech`
-Type: A
-Value: `76.13.243.12`
+- `GET /health` returns `200` and `{"status":"ok"}`.
+- `GET /ready` returns `200` and `{"status":"ok"}`. That check talks to
+  Postgres.
 
-The apex `niresh.tech` stays as it is. This is a new subdomain record.
+Those two checks prove the hosted control plane process and its database
+path. They do not prove a GitHub webhook, a model call, or a posted
+comment.
 
-## Traefik v2.11 (not loaded, not restarted)
+The hosted schema still must not hold source, diffs, or model keys. Finding
+titles and rationale may sit on Neon so the dashboard can show them. See
+[DATA_BOUNDARIES.md](DATA_BOUNDARIES.md).
 
-This VPS already runs `traefik:v2.11` with:
+## What still needs the owner
 
-- Docker provider, `exposedbydefault=false`
-- entrypoints `web` (80) and `websecure` (443)
-- HTTP to HTTPS redirect
-- cert resolver name `letsencrypt`
-- Docker network `n8n-mkvx_proxy`
+- Point the GitHub App homepage, callback, and webhook at
+  `https://reviewer.niresh.tech` if they still use another origin.
+- Install the App on a repository you own.
+- Install a runner on a machine you control. Pair it. Store the model key
+  there. See [INSTALL.md](INSTALL.md).
+- Open a pull request and approve a finding before a comment can post.
+- A new Render or Railway URL. That needs your account, a Neon
+  `DATABASE_URL`, and GitHub App secrets. See [DEPLOY.md](DEPLOY.md).
+- A public GitHub Release install asset. Local checksum install is the
+  path today.
 
-File-provider YAML: `deploy/traefik/reviewer.yml` (router `reviewer`, service
-`reviewer`, Host `reviewer.niresh.tech`, backend `http://api:8000`).
-This Traefik process has no file provider, so that YAML is not live.
+Do not invent those values.
 
-Apply path when a human chooses to deploy: merge
-`docker-compose.hosted.yml` onto `compose.release.yml`. Labels enable the
-same router and service on the `api` container. That merge is not run here.
+## GitHub App URLs
 
-Offline check that was run:
-
-```sh
-docker compose -f compose.release.yml -f docker-compose.hosted.yml config
-```
-
-## GitHub App 4771544 URLs (not edited)
-
-The App is still on the apex. Change these three from `niresh.tech` to the
-subdomain when DNS and Traefik are actually live:
+When the owner is ready, set:
 
 - Homepage: `https://reviewer.niresh.tech`
 - Callback: `https://reviewer.niresh.tech/api/auth/github/callback`
 - Webhook: `https://reviewer.niresh.tech/api/github/webhook`
 
-Callback path is `oauth_api.CALLBACK_PATH`. Webhook path is
-`POST /api/github/webhook` on the control plane.
+Until those match, live events will not reach this instance.
 
-## Rollback (not performed)
+## Rollback
 
-1. Stop the hosted overlay: `docker compose -f compose.release.yml -f docker-compose.hosted.yml down`.
-   Traefik drops the router because the Docker provider watches labels.
-2. Leave GitHub App 4771544 on the apex until the subdomain is gone, or point
-   the three URLs back to `niresh.tech`.
-3. Remove the `reviewer.niresh.tech` A record if it was added.
+1. Stop the hosted overlay:
+   `docker compose -f compose.release.yml -f docker-compose.hosted.yml down`.
+2. Point the three App URLs back if you changed them.
+3. Keep Neon data unless you mean to delete it.
 
-Do not change Traefik's own command or cert resolver as part of rollback.
+## What this runbook does not claim
 
-## What this runbook does not do
-
-- Task 24 FoodSpector shadow
-- Runtime Task 10 live webhook proof
-- Any precision, recall, latency, or cost number
+- It does not publish an eval baseline.
+- It does not prove a comment on a real pull request.
+- It does not set prices for the later team paid path.

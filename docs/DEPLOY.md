@@ -1,8 +1,9 @@
 # Deploy the hosted control plane
 
 This guide is for a first hosted instance. It covers Render and Railway. It
-does not put model keys, diffs, or findings on the hosted plane. Those stay
-on the runner.
+does not put model keys or diffs on the hosted plane. Those stay on the
+runner. Finding titles and rationale may be stored so the dashboard can show
+them.
 
 There is already a live compose instance at `https://reviewer.niresh.tech`.
 `GET /health` and `GET /ready` return `200` with `{"status":"ok"}`. Use that
@@ -90,8 +91,9 @@ Until those three match, OAuth and webhooks will not reach this instance.
 - The local runner. Install that on a machine you control. Pair it to this
   origin. Store model keys there.
 - The Next.js UI. The one-click files start the API image only.
-- Source, diffs, findings, or model keys. The hosted schema must not hold
-  those.
+- Source, diffs, or model keys. The hosted schema must not hold those.
+  Finding titles and rationale are allowlisted dashboard text. See
+  [DATA_BOUNDARIES.md](DATA_BOUNDARIES.md).
 
 ## If something fails
 

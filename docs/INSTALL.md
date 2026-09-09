@@ -1,6 +1,19 @@
 # Install
 
-The installer never asks for hosted-plane credentials. Pairing uses a one-time browser or device code. Model keys are read with hidden input and stored in the OS secret store, or in `~/.config/pr-reviewer` mode `0600` when that store is missing.
+## What you need before you start
+
+- A machine you control. The runner reads source and diffs there.
+- Python 3.12 and [uv](https://docs.astral.sh/uv/) if you run from this repo.
+- Docker if you want full mode with sandbox checks.
+- A model key. Enter it during `reviewer setup`. It stays on this machine.
+- A hosted origin to pair with. `https://reviewer.niresh.tech` answers
+  `/health` and `/ready` today. For your own instance see [DEPLOY.md](DEPLOY.md).
+- GitHub connected through the App. Pairing uses a one-time browser or device
+  code.
+
+The installer never asks for hosted-plane credentials. Model keys are read with
+hidden input and stored in the OS secret store, or in `~/.config/pr-reviewer`
+mode `0600` when that store is missing.
 
 ## Install a versioned release
 

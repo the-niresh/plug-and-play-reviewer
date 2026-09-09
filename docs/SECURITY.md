@@ -11,6 +11,12 @@
 Each control names the test that proves it. This document has no quality or
 cost-per-PR numbers.
 
+## What never goes to hosted
+
+Source, diffs, embeddings, sandbox logs, and model keys stay on the runner.
+Hosted Neon may store finding title and rationale so the dashboard can show
+them. It does not store the patch. See [DATA_BOUNDARIES.md](DATA_BOUNDARIES.md).
+
 ## 1 - ✅ Three authorization axes
 
 Hosted authorization is installation, then repository, then runner.
@@ -131,11 +137,29 @@ container scan: digest-pinned images in Dockerfile, compose.release.yml, docker-
 That is a digest-pin scan of the tracked image refs, not a hosted vulnerability
 scanner. GitHub Actions has not executed these steps. `.env` was not read.
 
+## 10 - ✅ Hosted finding text and rate limit
+
+Hosted Neon stores allowlisted finding text: `review_findings.title` and
+`review_findings.rationale`, plus identifiers, enums, and verification
+summaries (`docs/DATA_BOUNDARIES.md`, `tests/test_privacy_story.py`). It does
+not store source, diffs, evidence, embeddings, sandbox logs, or model keys.
+Model keys live in the runner secret store (OS keyring or mode-0600 files),
+not in `os.environ` and not on the hosted plane
+(`tests/test_model_key_storage.py`).
+
+Hosted HTTP routes share one in-process sliding window per client address
+(`control_plane/rate_limit.py`). A limiter failure returns 429 with
+`{"error": "rate_limited"}` and no internal detail. `/health` and `/ready`
+are not limited (`tests/test_hosted_rate_limit.py`).
+
 ## Settled - ✅
 
 - ✅ Installation, repository, and runner are distinct axes.
 - ✅ Untrusted repository text cannot skip `wrap_untrusted`.
 - ✅ Dashboard deny-by-default is tested, including `/openapi.json`.
+- ✅ Hosted Neon stores finding title and rationale. It does not store source,
+  diffs, or model keys.
+- ✅ Hosted HTTP is rate limited except `/health` and `/ready`.
 
 ## Open Decisions - ❓
 

@@ -8,8 +8,9 @@
 | ❓ | Open |
 
 Walk a signed webhook through to a human decision using commands that run
-on this machine. Steps marked ❌ need DNS, Traefik, and a live GitHub App
-URL. Those are morning work, not this checkout.
+on this machine. The hosted origin `https://reviewer.niresh.tech` answers
+`/health` and `/ready`. A first live comment on a real pull request still
+needs the owner to point the GitHub App, pair a runner, and approve.
 
 ## Screenshots captured today - ✅
 
@@ -74,32 +75,32 @@ approval, the gate holds the finding so mock GitHub stays empty, a human
 `allow_public_post` posts once, and a newer head SHA supersedes the job so a
 stale post does not fire. Runtime Task 10 is still not done.
 
-## Hosted worker claiming a real job - ❌ needs deployment
+## Hosted health on reviewer.niresh.tech - ✅ live
 
-A production webhook URL at `https://reviewer.niresh.tech/api/github/webhook`
-does not exist yet. Runtime Task 10 needs:
+`GET https://reviewer.niresh.tech/health` and
+`GET https://reviewer.niresh.tech/ready` return `200` and `{"status":"ok"}`.
+That is the hosted control plane and its database check.
 
-- DNS A record for `reviewer.niresh.tech` to `76.13.243.12`
-- Traefik router for that host
-- GitHub App homepage, callback, and webhook URLs pointed at that host
+A signed GitHub delivery still needs the App webhook pointed at
+`https://reviewer.niresh.tech/api/github/webhook`. That App setting is owner
+work. See [RUNBOOK.md](RUNBOOK.md).
 
-Until then a signed GitHub delivery cannot reach this control plane from
-the internet.
-
-## Posting to a real pull request - ❌ needs deployment and a human
+## Posting to a real pull request - ❌ needs owner setup and a human
 
 `post_review` is tested for stale head and duplicate keys. Posting onto a
-FoodSpector PR still needs the deployed App, a paired runner, and a human
-approval on a real finding. Task 24 is that shadow run.
+real PR still needs the App URLs, a paired runner, a model key, and a human
+approval. Retrieval, an optional suggested fix, and opt-in specialists can
+run on that path. They are not a published baseline.
 
 ## What this demo is not
 
 - It is not a 14-day FoodSpector shadow.
-- It does not report precision, recall, or cost per PR. The frozen holdout
-  does not exist yet.
+- It does not report precision, recall, or cost per PR. Dev eval notes are
+  not a baseline.
 - It does not use Redis.
 
 ## Settled - ✅
 
 - ✅ Local webhook tests and the Playwright approval path run today.
-- ❌ Live GitHub to hosted control plane is blocked on DNS and App URLs.
+- ✅ Hosted `/health` and `/ready` on `reviewer.niresh.tech` answer today.
+- ❌ A live GitHub comment still needs owner App URLs, a runner, and a human.

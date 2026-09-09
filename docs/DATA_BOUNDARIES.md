@@ -9,8 +9,14 @@ cannot drift; `--check` exits 1 if this file is stale.
 Background: `docs/phases/phase-2-security-design-gate.md`, section 4 ("Assume breach"). If the
 control plane is fully compromised, the attacker gets identity records, repository IDs, job
 state, redacted lifecycle events, aggregate token/cost numbers, and runner credential **hashes**.
-They must never get source, diffs, findings, rationale, sandbox logs, embeddings, or a model key.
+They also get the allowlisted finding fields on `review_findings` (title, rationale,
+category, file path, and verification summaries). They must never get source, diffs,
+evidence, sandbox logs, embeddings, or a model key.
 Those must never exist on that machine.
+
+In plain words: the hosted site can show finding titles and rationale. It
+cannot hold your source, your diffs, or your model key. Retrieval chunks
+and sandbox logs stay on the runner.
 
 ## Hosted (control plane, Neon)
 
@@ -109,8 +115,9 @@ Everything the hosted plane must never see lives here instead, once Task 5 exist
 
 - **Source and diffs** - the actual PR content pulled from GitHub.
 - **Embeddings** - vector chunks of that source (`code_chunks`, retired hosted-side by this task).
-- **Findings and rationale** - the review output itself, including the reasoning behind it
-  (`findings`, retired hosted-side by this task).
+- **Finding evidence and local finding rows** - evidence hunks, embeddings, and the
+  retired `findings` table live here. Hosted `review_findings` still stores title and
+  rationale as allowlisted dashboard text, not only opaque ids.
 - **Human decisions** - approve/reject/dispute notes on a finding (`human_decisions`, retired
   hosted-side by this task).
 - **Sandbox logs** - verification output that may echo source or diff content.

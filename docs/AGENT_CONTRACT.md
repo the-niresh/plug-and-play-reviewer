@@ -115,7 +115,7 @@ A review result has this shape:
 Current stable codes:
 
 - `github_not_connected` - connect GitHub, then retry.
-- `no_model_key` - set `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`, then retry.
+- `no_model_key` - run `reviewer setup` to store a local model key, then retry.
 - `out_of_tokens` - add credits or switch provider, then retry.
 - `unknown_review` - run a review first, then use its `review_id`.
 - `invalid_request` - fix command arguments or JSON-RPC arguments.

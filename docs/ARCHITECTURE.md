@@ -18,10 +18,12 @@ shared job metadata in Neon, and hands jobs to runners over outbound HTTPS.
 The installed runner keeps model keys local, fetches PR data with short-lived
 installation tokens, runs review, and posts only after a human gate.
 
-Hosted schema cannot hold private review data. `assert_no_private_columns`
-(`control_plane/boundary.py`) reads the live schema. `HOSTED_EXEMPTIONS` is
-empty (`boundary.py:35`, `tests/test_hosted_boundary_enforcement.py`). The
-human-readable half is `docs/DATA_BOUNDARIES.md`. Dashboard modules do not
+Hosted schema cannot hold source, diffs, evidence, embeddings, sandbox logs, or
+model keys. `assert_no_private_columns`
+(`control_plane/boundary.py`) reads the live schema. Finding title and rationale
+are allowlisted hosted text on `review_findings` so the dashboard can show them.
+`HOSTED_EXEMPTIONS` is empty (`boundary.py:35`, `tests/test_hosted_boundary_enforcement.py`).
+The human-readable half is `docs/DATA_BOUNDARIES.md`. Dashboard modules do not
 import runner or hosted handles (`tests/test_dashboard_auth.py`). Runner CLI
 does not import `pr_reviewer.db` (`tests/test_doctor.py`).
 
@@ -90,12 +92,25 @@ here.
 
 ## Settled - ✅
 
-- ✅ Hosted Neon never holds source, diffs, findings, or model keys.
+- ✅ Hosted Neon never holds source, diffs, or model keys. It does store finding
+  title, rationale, and other allowlisted `review_findings` fields.
 - ✅ Runners use outbound HTTPS. The dashboard exposes no webhook route.
 - ✅ Jobs are Postgres rows claimed with skip-locked leases.
 - ✅ Untrusted commands run only in Docker, or not at all.
 
+## 8 - ✅ Review path on the runner
+
+Live reviews retrieve repo chunks when indexing is available
+(`agent_surfaces/backend.py`). Findings may carry an optional suggested fix
+from the same generate call. Extra specialists are opt-in per repository and
+off by default (`tests/test_specialists.py`). None of that is a published
+baseline.
+
+A single person can stay on a simple local path. Team controls, shared
+prompts, and extra repositories are the paid path later.
+
 ## Open Decisions - ❓
 
-- ❓ Which public HTTPS host will run the shared control plane.
+- ❓ Whether a new Render or Railway hostname replaces the live compose
+  origin `https://reviewer.niresh.tech`.
 - ❓ Which operating systems ship in v1.
