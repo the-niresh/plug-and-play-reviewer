@@ -37,8 +37,8 @@ titles and rationale may sit on Neon so the dashboard can show them. See
 - Open a pull request and approve a finding before a comment can post.
 - A new Render or Railway URL. That needs your account, a Neon
   `DATABASE_URL`, and GitHub App secrets. See [DEPLOY.md](DEPLOY.md).
-- A public GitHub Release install asset. Local checksum install is the
-  path today.
+- A published GitHub Release on GitHub (local build + checksum path is ready;
+  see [RELEASE.md](RELEASE.md)).
 
 Do not invent those values.
 

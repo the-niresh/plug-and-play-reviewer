@@ -63,16 +63,44 @@ PR_REVIEWER_INSTALL_SOURCE=/path/to/plug-and-play-reviewer \
 
 Exit code 0. The `reviewer setup` command appears in help output.
 
-⬜ GitHub Release checksum asset for offline install. Blocked: no release is
-published yet. Owner steps: tag a version, attach build output from
-`scripts/build-local-release.sh`, enable the release workflow, then update
-`scripts/install.sh` docs with the download URL.
+## Pinned install from a GitHub Release (checksum verified)
+
+For a pinned hosted deploy compose file, or offline verification after download,
+use [RELEASE.md](RELEASE.md).
+
+Build assets locally:
+
+```sh
+sh scripts/build-local-release.sh dist
+```
+
+Install with checksum verification from a local build:
+
+```sh
+mkdir -p /tmp/pr-reviewer-release-prefix
+sh scripts/install-from-release.sh --dist dist --prefix /tmp/pr-reviewer-release-prefix
+```
+
+After the owner publishes `v0.1.0` on GitHub:
+
+```sh
+sh scripts/install-from-release.sh --version 0.1.0 --prefix /tmp/pr-reviewer-release-prefix
+```
+
+Pin the runner CLI to the same tag (still needs network to git):
+
+```sh
+PR_REVIEWER_GIT_REF=v0.1.0 curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
+```
+
+Publishing a release needs owner auth. See [RELEASE.md](RELEASE.md).
 
 ## Hosted deploy artifact (not the CLI)
 
 To copy a pinned `compose.release.yml` with checksum verification, use
-`scripts/build-local-release.sh` and `scripts/install.sh`. That path is for
-hosted control-plane deploy, not for installing the `reviewer` runner command.
+`scripts/build-local-release.sh`, `scripts/install-from-release.sh`, or
+`scripts/install.sh` directly. That path is for hosted control-plane deploy,
+not for installing the `reviewer` runner command.
 
 ## Setup
 

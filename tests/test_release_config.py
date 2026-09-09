@@ -155,6 +155,8 @@ def test_release_workflow_writes_checksums_and_sbom() -> None:
     assert "SHA256SUMS" in text
     assert "sbom" in text.lower()
     assert "cosign" in text or "syft" in text or "anchore" in text
+    assert "softprops/action-gh-release" in text
+    assert "v*" in text
 
 
 def test_migration_filenames_are_unique_prefixed_and_not_renamed() -> None:

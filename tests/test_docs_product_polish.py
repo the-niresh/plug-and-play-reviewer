@@ -156,3 +156,12 @@ def test_readme_states_free_tier_without_prices() -> None:
     text = _text(README).lower()
     assert "free tier" in text
     assert "one github user" in text or "one repository" in text
+
+
+def test_release_doc_describes_checksum_install_path() -> None:
+    release = (ROOT / "docs" / "RELEASE.md").read_text(encoding="utf-8").lower()
+    install = _text(INSTALL).lower()
+    assert "sha256sums" in release
+    assert "install-from-release.sh" in release
+    assert "install-from-release.sh" in install
+    assert "release.md" in install

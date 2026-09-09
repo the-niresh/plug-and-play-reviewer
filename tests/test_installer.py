@@ -208,9 +208,10 @@ def test_install_docs_list_reviewer_install_command() -> None:
     assert "curl -fsSL" in text
     assert "reviewer --help" in text
 
-def test_install_docs_note_curl_404_fallback() -> None:
+def test_install_docs_describe_release_checksum_path() -> None:
     text = (REPO / "docs" / "INSTALL.md").read_text(encoding="utf-8")
-    assert "404" in text
+    assert "install-from-release.sh" in text
+    assert "SHA256SUMS" in text or "RELEASE.md" in text
     assert "uv tool install" in text
     assert "reviewer.niresh.tech" in text
 

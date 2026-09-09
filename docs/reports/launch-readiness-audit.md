@@ -56,8 +56,8 @@ repo topics not set on GitHub (requires admin `gh` access).
 
 ## What still blocks public launch
 
-1. **No GitHub Release checksum asset** for offline/pinned install (`docs/INSTALL.md`,
-   `README.md`).
+1. **GitHub Release not published yet.** Checksum install path is built and proved locally
+   ([release-checksum-install-proof.md](release-checksum-install-proof.md)). Owner must push `v0.1.0`.
 2. **No stranger-only end-to-end proof.** Live proofs used owner-side pairing approval
    and a model key on a known VPS. A cold stranger still needs browser GitHub sign-in
    during setup (documented, not re-proved here).
@@ -73,7 +73,7 @@ repo topics not set on GitHub (requires admin `gh` access).
 |---|---|
 | `git push origin main` through baseline, scorecard test fix, and polish commits | Public GitHub matches local docs and proofs |
 | Run `gh auth login` then `gh repo edit` topics from [REPO_TOPICS.md](../REPO_TOPICS.md) | Findability on GitHub (requires repo admin) |
-| Publish GitHub Release + checksum asset | Offline install path in INSTALL/RUNBOOK |
+| Push `v0.1.0` tag to trigger release workflow (or `gh release create`) | Publishes SHA256SUMS + compose asset on GitHub |
 | Optional: run og card validator on `https://reviewer.niresh.tech/opengraph-image` | Confirms social preview outside this VPS |
 | Optional: stranger-only install test on a machine with no repo checkout | Confirms pairing UX without owner DB shortcuts |
 | Product Hunt listing under **PR Reviewer** when ready | Matches site/README product name |

@@ -64,8 +64,9 @@ a result.
 - The published scorecard is **7 human-judged holdout cases from the Zod
   repository only**. It is not proof on every language, repo, or pull request.
   Dev eval notes are working notes, not a published baseline.
-- A GitHub-hosted release asset is not published. Local checksum install is
-  documented in [docs/INSTALL.md](docs/INSTALL.md).
+- GitHub Release checksum install is documented in [docs/RELEASE.md](docs/RELEASE.md).
+  Assets build locally today; publishing `v*` on GitHub still needs the owner
+  to push a tag (see RELEASE.md).
 - A new Render or Railway URL was not created. That needs the owner's
   account, Neon `DATABASE_URL`, and GitHub App secrets.
 - No stranger-only end-to-end proof without owner-side pairing shortcuts.
