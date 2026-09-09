@@ -20,8 +20,8 @@ and sandbox logs stay on the runner.
 
 Human replies to our review comments are **feedback capture**, not
 self-improvement. Hosted may store the public reply text after
-`wrap_untrusted`. That text does not change prompts, eval labels, or model
-settings.
+`wrap_untrusted`. That text may be read to build human-reviewable improvement
+candidates. It never auto-changes prompts, eval labels, or model settings.
 
 ## Hosted (control plane, Neon)
 
@@ -73,7 +73,7 @@ must stay that way -- see Exemptions below.
 | `review_comment_feedback` | `classification` | Fixed enum ('useful', 'wrong', 'unclear', 'follow_up', 'unknown'), set by keyword rules in control_plane/review_comment_feedback.py, never by a model. |
 | `review_comment_feedback` | `delivery_id` | References github_deliveries.id, GitHub's opaque delivery id, not content. |
 | `review_comment_feedback` | `finding_id` | Our own finding id copied from the parent review_comment_posts row, an opaque identifier, never source or a diff. |
-| `review_comment_feedback` | `reply_text` | Public PR review-comment reply text, already visible on GitHub, stored only after wrap_untrusted. Feedback capture, not self-improvement: this column is never read to edit prompts, eval labels, or model settings. Never a diff hunk, source, embedding, evidence, or a model key. |
+| `review_comment_feedback` | `reply_text` | Public PR review-comment reply text, already visible on GitHub, stored only after wrap_untrusted. Feedback capture, not self-improvement: may be read for human-reviewable improvement candidates (control_plane/feedback_improvement.py); never read to auto-edit prompts, eval labels, or model settings. Never a diff hunk, source, embedding, evidence, or a model key. |
 | `review_comment_posts` | `finding_id` | Our own finding id copied from the HTML marker on a comment we posted, an opaque identifier, never source or a diff. |
 | `review_findings` | `category` | A short finding category label (e.g. 'null-check'), not the finding's source or diff. |
 | `review_findings` | `command_id` | Opaque identifier for the specific command inside the sandbox run, not review content. |

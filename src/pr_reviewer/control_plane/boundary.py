@@ -290,9 +290,10 @@ ALLOWLIST: dict[tuple[str, str], str] = {
     ),
     ("review_comment_feedback", "reply_text"): (
         "Public PR review-comment reply text, already visible on GitHub, stored only after "
-        "wrap_untrusted. Feedback capture, not self-improvement: this column is never read "
-        "to edit prompts, eval labels, or model settings. Never a diff hunk, source, "
-        "embedding, evidence, or a model key."
+        "wrap_untrusted. Feedback capture, not self-improvement: may be read for "
+        "human-reviewable improvement candidates (control_plane/feedback_improvement.py); "
+        "never read to auto-edit prompts, eval labels, or model settings. Never a diff hunk, "
+        "source, embedding, evidence, or a model key."
     ),
 }
 

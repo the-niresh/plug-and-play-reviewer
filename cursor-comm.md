@@ -1688,3 +1688,18 @@ gate numbers: hygiene+install+free_tier+context_cache+docs_polish+pairing+bounda
 what I did: Audited 12 launch areas against live proofs, live health checks, and targeted tests. Wrote docs/reports/launch-readiness-audit.md with PASS/PARTIAL/BLOCKED verdicts and next task list.
 blockers: Public launch blocked on quality baseline, unpushed docs, release asset, marketing metadata; beta ready for owner-operated path.
 
+## 2026-09-10T01:47:04+05:30 | publish-holdout-quality-baseline | measure and publish
+status: DONE
+commit sha: pending after commit
+red proof: n/a (measure-only goal, no code change)
+gate numbers: test_web_scorecard.py 1 failed (on_disk now has measured numbers, generate_scorecard(FixtureReviewer.perfect()) still refuses zero-cost); test_scorecard.py 6 passed
+what I did: Verified origin/main includes 15d70ad, 04c56bf, 8a2e016 (tip 8a2e016). Ran live holdout baseline: 7 cases, gpt-4o-mini, diff-only, repeats=1, projected 0.021060 USD, measured 0.004606 USD. precision 0.667 recall 0.571 false/PR 0.286, 4/7 hits. Wrote docs/reports/holdout-quality-baseline.md and docs/reports/scorecard.json as the intended published baseline.
+blockers: test_web_scorecard.py needs a follow-up update to accept measured scorecards instead of fixture refusal sync.
+
+## 2026-09-10T03:26:00+05:30 | feedback-to-evals | feedback-to-evals
+status: DONE
+commit sha: pending
+red proof: ModuleNotFoundError: No module named 'pr_reviewer.evals.feedback_to_evals' (8 failed before implementation)
+gate numbers: ruff 0 on scoped files; mypy src 0; pytest scoped 8 passed (test_feedback_to_evals); full suite 1526 passed 20 failed (webhook invalid signature env, unrelated); package_boundaries + hosted_boundary pass
+what I did: Added evals/feedback_to_evals.py to group review_comment_feedback rows by install/repo/PR/finding/class and emit task candidates (wrong/unclear/unknown), positive signals (useful), and follow_up groups. Added control_plane/feedback_improvement.py hosted reader. No prompt, eval label, dataset, scorecard, or model setting writes. Updated DATA_BOUNDARIES allowlist text for candidate reads.
+blockers: None
