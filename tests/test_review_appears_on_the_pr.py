@@ -95,6 +95,9 @@ class InProcessRunnerClient:
             expires_at=datetime.now(UTC),
         )
 
+    def issue_job_post_token(self, job_id: str, lease_token: str) -> GitHubJobToken:
+        return self.issue_job_token(job_id, lease_token)
+
 
 def _job_state_for(delivery_id: str) -> tuple[str | None, str | None]:
     with connection() as conn:
