@@ -98,6 +98,7 @@ must stay that way -- see Exemptions below.
 | `review_jobs` | `status` | Fixed enum ('pending', 'running', 'succeeded', 'failed', 'superseded', 'cancelled', 'completed', 'stopped_early'), enforced by a check constraint. The last two are set by a pushed review summary (control_plane/review_projection.py), never by the queue-driven path. |
 | `runners` | `credential_hash` | A one-way hash of the runner's credential. The credential itself is never stored, so this column cannot be reversed back into it. |
 | `runners` | `device_name` | Operator-chosen label for a runner device, not review content. |
+| `runners` | `last_heartbeat_at` | Operational timestamp of the last runner claim or job heartbeat, not review content. |
 | `runners` | `mode` | Fixed enum ('analysis_only', 'full'), enforced by a check constraint. |
 | `runners` | `platform` | Runner platform identifier (e.g. darwin-arm64), not review content. |
 | `runners` | `version` | Runner software version string. |

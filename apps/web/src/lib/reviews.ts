@@ -122,8 +122,19 @@ export type RepositoryReviews = {
   reviews: ReviewSummary[];
 };
 
+export type RunnerPresenceStatus = "online" | "offline" | "never_seen";
+
+export type RunnerStatus = {
+  runner_id: string;
+  device_name: string;
+  installation_id: number;
+  status: RunnerPresenceStatus;
+  last_heartbeat_at: string | null;
+};
+
 export type ReviewsResponse = {
   repositories: RepositoryReviews[];
+  runners: RunnerStatus[];
 };
 
 export const SEVERITY_LEVELS = ["critical", "high", "medium", "low", "info"] as const;
@@ -131,6 +142,20 @@ export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
 
 /** Severity is semantic and deliberately separate from the brand accent, so "critical"
  *  can never read as "this is fine, it is just our colour". */
+export function runnerStatusLabel(status: RunnerPresenceStatus): string {
+  if (status === "online") return "Online";
+  if (status === "never_seen") return "Not seen yet";
+  return "Offline";
+}
+
+export function runnerStatusTone(
+  status: RunnerPresenceStatus,
+): "default" | "warning" | "muted" {
+  if (status === "online") return "default";
+  if (status === "never_seen") return "warning";
+  return "muted";
+}
+
 export function severityTone(severity: string): "danger" | "warning" | "muted" {
   const level = severity.toLowerCase();
   if (level === "critical" || level === "high") return "danger";

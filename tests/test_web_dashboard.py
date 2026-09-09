@@ -92,3 +92,9 @@ def test_dashboard_nav_marks_the_current_page_with_aria_current() -> None:
     assert "aria-current" in source
     assert '"/dashboard"' in source
     assert '"/dashboard/reviews"' in source
+
+
+def test_dashboard_shows_runner_status_panel() -> None:
+    source = DASHBOARD_PAGE.read_text(encoding="utf-8")
+    assert "<RunnerStatusPanel" in source
+    assert "runnerStatusLabel" in source

@@ -29,6 +29,7 @@ from pr_reviewer.contracts.runner import (
 )
 from pr_reviewer.control_plane.repository_policy import hash_runner_credential, revoke_runner
 from pr_reviewer.control_plane.runner_auth import authenticate_runner
+from pr_reviewer.control_plane.runner_presence import touch_runner_heartbeat
 from pr_reviewer.control_plane.token_broker import issue_job_post_token, issue_job_token
 from pr_reviewer.db.client import connection
 from pr_reviewer.events.record_event import JsonObject, serialize_json_object
@@ -144,6 +145,8 @@ def claim_job(runner: AuthenticatedRunner) -> JobEnvelope | NoJob:
         if runner_row is None or runner_row["revoked_at"] is not None:
             return NoJob()
 
+        touch_runner_heartbeat(conn, runner.runner_id)
+
         cursor = conn.execute(
             """
             with next_job as (
@@ -234,6 +237,7 @@ def heartbeat_job(runner_id: uuid.UUID, job_id: uuid.UUID, lease_token: str) -> 
             (REVIEW_JOB_LEASE_INTERVAL, str(job_id), str(runner_id), token_hash),
         )
         if cursor.rowcount == 1:
+            touch_runner_heartbeat(conn, runner_id)
             return LeaseState(status="active")
         cancelled = conn.execute(
             """

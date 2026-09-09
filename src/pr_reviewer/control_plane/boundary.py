@@ -144,6 +144,9 @@ ALLOWLIST: dict[tuple[str, str], str] = {
     ("runners", "mode"): "Fixed enum ('analysis_only', 'full'), enforced by a check constraint.",
     ("runners", "platform"): "Runner platform identifier (e.g. darwin-arm64), not review content.",
     ("runners", "version"): "Runner software version string.",
+    ("runners", "last_heartbeat_at"): (
+        "Operational timestamp of the last runner claim or job heartbeat, not review content."
+    ),
     ("schema_migrations", "filename"): (
         "Our own migration filename: code structure metadata, not review content."
     ),

@@ -45,6 +45,14 @@ gate numbers: ruff 0 (`src/pr_reviewer/runner/secrets.py`,
   - `tests/test_package_boundaries.py` -> 19 passed, 0 failed
 blockers: None
 
+## 2026-09-10T03:40:04+05:30 | default-reviewer-prompt | bug catcher prompt
+status: DONE
+commit sha: 15e2fb5 fix: strengthen default reviewer prompt
+red proof: AssertionError: assert 'bug catcher for a production pull request' in '<diff_only prompt>' at tests/test_review_prompt_calibration.py
+gate numbers: ruff 0 on scoped files; mypy 0 on 254 source files; dash grep empty; full suite 1548 passed, 3 skipped, 0 failed
+what I did: Strengthened the default diff-only reviewer prompt so it names the agent as a bug catcher for a production pull request, rejects style feedback, asks for concrete failures, uses included repository context when present, and still reviews visible changed lines when context is absent. Fixed the in-process runner test fake so it supports the post-token method the real runner client already has.
+blockers: None
+
 ## 2026-09-09T00:11:55+05:30 | eval matcher | ignore category wording for matches
 status: DONE
 commit sha: 9ce48c5 fix: match eval findings without category text
@@ -1702,4 +1710,12 @@ commit sha: pending
 red proof: ModuleNotFoundError: No module named 'pr_reviewer.evals.feedback_to_evals' (8 failed before implementation)
 gate numbers: ruff 0 on scoped files; mypy src 0; pytest scoped 8 passed (test_feedback_to_evals); full suite 1526 passed 20 failed (webhook invalid signature env, unrelated); package_boundaries + hosted_boundary pass
 what I did: Added evals/feedback_to_evals.py to group review_comment_feedback rows by install/repo/PR/finding/class and emit task candidates (wrong/unclear/unknown), positive signals (useful), and follow_up groups. Added control_plane/feedback_improvement.py hosted reader. No prompt, eval label, dataset, scorecard, or model setting writes. Updated DATA_BOUNDARIES allowlist text for candidate reads.
+blockers: None
+
+## 2026-09-10T04:02:18+05:30 | runner-heartbeat-dashboard | runner-heartbeat-dashboard
+status: DONE
+commit sha: pending
+red proof: ModuleNotFoundError pr_reviewer.control_plane.runner_presence; column last_heartbeat_at does not exist (7 failed before implementation)
+gate numbers: ruff 0 scoped; mypy src 0; pytest scoped 46 passed (presence+web_runner_status+web_dashboard+boundary); package_boundaries + hosted_boundary pass
+what I did: Committed feedback CLI batch (1de01a0). Added runners.last_heartbeat_at updated on job claim and job heartbeat. Added control_plane/runner_presence.py and exposed runners[] on GET /api/reviews scoped to the signed-in GitHub user. Dashboard shows a Runner card with Online/Offline/Not seen yet badges.
 blockers: None

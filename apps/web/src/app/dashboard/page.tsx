@@ -7,9 +7,12 @@ import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { SeverityBreakdown } from "@/components/SeverityBreakdown";
 import {
   fetchReviews,
+  runnerStatusLabel,
+  runnerStatusTone,
   SEVERITY_LEVELS,
   severityTone,
   worstSeverity,
+  type RunnerStatus,
   type SeverityLevel,
 } from "@/lib/reviews";
 
@@ -20,6 +23,48 @@ export const metadata = {
 };
 
 const RECENT_REVIEW_COUNT = 5;
+
+function RunnerStatusPanel({ runners }: { runners: RunnerStatus[] }) {
+  if (runners.length === 0) {
+    return (
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Runner</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            No paired runner is visible for this GitHub account yet. Pair one from the
+            local onboarding app, then it shows up here when it polls for work.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mt-8">
+      <CardHeader>
+        <CardTitle>Runner</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col divide-y rounded-md border">
+          {runners.map((runner) => (
+            <li
+              key={runner.runner_id}
+              className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5 text-sm"
+            >
+              <span className="font-medium">{runner.device_name}</span>
+              <Badge variant={runnerStatusTone(runner.status)}>
+                {runnerStatusLabel(runner.status)}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -47,6 +92,8 @@ export default async function DashboardPage() {
     repo.reviews.map((review) => ({ ...review, repository_name: repo.repository_name })),
   );
 
+  const runners = result.data.runners;
+
   if (reviews.length === 0) {
     return (
       <main className="mx-auto w-full max-w-4xl px-6 py-14">
@@ -67,6 +114,7 @@ export default async function DashboardPage() {
             Check connected repositories
           </Link>
         </div>
+        <RunnerStatusPanel runners={runners} />
       </main>
     );
   }
@@ -95,6 +143,8 @@ export default async function DashboardPage() {
       <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
         A quick read on what your reviews have found so far.
       </p>
+
+      <RunnerStatusPanel runners={runners} />
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <Card>

@@ -23,6 +23,10 @@ from pr_reviewer.control_plane.github_auth import LiveInstallationAssertion
 from pr_reviewer.control_plane.github_oauth import LIVE_SIGN_IN_COOKIE_NAME, read_live_sign_in
 from pr_reviewer.control_plane.repository_policy import authorize_repository
 from pr_reviewer.control_plane.runner_auth import authenticate_runner
+from pr_reviewer.control_plane.runner_presence import (
+    RunnerStatusSummary,
+    list_runners_for_viewer,
+)
 from pr_reviewer.db.client import Row, connection
 
 
@@ -378,6 +382,7 @@ class ReviewsResponse(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     repositories: list[RepositoryReviews]
+    runners: list[RunnerStatusSummary] = Field(default_factory=list)
 
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
@@ -414,7 +419,8 @@ def list_reviews(
                     repository_name=repository_name,
                     reviews=reviews,
                 )
-            ]
+            ],
+            runners=list(list_runners_for_viewer(assertion)),
         )
 
     repositories: list[RepositoryReviews] = []
@@ -431,7 +437,10 @@ def list_reviews(
                     reviews=reviews or [],
                 )
             )
-    return ReviewsResponse(repositories=repositories)
+    return ReviewsResponse(
+        repositories=repositories,
+        runners=list(list_runners_for_viewer(assertion)),
+    )
 
 
 @router.get("/{review_job_id}", response_model=ReviewSummary)

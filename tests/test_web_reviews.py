@@ -73,7 +73,7 @@ def test_signed_in_with_no_installations_returns_an_empty_list() -> None:
     cookie = _signed_in_cookie({})
     response = _client(cookie).get("/api/reviews")
     assert response.status_code == 200
-    assert response.json() == {"repositories": []}
+    assert response.json() == {"repositories": [], "runners": []}
 
 
 def test_signed_in_viewer_sees_their_own_repositorys_findings() -> None:
