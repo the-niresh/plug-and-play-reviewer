@@ -53,12 +53,19 @@ to that https origin and redeploy once.
 
 ## Vercel web UI
 
-Deploy `apps/web` on Vercel from the repository root. The checked-in
-`vercel.json` uses:
+Import the repository, then set **Root Directory to `apps/web`** and leave
+every build setting on the Vercel default:
 
-- install command: `cd apps/web && bun install --frozen-lockfile`
-- build command: `cd apps/web && bun run build`
-- output directory: `apps/web/.next`
+- install command: default (`bun install`)
+- build command: default (`next build`)
+- output directory: default (`.next`)
+
+Do not add a `vercel.json` at the repository root. Vercel resolves the
+framework from the Root Directory's `package.json`, and the repo root is a
+Python project with none, so the import fails with `No Next.js version
+detected`. A checked-in `vercel.json` also greys out the Build and
+Development Settings in the dashboard, so wrong values cannot be cleared
+from the UI.
 
 Set these Vercel environment variables:
 

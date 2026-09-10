@@ -17,12 +17,32 @@ def _read(relative: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_vercel_config_builds_the_web_app_from_the_monorepo_root() -> None:
-    payload = json.loads(_read("vercel.json"))
-    assert payload["framework"] == "nextjs"
-    assert payload["installCommand"] == "cd apps/web && bun install --frozen-lockfile"
-    assert payload["buildCommand"] == "cd apps/web && bun run build"
-    assert payload["outputDirectory"] == "apps/web/.next"
+def test_no_root_vercel_json_overrides_the_build() -> None:
+    """The repo root must NOT carry a vercel.json. Deploy with Root Directory=apps/web.
+
+    A root vercel.json with `cd apps/web` commands cannot work: Vercel resolves the
+    framework from the Root Directory's package.json, and the repo root is a Python
+    project with none, so the import fails with "No Next.js version detected". Setting
+    Root Directory to apps/web fixes detection but then the same commands resolve to
+    apps/web/apps/web. Worse, a checked-in vercel.json greys out the Build & Development
+    Settings in the dashboard, so the bad values cannot be cleared from the UI at all.
+
+    Vercel's own defaults are correct here and are verified below: apps/web declares next
+    and a build script, and its lockfile is committed.
+    """
+    assert not (REPO / "vercel.json").is_file(), (
+        "a root vercel.json locks the Vercel dashboard settings and breaks framework "
+        "detection; deploy with Root Directory=apps/web and Vercel's defaults instead"
+    )
+
+
+def test_web_app_is_self_sufficient_for_vercel_defaults() -> None:
+    payload = json.loads(_read("apps/web/package.json"))
+    assert "next" in payload.get("dependencies", {})
+    assert payload["scripts"]["build"] == "next build"
+    assert (REPO / "apps" / "web" / "bun.lock").is_file(), (
+        "Vercel's default install needs a committed lockfile"
+    )
 
 
 def test_vercel_ignores_backend_and_local_build_noise() -> None:
