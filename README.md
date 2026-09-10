@@ -8,10 +8,10 @@ runner reads the diff, retrieves repo context, and calls your model.
     <img alt="Deploy frontend to Vercel" src="https://img.shields.io/badge/Deploy%20frontend%20to%20Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white">
   </a>
   <a href="https://render.com/deploy?repo=https://github.com/the-niresh/plug-and-play-reviewer">
-    <img alt="Deploy API on Render" src="https://img.shields.io/badge/Deploy%20API%20on%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=000000">
+    <img alt="Deploy API on Render" src="https://render.com/images/deploy-to-render-button.svg">
   </a>
-  <a href="https://railway.com/new">
-    <img alt="Deploy API on Railway" src="https://img.shields.io/badge/Deploy%20API%20on%20Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white">
+  <a href="https://railway.com/new/template?template=https://github.com/the-niresh/plug-and-play-reviewer">
+    <img alt="Deploy API on Railway" src="https://railway.com/button.svg">
   </a>
 </p>
 

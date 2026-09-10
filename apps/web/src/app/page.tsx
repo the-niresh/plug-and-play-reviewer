@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { RailwayMark, RenderMark } from "@/components/deploy-marks";
 import { GithubMark } from "@/components/github-mark";
 import { ProductStage } from "@/components/landing/ProductStage";
 import { SiteNav } from "@/components/SiteNav";
@@ -203,19 +202,30 @@ export default function HomePage() {
                 href={RENDER_DEPLOY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="deploy-target"
+                className="inline-flex items-center focus-visible:ring-ring/50 rounded-md focus-visible:ring-[3px] focus-visible:outline-none"
               >
-                <RenderMark className="size-4 shrink-0" />
-                Deploy API on Render
+                {/* Official button, served from /public, not hot-linked.
+                    Fetching it from render.com would report every visitor to them.
+                    This page claims nothing leaks, so nothing may leak. */}
+                <img
+                  src="/deploy-to-render.svg"
+                  alt="Deploy API on Render"
+                  width={153}
+                  height={40}
+                />
               </a>
               <a
                 href={RAILWAY_DEPLOY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="deploy-target"
+                className="inline-flex items-center focus-visible:ring-ring/50 rounded-md focus-visible:ring-[3px] focus-visible:outline-none"
               >
-                <RailwayMark className="size-4 shrink-0" />
-                Deploy API on Railway
+                <img
+                  src="/deploy-on-railway.svg"
+                  alt="Deploy API on Railway"
+                  width={183}
+                  height={40}
+                />
               </a>
             </div>
             <a href="#how-a-review-moves" className="landing-link mt-6 inline-block text-sm">
