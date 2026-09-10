@@ -124,6 +124,15 @@ def test_compose_release_uses_runtime_secrets_and_a_real_api_healthcheck() -> No
     assert ":latest" not in text
 
 
+def test_compose_release_passes_public_web_values_at_build_time() -> None:
+    text = _read("compose.release.yml")
+    dockerfile = _read("Dockerfile")
+    assert "args:" in text
+    assert "NEXT_PUBLIC_GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:?" in text
+    assert "ARG NEXT_PUBLIC_GITHUB_APP_SLUG" in dockerfile
+    assert "ENV NEXT_PUBLIC_GITHUB_APP_SLUG=$NEXT_PUBLIC_GITHUB_APP_SLUG" in dockerfile
+
+
 def test_ci_compose_is_non_root_healthy_and_pinned() -> None:
     text = _read("docker-compose.ci.yml")
     assert "user:" in text
