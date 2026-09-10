@@ -150,12 +150,12 @@ def radio_select(
         raise ValueError("labels must match options length")
     active = options.index(current) if current in options else 0
 
+    # Title and header only. The option rows belong to the redraw loop below, which owns
+    # them: it reprints the list on every keypress and rewinds with \033[F by exactly
+    # len(display) lines. Drawing the rows here too left a frozen duplicate above the live
+    # list, because the rewind only ever erased the loop's own copy.
     output_stream.write(f"\n{title}\n")
     output_stream.write(f"{RADIO_HEADER}\n")
-    for index, label in enumerate(display):
-        marker = ">" if index == (options.index(current) if current in options else 0) else " "
-        suffix = "  ← currently active" if current is not None and options[index] == current else ""
-        output_stream.write(f" {marker} {label}{suffix}\n")
     output_stream.flush()
 
     if not _is_tty(input_stream):
