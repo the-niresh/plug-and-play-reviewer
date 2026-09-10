@@ -199,6 +199,24 @@ export default function HomePage() {
                 <GithubMark className="size-4" />
                 Sign in with GitHub
               </a>
+              <a
+                href={RENDER_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deploy-target"
+              >
+                <RenderMark className="size-4 shrink-0" />
+                Deploy API on Render
+              </a>
+              <a
+                href={RAILWAY_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deploy-target"
+              >
+                <RailwayMark className="size-4 shrink-0" />
+                Deploy API on Railway
+              </a>
             </div>
             <a href="#how-a-review-moves" className="landing-link mt-6 inline-block text-sm">
               See how a review moves
@@ -425,26 +443,6 @@ export default function HomePage() {
               plane, not the runner: the runner must stay on a machine you trust, which is
               the whole point.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <a
-                href={RENDER_DEPLOY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="deploy-target"
-              >
-                <RenderMark className="size-4 shrink-0" />
-                Deploy API on Render
-              </a>
-              <a
-                href={RAILWAY_DEPLOY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="deploy-target"
-              >
-                <RailwayMark className="size-4 shrink-0" />
-                Deploy API on Railway
-              </a>
-            </div>
             <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
               One-click Render still needs your own secrets and database.
               Railway starts from a repo import until a public template id exists.

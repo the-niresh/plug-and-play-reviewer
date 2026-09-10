@@ -151,7 +151,7 @@ def test_landing_does_not_offer_to_clone_the_frontend() -> None:
     assert "vercel.com/new/clone" not in text
 
 
-def test_landing_offers_control_plane_hosting_outside_the_hero() -> None:
+def test_landing_offers_control_plane_hosting() -> None:
     text = _read("apps/web/src/app/page.tsx")
     assert "RENDER_DEPLOY_URL" in text
     assert "RAILWAY_DEPLOY_URL" in text
@@ -159,9 +159,6 @@ def test_landing_offers_control_plane_hosting_outside_the_hero() -> None:
     assert "Deploy API on Railway" in text
     assert "render.com/deploy" in text
     assert "railway.com/new" in text
-    # They must sit in the setup section, after the hero CTA, not beside sign-in.
-    assert text.index("Sign in with GitHub") < text.index("Deploy API on Render")
-    assert text.index("how-to-set-it-up") < text.index("Deploy API on Render")
 
 
 def test_landing_deploy_links_open_in_a_new_tab() -> None:
