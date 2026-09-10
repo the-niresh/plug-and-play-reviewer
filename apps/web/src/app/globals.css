@@ -3,42 +3,39 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* The palette predates Tailwind here and is kept deliberately: a deep blue-black
-   ground with a single green accent. It is mapped onto shadcn's token names so
-   components inherit this identity instead of stock slate. */
+/* Light tokens on bare :root; dark redefined under prefers-color-scheme. One green
+   accent on both. Mapped onto shadcn token names so components stay on-brand. */
 :root {
   --radius: 0.5rem;
 
-  --background: oklch(16% 0.014 260);
-  --foreground: oklch(95% 0.006 260);
+  --background: oklch(98% 0.008 260);
+  --foreground: oklch(22% 0.02 260);
 
-  --card: oklch(21% 0.018 260);
-  --card-foreground: oklch(95% 0.006 260);
-  --popover: oklch(21% 0.018 260);
-  --popover-foreground: oklch(95% 0.006 260);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(22% 0.02 260);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(22% 0.02 260);
 
-  --primary: oklch(80% 0.17 155);
-  --primary-foreground: oklch(18% 0.03 155);
+  --primary: oklch(52% 0.14 155);
+  --primary-foreground: oklch(98% 0.01 155);
 
-  --secondary: oklch(26% 0.02 260);
-  --secondary-foreground: oklch(95% 0.006 260);
+  --secondary: oklch(94% 0.012 260);
+  --secondary-foreground: oklch(22% 0.02 260);
 
-  --muted: oklch(24% 0.018 260);
-  --muted-foreground: oklch(72% 0.02 260);
+  --muted: oklch(94% 0.012 260);
+  --muted-foreground: oklch(48% 0.02 260);
 
-  --accent: oklch(26% 0.02 260);
-  --accent-foreground: oklch(95% 0.006 260);
+  --accent: oklch(94% 0.012 260);
+  --accent-foreground: oklch(22% 0.02 260);
 
-  /* Semantic, and deliberately separate from the green accent so "this needs
-     attention" never reads as "this is the brand colour". */
-  --destructive: oklch(64% 0.19 25);
-  --destructive-foreground: oklch(97% 0.01 25);
-  --warning: oklch(78% 0.15 75);
-  --success: oklch(80% 0.17 155);
+  --destructive: oklch(55% 0.2 25);
+  --destructive-foreground: oklch(98% 0.01 25);
+  --warning: oklch(68% 0.14 75);
+  --success: oklch(52% 0.14 155);
 
-  --border: oklch(30% 0.02 260);
-  --input: oklch(30% 0.02 260);
-  --ring: oklch(80% 0.17 155);
+  --border: oklch(88% 0.015 260);
+  --input: oklch(88% 0.015 260);
+  --ring: oklch(52% 0.14 155);
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -46,6 +43,44 @@
     ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, monospace;
 
   --space-section: clamp(3.5rem, 3rem + 4vw, 7rem);
+  --landing-grid: oklch(82% 0.015 260 / 0.45);
+  --landing-glow: oklch(52% 0.14 155 / 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(16% 0.014 260);
+    --foreground: oklch(95% 0.006 260);
+
+    --card: oklch(21% 0.018 260);
+    --card-foreground: oklch(95% 0.006 260);
+    --popover: oklch(21% 0.018 260);
+    --popover-foreground: oklch(95% 0.006 260);
+
+    --primary: oklch(80% 0.17 155);
+    --primary-foreground: oklch(18% 0.03 155);
+
+    --secondary: oklch(26% 0.02 260);
+    --secondary-foreground: oklch(95% 0.006 260);
+
+    --muted: oklch(24% 0.018 260);
+    --muted-foreground: oklch(72% 0.02 260);
+
+    --accent: oklch(26% 0.02 260);
+    --accent-foreground: oklch(95% 0.006 260);
+
+    --destructive: oklch(64% 0.19 25);
+    --destructive-foreground: oklch(97% 0.01 25);
+    --warning: oklch(78% 0.15 75);
+    --success: oklch(80% 0.17 155);
+
+    --border: oklch(30% 0.02 260);
+    --input: oklch(30% 0.02 260);
+    --ring: oklch(80% 0.17 155);
+
+    --landing-grid: oklch(30% 0.02 260 / 0.22);
+    --landing-glow: oklch(80% 0.17 155 / 0.14);
+  }
 }
 
 @theme inline {
@@ -85,7 +120,7 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light dark;
   }
 
   body {
@@ -108,11 +143,25 @@
 
 .landing-root {
   font-family: var(--font-landing-sans), var(--font-sans);
+  background-color: var(--background);
   background-image:
-    linear-gradient(to right, oklch(30% 0.02 260 / 0.22) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(30% 0.02 260 / 0.22) 1px, transparent 1px);
-  background-size: 28px 28px;
+    radial-gradient(ellipse 80% 50% at 50% -10%, var(--landing-glow), transparent 70%),
+    linear-gradient(to right, var(--landing-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--landing-grid) 1px, transparent 1px);
+  background-size: auto, 28px 28px, 28px 28px;
   background-attachment: fixed;
+}
+
+.landing-card {
+  @apply bg-card/90 border-border rounded-xl border shadow-sm transition-[transform,box-shadow,border-color] duration-200;
+}
+
+.landing-card:hover {
+  @apply border-primary/35 -translate-y-0.5 shadow-md;
+}
+
+.landing-kicker {
+  @apply text-primary font-mono text-xs tracking-[0.14em] uppercase;
 }
 
 .landing-root .landing-display {

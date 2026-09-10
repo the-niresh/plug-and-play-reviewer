@@ -1,12 +1,15 @@
+import Link from "next/link";
+
 import { GithubMark } from "@/components/github-mark";
 import { ProductStage } from "@/components/landing/ProductStage";
 import { SiteNav } from "@/components/SiteNav";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PRODUCT_NAME, pageTitle, siteHost } from "@/lib/site";
 import type { ReviewFinding } from "@/lib/reviews";
 
 export const metadata = {
-  title: "PR Reviewer",
+  title: pageTitle(),
   description:
     "Private AI code review. Hosted jobs, a local runner, and your model key.",
 };
@@ -126,7 +129,7 @@ const SETUP_STEPS = [
   },
   {
     title: "Hosted URL",
-    body: "Point the runner at the hosted URL. reviewer.niresh.tech is the live control plane.",
+    body: `Point the runner at the hosted URL. ${siteHost()} is the live control plane.`,
   },
   {
     title: "Local runner",
@@ -136,6 +139,15 @@ const SETUP_STEPS = [
     title: "Model key",
     body: "Keep the model key on the runner. It never goes to the hosted database.",
   },
+] as const;
+
+const SECTIONS = [
+  { id: "how-a-review-moves", kicker: "01", title: "How a review moves" },
+  { id: "hosted-vs-local", kicker: "02", title: "Hosted vs local" },
+  { id: "what-already-works", kicker: "03", title: "What already works" },
+  { id: "what-teams-can-change", kicker: "04", title: "What teams can change" },
+  { id: "what-the-evals-show", kicker: "05", title: "What the evals show" },
+  { id: "how-to-set-it-up", kicker: "06", title: "How to set it up" },
 ] as const;
 
 export default function HomePage() {
@@ -149,28 +161,37 @@ export default function HomePage() {
       </a>
       <SiteNav />
       <main className="mx-auto w-full max-w-6xl px-6">
-        <section className="border-border grid gap-10 border-b py-[var(--space-section)] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-end">
+        <section className="relative grid gap-12 border-b py-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-end lg:gap-16 lg:py-24">
           <div className="min-w-0">
-            <p className="text-primary font-mono text-xs tracking-[0.2em] uppercase">
-              PR Reviewer
+            <p className="landing-kicker">{PRODUCT_NAME}</p>
+            <p className="bg-primary/10 text-primary mt-5 inline-block rounded-full px-3 py-1 text-sm font-medium">
+              Built for solo devs shipping 2 to 3 pull requests a day
             </p>
-            <h1 className="landing-display mt-5 max-w-[18ch] text-5xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-6xl">
+            <h1 className="landing-display mt-6 max-w-[16ch] text-4xl leading-[1.06] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
               Private AI code review that stays on your machine
             </h1>
             <p className="text-muted-foreground mt-6 max-w-prose text-lg leading-relaxed">
-              This is an open source PR reviewer. A hosted control plane takes GitHub
-              events. The local runner reads the diff and calls your model.
+              A hosted control plane takes GitHub events. Your local runner reads the diff
+              and calls your model. The patch never leaves the machine you trust.
             </p>
             <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-              Use it for AI code review self hosted on a laptop or a server you run.
-              Teams who need a CodeRabbit alternative keep diffs on their own runner.
+              That boundary is not a promise on a slide. CI runs a schema check that fails
+              if source, diffs, or model keys could land on the hosted plane. See what we
+              store in{" "}
+              <Link
+                href="/privacy"
+                className="text-primary underline-offset-4 hover:underline focus-visible:ring-ring/50 rounded-sm focus-visible:ring-[3px] focus-visible:outline-none"
+              >
+                Privacy
+              </Link>
+              .
             </p>
-            <div className="mt-9 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
+            <div className="mt-10 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
               <a
                 href={VERCEL_DEPLOY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(buttonVariants({ size: "lg" }), "gap-2")}
+                className={cn(buttonVariants({ size: "lg" }), "gap-2 shadow-sm")}
               >
                 Deploy frontend on Vercel
               </a>
@@ -205,33 +226,31 @@ export default function HomePage() {
               See how a review moves
             </a>
           </div>
-          <ProductStage finding={EXAMPLE_FINDING} />
+          <div className="landing-card shadow-lg lg:translate-y-2">
+            <ProductStage finding={EXAMPLE_FINDING} />
+          </div>
         </section>
 
         <section
           id="how-a-review-moves"
-          className="border-border border-b py-[var(--space-section)]"
+          className="border-border scroll-mt-20 border-b py-14 lg:py-[var(--space-section)]"
         >
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-            02
-          </p>
-          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
-            How a review moves
+          <p className="landing-kicker">{SECTIONS[0].kicker}</p>
+          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            {SECTIONS[0].title}
           </h2>
-          <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-            GitHub PR to hosted job to local runner to retrieval to review comment.
-            The hosted box never holds the patch.
+          <p className="text-muted-foreground mt-4 max-w-prose text-base leading-relaxed">
+            GitHub PR to hosted job to local runner to retrieval to review comment. The
+            hosted box never holds the patch.
           </p>
-          <ol className="mt-8 flex gap-px overflow-x-auto border">
+          <ol className="mt-10 flex gap-3 overflow-x-auto pb-2">
             {FLOW_STEPS.map((step) => (
               <li
                 key={step.kicker}
-                className="bg-card min-w-[12.5rem] flex-1 px-4 py-4"
+                className="landing-card min-w-[11.5rem] flex-1 px-4 py-5"
               >
-                <p className="text-primary font-mono text-[11px] tracking-[0.14em] uppercase">
-                  {step.kicker}
-                </p>
-                <h3 className="mt-2 font-mono text-sm font-medium">{step.title}</h3>
+                <p className="landing-kicker text-[11px]">{step.kicker}</p>
+                <h3 className="mt-3 font-mono text-sm font-semibold">{step.title}</h3>
                 <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                   {step.body}
                 </p>
@@ -242,32 +261,51 @@ export default function HomePage() {
 
         <section
           id="hosted-vs-local"
-          className="border-border border-b py-[var(--space-section)]"
+          className="border-border scroll-mt-20 border-b py-12 lg:py-20"
         >
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-            03
-          </p>
-          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
-            Hosted vs local
+          <p className="landing-kicker">{SECTIONS[1].kicker}</p>
+          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            {SECTIONS[1].title}
           </h2>
-          <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-            This is private AI code review. Source, diffs, and the model key stay on
-            the runner. Finding text may sit on the dashboard so you can read it.
+          <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
+            Source, diffs, and the model key stay on the runner. Finding text may sit on
+            the dashboard so you can read it before you approve a post.
           </p>
-          <div className="mt-8 overflow-x-auto border">
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:hidden">
+            {PRIVACY_ROWS.map((row) => (
+              <article key={row.item} className="landing-card p-4">
+                <h3 className="font-mono text-sm font-semibold">{row.item}</h3>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="text-warning text-[11px] font-medium tracking-wide uppercase">
+                      Hosted
+                    </dt>
+                    <dd className="text-muted-foreground mt-1">{row.hosted}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-success text-[11px] font-medium tracking-wide uppercase">
+                      Local
+                    </dt>
+                    <dd className="text-muted-foreground mt-1">{row.local}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+          <div className="landing-card mt-8 hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[36rem] border-collapse text-sm">
               <caption className="sr-only">
                 What the hosted control plane sees versus what stays on the local runner
               </caption>
               <thead>
                 <tr className="bg-muted/40 text-muted-foreground text-left">
-                  <th scope="col" className="px-4 py-2.5 font-medium">
+                  <th scope="col" className="px-4 py-3 font-medium">
                     Data
                   </th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">
+                  <th scope="col" className="text-warning px-4 py-3 font-medium">
                     Hosted
                   </th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">
+                  <th scope="col" className="text-success px-4 py-3 font-medium">
                     Local
                   </th>
                 </tr>
@@ -289,119 +327,110 @@ export default function HomePage() {
 
         <section
           id="what-already-works"
-          className="border-border border-b py-[var(--space-section)]"
+          className="border-border scroll-mt-20 border-b py-[var(--space-section)]"
         >
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-            04
-          </p>
-          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
-            What already works
+          <p className="landing-kicker">{SECTIONS[2].kicker}</p>
+          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            {SECTIONS[2].title}
           </h2>
-          <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-            These are the hard parts. Grounded findings, suggestion blocks, and the
-            human gate are product rules, not slogans.
+          <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
+            Grounded findings, suggestion blocks, and the human gate are product rules, not
+            slogans.
           </p>
-          <dl className="mt-8 border">
-            {PRIDE.map((item) => (
-              <div
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {PRIDE.map((item, index) => (
+              <article
                 key={item.title}
-                className="border-border grid gap-2 border-b px-4 py-4 last:border-b-0 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-8"
+                className={cn(
+                  "landing-card p-5",
+                  index === 0 && "sm:col-span-2 lg:row-span-2 lg:p-7",
+                )}
               >
-                <dt className="font-mono text-sm font-medium">{item.title}</dt>
-                <dd className="text-muted-foreground text-sm leading-relaxed">
+                <h3 className="font-mono text-sm font-semibold">{item.title}</h3>
+                <p
+                  className={cn(
+                    "text-muted-foreground mt-2 leading-relaxed",
+                    index === 0 ? "text-base" : "text-sm",
+                  )}
+                >
                   {item.body}
-                </dd>
-              </div>
+                </p>
+              </article>
             ))}
-          </dl>
+          </div>
         </section>
 
         <section
           id="what-teams-can-change"
-          className="border-border grid gap-12 border-b py-[var(--space-section)] lg:grid-cols-2"
+          className="border-border scroll-mt-20 grid gap-10 border-b py-12 lg:grid-cols-2 lg:gap-16 lg:py-20"
         >
-          <div>
-            <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-              05
-            </p>
-            <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
-              What teams can change
+          <article>
+            <p className="landing-kicker">{SECTIONS[3].kicker}</p>
+            <h2 className="landing-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {SECTIONS[3].title}
             </h2>
-            <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
+            <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
               You can add agents and edit prompts per repository. Those settings stay
               private to that repo.
             </p>
             <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              Repo A never receives Repo B prompts. This is permissioned team power,
-              not a public dump.
+              Repo A never receives Repo B prompts. This is permissioned team power, not a
+              public dump.
             </p>
-          </div>
-          <div>
-            <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-              06
-            </p>
-            <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
+          </article>
+          <article className="landing-card p-6">
+            <p className="landing-kicker">Pricing shape</p>
+            <h2 className="landing-display mt-2 text-2xl font-semibold tracking-tight">
               What stays free and what is for teams
             </h2>
-            <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              A single person running a local reviewer can stay on a simple path.
-              The free tier allows one GitHub user and one repository per
-              installation.
+            <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
+              A single person running a local reviewer can stay on a simple path. The free
+              tier allows one GitHub user and one repository per installation.
             </p>
-            <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              Team controls, shared prompts, and extra repositories are the paid path.
+            <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+              Team controls, shared prompts, and extra repositories are the paid path. There
+              are no prices on this page.
             </p>
-            <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              There are no prices on this page. Team access is a later product rule,
-              not a checkout form.
-            </p>
-          </div>
+          </article>
         </section>
 
         <section
           id="what-the-evals-show"
-          className="border-border border-b py-[var(--space-section)]"
+          className="border-border scroll-mt-20 border-b py-14 lg:py-[var(--space-section)]"
         >
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-            07
-          </p>
-          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
-            What the evals show
+          <p className="landing-kicker">{SECTIONS[4].kicker}</p>
+          <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+            {SECTIONS[4].title}
           </h2>
-          <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-            Dev eval notes are working notes. They are not a published baseline.
+          <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
+            Every finding is scored by a second model call and anything ungrounded is
+            dropped before you see it. The scorecard shows the measured result on a
+            human-judged holdout, with the model and the sample it was run on.
           </p>
-          <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-            The published scorecard measures 7 human-judged holdout cases from the
-            Zod repository only (gpt-4o-mini, diff-only). That sample is not proof
-            on every language or repo.
-          </p>
-          <a
+          <Link
             href="/scorecard"
-            className="text-primary mt-5 inline-block text-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 rounded-sm focus-visible:ring-[3px] focus-visible:outline-none"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "mt-8 inline-flex",
+            )}
           >
             Open the scorecard
-          </a>
+          </Link>
         </section>
 
         <section
           id="how-to-set-it-up"
-          className="border-border grid gap-12 border-b py-[var(--space-section)] lg:grid-cols-2"
+          className="border-border scroll-mt-20 grid gap-12 border-b py-12 lg:grid-cols-[1.1fr_0.9fr] lg:py-20"
         >
           <div>
-            <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-              08
-            </p>
+            <p className="landing-kicker">{SECTIONS[5].kicker}</p>
             <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
-              How to set it up
+              {SECTIONS[5].title}
             </h2>
-            <ol className="mt-6 border">
+            <ol className="mt-8 flex flex-col gap-3">
               {SETUP_STEPS.map((step, index) => (
-                <li
-                  key={step.title}
-                  className="border-border border-b px-4 py-4 last:border-b-0"
-                >
-                  <p className="font-mono text-sm font-medium">
+                <li key={step.title} className="landing-card px-4 py-4">
+                  <p className="font-mono text-sm font-semibold">
                     {String(index + 1).padStart(2, "0")}  {step.title}
                   </p>
                   <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
@@ -410,34 +439,55 @@ export default function HomePage() {
                 </li>
               ))}
             </ol>
-            <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
-              One-click Render still needs your own secrets and database.
-              Railway starts from a repo import until a public template id exists.
+            <p className="text-muted-foreground mt-5 max-w-prose text-sm leading-relaxed">
+              One-click Render still needs your own secrets and database. Railway starts
+              from a repo import until a public template id exists.
             </p>
+            <Link
+              href="/docs"
+              className="text-primary mt-4 inline-block text-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 rounded-sm focus-visible:ring-[3px] focus-visible:outline-none"
+            >
+              Read the install docs
+            </Link>
           </div>
-          <div>
-            <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-              09
-            </p>
-            <h2 className="landing-display mt-2 text-3xl font-semibold tracking-tight">
+          <aside className="landing-card bg-muted/30 p-6">
+            <p className="landing-kicker">07</p>
+            <h2 className="landing-display mt-2 text-xl font-semibold tracking-tight">
               What is not automatic yet
             </h2>
-            <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              The reviewer does not learn from human replies yet.
-            </p>
-            <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              The published scorecard is a narrow holdout sample, not a guarantee on
-              your repository.
-            </p>
-            <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              An empty-generate retry exists but stays off. It raised false findings
-              when we tried it.
-            </p>
-          </div>
+            <ul className="text-muted-foreground mt-4 space-y-3 text-sm leading-relaxed">
+              <li>The reviewer does not learn from human replies yet.</li>
+              <li>
+                The published scorecard is a narrow holdout sample, not a guarantee on your
+                repository.
+              </li>
+              <li>
+                An empty-generate retry exists but stays off. It raised false findings when
+                we tried it.
+              </li>
+            </ul>
+          </aside>
         </section>
 
-        <footer className="text-muted-foreground py-8 font-mono text-xs">
-          PR Reviewer · reviewer.niresh.tech
+        <footer className="text-muted-foreground border-border border-t py-10 font-mono text-xs">
+          <p>
+            {PRODUCT_NAME} · {siteHost()}
+          </p>
+          <p className="mt-2">Built for fast shipping solo founders.</p>
+          <nav aria-label="Legal" className="mt-4 flex flex-wrap gap-4">
+            <Link
+              href="/privacy"
+              className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm underline-offset-4 transition-colors hover:underline focus-visible:ring-[3px] focus-visible:outline-none"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="hover:text-foreground focus-visible:ring-ring/50 rounded-sm underline-offset-4 transition-colors hover:underline focus-visible:ring-[3px] focus-visible:outline-none"
+            >
+              Terms
+            </Link>
+          </nav>
         </footer>
       </main>
     </div>
