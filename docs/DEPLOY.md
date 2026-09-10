@@ -1,26 +1,27 @@
 # Deploy the hosted control plane
 
-This guide is for a first hosted instance. It covers Render and Railway. It
-does not put model keys or diffs on the hosted plane. Those stay on the
-runner. Finding titles and rationale may be stored so the dashboard can show
-them.
+This guide is for a first hosted instance. It covers Vercel for the Next.js UI,
+and Render or Railway for the hosted API. It does not put model keys or diffs
+on the hosted plane. Those stay on the runner. Finding titles and rationale
+may be stored so the dashboard can show them.
 
 There is already a live compose instance at `https://reviewer.niresh.tech`.
 `GET /health` and `GET /ready` return `200` with `{"status":"ok"}`. Use that
 URL if you only need a working control plane today. Use the steps below when
-you want a Render or Railway instance of your own.
+you want a Vercel UI, or a Render or Railway API instance of your own.
 
 ## What you need before you start
 
 You must have these. This repository does not contain them, and they must not
 be committed.
 
-1. A Render account or a Railway account. Pick one. Free web tiers are
-   enough. Do not add a persistent disk. Hosted GitHub App secrets go in the
-   dashboard env vars, not a volume.
-2. A Neon Postgres database. Copy the connection string. Add
+1. A Vercel account for the web UI.
+2. A Render account or a Railway account for the hosted API. Pick one. Free web
+   tiers are enough. Do not add a persistent disk. Hosted GitHub App secrets go
+   in the dashboard env vars, not a volume.
+3. A Neon Postgres database. Copy the connection string. Add
    `sslmode=verify-full` if it is not already there.
-3. A GitHub App. You need the App id, the PEM private key, the OAuth client
+4. A GitHub App. You need the App id, the PEM private key, the OAuth client
    id, the OAuth client secret, and the webhook secret. You can create the
    App first with placeholder URLs, deploy, then edit the App to the real
    origin.
@@ -40,13 +41,59 @@ repo.
 | `GITHUB_OAUTH_CLIENT_ID` | GitHub App OAuth client id |
 | `GITHUB_OAUTH_CLIENT_SECRET` | GitHub App OAuth client secret |
 | `GITHUB_WEBHOOK_SECRET` | GitHub App webhook secret |
-| `PR_REVIEWER_HOSTED_ORIGIN` | public https origin, no trailing slash |
+| `PR_REVIEWER_HOSTED_ORIGIN` | public app origin users open, no trailing slash |
 
 Do not set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `MODEL_KEY` on this
 service. The runner owns model keys.
 
 After the first deploy, copy the public URL. Set `PR_REVIEWER_HOSTED_ORIGIN`
 to that https origin and redeploy once.
+
+## Vercel web UI
+
+Deploy `apps/web` on Vercel from the repository root. The checked-in
+`vercel.json` uses:
+
+- install command: `cd apps/web && bun install --frozen-lockfile`
+- build command: `cd apps/web && bun run build`
+- output directory: `apps/web/.next`
+
+Set these Vercel environment variables:
+
+| Name | What to paste |
+|---|---|
+| `NEXT_PUBLIC_SITE_ORIGIN` | public Vercel or custom domain for the UI |
+| `NEXT_PUBLIC_CONTROL_PLANE_ORIGIN` | public origin of the hosted API |
+| `NEXT_PUBLIC_GITHUB_APP_SLUG` | GitHub App slug, for example `pr-reviewer-niresh` |
+
+The web app proxies `/api/*` to `NEXT_PUBLIC_CONTROL_PLANE_ORIGIN`. That keeps
+GitHub OAuth callbacks, dashboard API calls, and sign-out on the same browser
+origin as the UI. Without that proxy, a Vercel frontend would show the page but
+GitHub sign-in would not work.
+
+When Vercel owns the web hostname, `NEXT_PUBLIC_CONTROL_PLANE_ORIGIN` must point
+to a separate hosted API origin. For example, use
+`NEXT_PUBLIC_SITE_ORIGIN=https://pr-reviewer-web.vercel.app` and
+`NEXT_PUBLIC_CONTROL_PLANE_ORIGIN=https://reviewer.niresh.tech`. If you later
+move `reviewer.niresh.tech` to Vercel, keep the API on another hostname such as
+`https://api.reviewer.niresh.tech`.
+
+In that split setup, set the hosted API's `PR_REVIEWER_HOSTED_ORIGIN` to the
+Vercel web origin, not the API origin. The API uses it to build the GitHub OAuth
+callback URL and GitHub App manifest. The browser still reaches the API through
+the Vercel `/api/*` proxy.
+
+For a Vercel UI, point the GitHub App URLs at the web origin:
+
+- Homepage: `https://<vercel-or-custom-web-origin>`
+- Callback: `https://<vercel-or-custom-web-origin>/api/auth/github/callback`
+- Webhook: `https://<vercel-or-custom-web-origin>/api/github/webhook`
+
+Enable Vercel Web Analytics and Speed Insights in the Vercel dashboard after
+the project is created. The packages are already installed and mounted in the
+root layout. These tools collect frontend traffic and performance data only.
+They do not receive source code, diffs, model prompts, model replies, or model
+keys from the runner.
 
 ## Render
 
@@ -67,8 +114,8 @@ to that https origin and redeploy once.
 
 ## Railway
 
-1. In Railway, create a service from this repository. It reads
-   `deploy/railway.json`.
+1. In Railway, create a service from a repo import of this repository. It
+   reads `deploy/railway.json`. There is no public Railway template id yet.
 2. In the service variables, add every name in the table above. Railway does
    not take those values from the JSON file.
 3. Deploy. Railway runs `/app/.venv/bin/pr-reviewer-db-migrate` before it
@@ -90,7 +137,8 @@ Until those three match, OAuth and webhooks will not reach this instance.
 
 - The local runner. Install that on a machine you control. Pair it to this
   origin. Store model keys there.
-- The Next.js UI. The one-click files start the API image only.
+- The local runner UI. The public Next.js UI can run on Vercel. The Render
+  blueprint and Railway repo-import files start the hosted API image only.
 - Source, diffs, or model keys. The hosted schema must not hold those.
   Finding titles and rationale are allowlisted dashboard text. See
   [DATA_BOUNDARIES.md](DATA_BOUNDARIES.md).

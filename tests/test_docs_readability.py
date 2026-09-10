@@ -168,7 +168,10 @@ def test_required_routes_exist() -> None:
 
 def test_landing_page_has_a_deploy_button() -> None:
     source = LANDING_PAGE.read_text(encoding="utf-8")
-    assert "Deploy on Render" in source
+    assert "Deploy frontend on Vercel" in source
+    assert "Deploy API on Render" in source
+    assert "Deploy API on Railway" in source
+    assert "vercel.com/new/clone" in source
     assert "render.com/deploy" in source
 
 

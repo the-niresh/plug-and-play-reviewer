@@ -13,9 +13,16 @@ export const metadata = {
 
 const SIGN_IN_URL = "/api/auth/github/sign-in?return_to=/dashboard";
 
+const VERCEL_DEPLOY_URL =
+  process.env.NEXT_PUBLIC_VERCEL_DEPLOY_URL ??
+  "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthe-niresh%2Fplug-and-play-reviewer&project-name=pr-reviewer-web&repository-name=plug-and-play-reviewer&env=NEXT_PUBLIC_SITE_ORIGIN,NEXT_PUBLIC_CONTROL_PLANE_ORIGIN,NEXT_PUBLIC_GITHUB_APP_SLUG&envDescription=Public%20web%20origin,%20hosted%20API%20origin,%20and%20GitHub%20App%20slug";
+
 const RENDER_DEPLOY_URL =
   process.env.NEXT_PUBLIC_RENDER_DEPLOY_URL ??
   "https://render.com/deploy?repo=https://github.com/the-niresh/plug-and-play-reviewer";
+
+const RAILWAY_DEPLOY_URL =
+  process.env.NEXT_PUBLIC_RAILWAY_DEPLOY_URL ?? "https://railway.com/new";
 
 const EXAMPLE_FINDING: ReviewFinding = {
   id: "example-finding",
@@ -158,12 +165,30 @@ export default function HomePage() {
               Use it for AI code review self hosted on a laptop or a server you run.
               Teams who need a CodeRabbit alternative keep diffs on their own runner.
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
+            <div className="mt-9 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
               <a
-                href={RENDER_DEPLOY_URL}
+                href={VERCEL_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className={cn(buttonVariants({ size: "lg" }), "gap-2")}
               >
-                Deploy on Render
+                Deploy frontend on Vercel
+              </a>
+              <a
+                href={RENDER_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(buttonVariants({ size: "lg", variant: "outline" }), "gap-2")}
+              >
+                Deploy API on Render
+              </a>
+              <a
+                href={RAILWAY_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(buttonVariants({ size: "lg", variant: "outline" }), "gap-2")}
+              >
+                Deploy API on Railway
               </a>
               <a
                 href={SIGN_IN_URL}
@@ -386,7 +411,8 @@ export default function HomePage() {
               ))}
             </ol>
             <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
-              One-click Render or Railway still needs your own secrets and database.
+              One-click Render still needs your own secrets and database.
+              Railway starts from a repo import until a public template id exists.
             </p>
           </div>
           <div>

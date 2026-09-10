@@ -3,6 +3,18 @@
 Private AI code review. A hosted control plane takes GitHub events. A local
 runner reads the diff, retrieves repo context, and calls your model.
 
+<p>
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthe-niresh%2Fplug-and-play-reviewer&project-name=pr-reviewer-web&repository-name=plug-and-play-reviewer&env=NEXT_PUBLIC_SITE_ORIGIN,NEXT_PUBLIC_CONTROL_PLANE_ORIGIN,NEXT_PUBLIC_GITHUB_APP_SLUG&envDescription=Public%20web%20origin,%20hosted%20API%20origin,%20and%20GitHub%20App%20slug">
+    <img alt="Deploy frontend to Vercel" src="https://img.shields.io/badge/Deploy%20frontend%20to%20Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white">
+  </a>
+  <a href="https://render.com/deploy?repo=https://github.com/the-niresh/plug-and-play-reviewer">
+    <img alt="Deploy API on Render" src="https://img.shields.io/badge/Deploy%20API%20on%20Render-46E3B7?style=for-the-badge&logo=render&logoColor=000000">
+  </a>
+  <a href="https://railway.com/new">
+    <img alt="Deploy API on Railway" src="https://img.shields.io/badge/Deploy%20API%20on%20Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white">
+  </a>
+</p>
+
 Source, diffs, and model keys stay on the runner. Finding titles and rationale
 may sit on the hosted dashboard so you can read them. A review comment does
 not post until a human approves.
@@ -34,8 +46,9 @@ prices in this repository.
   `/ready` today.
 - A GitHub App pointed at that origin if you want live pull request events
 
-One-click Render or Railway still needs your own secrets and database.
-Install the runner with [docs/INSTALL.md](docs/INSTALL.md) (`scripts/install-reviewer.sh`). A GitHub Release checksum asset is not published yet.
+One-click Render still needs your own secrets and database. Railway starts from a repo import until a public template id exists.
+Install the runner with [docs/INSTALL.md](docs/INSTALL.md) (`scripts/install-reviewer.sh`).
+The GitHub Release checksum path is documented in [docs/RELEASE.md](docs/RELEASE.md).
 
 Start here: [Install](docs/INSTALL.md). Then [Deploy](docs/DEPLOY.md) if you
 want your own hosted instance. [Runbook](docs/RUNBOOK.md) says what is proved
@@ -90,4 +103,3 @@ Demo: [docs/DEMO.md](docs/DEMO.md).
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
