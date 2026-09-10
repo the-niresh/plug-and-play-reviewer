@@ -1,4 +1,4 @@
-# PR Reviewer
+# Plug and Play Reviewer
 
 Private AI code review. A hosted control plane takes GitHub events. A local
 runner reads the diff, retrieves repo context, and calls your model.
@@ -15,12 +15,24 @@ runner reads the diff, retrieves repo context, and calls your model.
   </a>
 </p>
 
+The product domain will be `plugandplayreviewer.online`. The live control plane
+today is `https://reviewer.niresh.tech`. That name is not pointed yet.
+
 Source, diffs, and model keys stay on the runner. Finding titles and rationale
 may sit on the hosted dashboard so you can read them. A review comment does
 not post until a human approves.
 
 This is an open source PR reviewer. Use it for AI code review self hosted on
 a laptop or a server you run.
+
+## Two boxes
+
+| Box | Deploy | Sees |
+|---|---|---|
+| **Hosted control plane** | One-click on Render or Railway (`pr-reviewer-api` only) | Job metadata, finding titles, rationale |
+| **Local runner** | Always on your machine (`reviewer start`) | Source, diffs, model key |
+
+No deploy target in this repo runs the runner.
 
 ## What it does
 
@@ -50,9 +62,21 @@ One-click Render still needs your own secrets and database. Railway starts from 
 Install the runner with [docs/INSTALL.md](docs/INSTALL.md) (`scripts/install-reviewer.sh`).
 The GitHub Release checksum path is documented in [docs/RELEASE.md](docs/RELEASE.md).
 
-Start here: [Install](docs/INSTALL.md). Then [Deploy](docs/DEPLOY.md) if you
-want your own hosted instance. [Runbook](docs/RUNBOOK.md) says what is proved
-and what still needs the owner.
+## Documentation
+
+| Doc | What it covers |
+|---|---|
+| [SELF_HOSTING.md](docs/SELF_HOSTING.md) | End-to-end flow from install to a claimed job |
+| [ONE_CLICK_DEPLOY.md](docs/ONE_CLICK_DEPLOY.md) | Render and Railway control plane deploy |
+| [INSTALL.md](docs/INSTALL.md) | Install, setup, doctor, uninstall |
+| [DEPLOY.md](docs/DEPLOY.md) | Vercel UI plus hosted API |
+| [RUNBOOK.md](docs/RUNBOOK.md) | What is live and what needs the owner |
+| [MCP.md](docs/MCP.md) | `reviewer mcp` over stdio |
+| [CHANNELS.md](docs/CHANNELS.md) | Slack, Telegram, Discord, email |
+| [AGENT_CONTRACT.md](docs/AGENT_CONTRACT.md) | JSON shapes, exit codes, agent prompt |
+
+Start here: [Self-hosting](docs/SELF_HOSTING.md). Then [One-click deploy](docs/ONE_CLICK_DEPLOY.md) if you
+want your own hosted instance.
 
 ## What is proved
 

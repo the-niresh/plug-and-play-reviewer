@@ -1,7 +1,9 @@
 # Runbook
 
 This is the operator page. It says what is live and what still needs the
-owner. It is not a launch scorecard.
+owner. It is not a launch scorecard. End-user setup lives in
+[SELF_HOSTING.md](SELF_HOSTING.md). Notification channels:
+[CHANNELS.md](CHANNELS.md).
 
 ## What is proved
 

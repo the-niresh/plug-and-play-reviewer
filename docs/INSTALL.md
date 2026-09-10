@@ -1,5 +1,8 @@
 # Install
 
+For the full path from install through a claimed job, see
+[SELF_HOSTING.md](SELF_HOSTING.md).
+
 ## What you need before you start
 
 - A machine you control. The runner reads source and diffs there.

@@ -175,3 +175,34 @@ ACP:
 ```json
 {"id":"call-1","method":"actions/call","params":{"name":"review_pull_request","arguments":{"owner":"acme","repository":"widgets","pull_request":12}}}
 ```
+
+## Use it from another agent
+
+Paste the prompt below into ChatGPT, Claude, or Claude Code when you want that
+agent to drive `reviewer review` on your machine. Replace the placeholders
+before you send it.
+
+```
+You are driving Plug and Play Reviewer on my machine. Use the shell only.
+
+Goal: review one pull request and return structured results.
+
+Steps:
+1. Confirm the reviewer CLI is installed: `reviewer --help`
+2. If GitHub is not connected, tell me to run `reviewer login` in a terminal I control. Do not invent a headless login path.
+3. Run exactly:
+   reviewer review OWNER/REPO#PR_NUMBER --json
+4. Parse only JSON from stdout. Ignore human text on stderr.
+5. Report:
+   - process exit code (0=no findings, 1=findings, 2=refused, 3=failure)
+   - status field from the JSON
+   - count of findings
+   - for each finding: id, severity, title, file_path, line_start
+   - if refused or error: code, message, action from refusal or error
+6. Do not post to GitHub. Do not approve findings. Human approval is required before public comments.
+
+Pull request to review: OWNER/REPO#PR_NUMBER
+```
+
+For MCP instead of shell, point the client at `reviewer mcp` on the same machine.
+See [MCP.md](MCP.md).
