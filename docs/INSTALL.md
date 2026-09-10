@@ -9,7 +9,7 @@ For the full path from install through a claimed job, see
 - [uv](https://docs.astral.sh/uv/) to install the `reviewer` command.
 - Docker if you want full mode with sandbox checks.
 - A model key. Enter it during `reviewer setup`. It stays on this machine.
-- A hosted origin to pair with. `https://reviewer.niresh.tech` answers
+- A hosted origin to pair with. `https://plugandplayreviewer.online` answers
   `/health` and `/ready` today. For your own instance see [DEPLOY.md](DEPLOY.md).
 - GitHub connected through the App. Pairing uses a one-time browser or device
   code.
@@ -108,7 +108,7 @@ not for installing the `reviewer` runner command.
 ## Setup
 
 ```sh
-reviewer setup --hosted-origin https://reviewer.niresh.tech
+reviewer setup --hosted-origin https://plugandplayreviewer.online
 ```
 
 `--hosted-origin` is the public control-plane site. Hidden input collects the model key. Slack secrets, if used, are also hidden. The command rejects secret-bearing flags.
@@ -120,7 +120,7 @@ No administrator rights are required. The task stores no model key or runner cre
 it only runs `reviewer start` with your hosted origin.
 
 ```powershell
-reviewer service install --hosted-origin https://reviewer.niresh.tech --host 127.0.0.1 --port 8799
+reviewer service install --hosted-origin https://plugandplayreviewer.online --host 127.0.0.1 --port 8799
 reviewer service start
 reviewer service stop
 reviewer service uninstall

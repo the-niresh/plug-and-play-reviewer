@@ -230,7 +230,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--hosted-origin",
         default=os.environ.get("PR_REVIEWER_HOSTED_ORIGIN", ""),
-        help="Hosted control plane origin, for example https://reviewer.niresh.tech.",
+        help="Hosted control plane origin, for example https://plugandplayreviewer.online.",
     )
     parser.add_argument(
         "--mode",

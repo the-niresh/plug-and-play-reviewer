@@ -51,6 +51,6 @@ body:
     id: extra
     attributes:
       label: Extra context
-      description: Model and provider if review-related. Hosted origin if not reviewer.niresh.tech.
+      description: Model and provider if review-related. Hosted origin if not plugandplayreviewer.online.
     validations:
       required: false

@@ -4,7 +4,7 @@ Plug and Play Reviewer can send review notifications to Slack, Discord,
 Telegram, and email. Delivery runs on the **local runner**. Webhook URLs, bot
 tokens, and email API keys never reach the hosted database.
 
-The live control plane is `https://reviewer.niresh.tech`. The product domain
+The live control plane is `https://plugandplayreviewer.online`. The product domain
 will be `plugandplayreviewer.online`, but it is not pointed yet.
 
 ## How the two sides split

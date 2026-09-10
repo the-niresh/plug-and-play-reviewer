@@ -7,7 +7,7 @@ owner. It is not a launch scorecard. End-user setup lives in
 
 ## What is proved
 
-`https://reviewer.niresh.tech` answers today.
+`https://plugandplayreviewer.online` answers today.
 
 - `GET /health` returns `200` and `{"status":"ok"}`.
 - `GET /ready` returns `200` and `{"status":"ok"}`. That check talks to
@@ -45,7 +45,7 @@ model choice, routing, or policy.
 ## What still needs the owner
 
 - Point the GitHub App homepage, callback, and webhook at
-  `https://reviewer.niresh.tech` if they still use another origin.
+  `https://plugandplayreviewer.online` if they still use another origin.
 - Install the App on a repository you own.
 - Install a runner on a machine you control. Pair it. Store the model key
   there. See [INSTALL.md](INSTALL.md).
@@ -61,9 +61,9 @@ Do not invent those values.
 
 When the owner is ready, set:
 
-- Homepage: `https://reviewer.niresh.tech`
-- Callback: `https://reviewer.niresh.tech/api/auth/github/callback`
-- Webhook: `https://reviewer.niresh.tech/api/github/webhook`
+- Homepage: `https://plugandplayreviewer.online`
+- Callback: `https://plugandplayreviewer.online/api/auth/github/callback`
+- Webhook: `https://plugandplayreviewer.online/api/github/webhook`
 
 Until those match, live events will not reach this instance.
 

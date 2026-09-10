@@ -12,23 +12,26 @@ export const PRODUCT_NAME = "Plug and Play Reviewer";
  *  and sentence case in a search result reads like a fragment. */
 export const TAGLINE = "Private AI PR Reviewer for GitHub";
 
-/** Where this website lives. */
+/** Where this website lives, and also the origin a runner is pointed at.
+ *
+ *  Those are the same host on purpose. next.config.ts rewrites /api/* here to the API
+ *  origin below, and the whole GitHub sign-in has to happen on one origin: the binding
+ *  cookie is set on the sign-in response and read back on the callback, and the session
+ *  cookie has to be readable by the dashboard. Split them and sign-in silently fails. */
 const DEFAULT_SITE_ORIGIN = "https://plugandplayreviewer.online";
 
-/** Where the hosted control plane answers webhooks and the runner points.
+/** The control plane itself, behind that proxy.
  *
- *  Deliberately a different host from the site, and deliberately a separate constant.
- *  Conflating the two is how docs end up telling people to point their runner at the
- *  marketing page. Still reviewer.niresh.tech: that host answers /health today. Flip it
- *  only once the replacement answers /health on its final hostname. */
-const DEFAULT_CONTROL_PLANE_ORIGIN = "https://reviewer.niresh.tech";
+ *  Only two things address it directly: the rewrite in next.config.ts, and prose that
+ *  needs to name the machine holding hosted data. Never put it in a setup command. */
+const DEFAULT_API_ORIGIN = "https://api.plugandplayreviewer.online";
 
 export function siteOrigin(): string {
   return process.env.NEXT_PUBLIC_SITE_ORIGIN ?? DEFAULT_SITE_ORIGIN;
 }
 
-export function controlPlaneOrigin(): string {
-  return process.env.NEXT_PUBLIC_CONTROL_PLANE_ORIGIN ?? DEFAULT_CONTROL_PLANE_ORIGIN;
+export function apiOrigin(): string {
+  return process.env.NEXT_PUBLIC_CONTROL_PLANE_ORIGIN ?? DEFAULT_API_ORIGIN;
 }
 
 function bareHost(origin: string): string {
@@ -40,9 +43,9 @@ export function siteHost(): string {
   return bareHost(siteOrigin());
 }
 
-/** The bare host of the control plane, for setup commands and the privacy page. */
-export function controlPlaneHost(): string {
-  return bareHost(controlPlaneOrigin());
+/** The bare host of the control plane behind the proxy. */
+export function apiHost(): string {
+  return bareHost(apiOrigin());
 }
 
 /** `Section | Product` for a subpage, `Product | Tagline` for the home page.

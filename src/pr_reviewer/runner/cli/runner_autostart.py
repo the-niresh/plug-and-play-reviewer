@@ -234,7 +234,7 @@ def _parse_config(rest: Sequence[str]) -> AutostartConfig:
     parser.add_argument(
         "--hosted-origin",
         default=os.environ.get("PR_REVIEWER_HOSTED_ORIGIN", ""),
-        help="Hosted control plane origin, for example https://reviewer.niresh.tech.",
+        help="Hosted control plane origin, for example https://plugandplayreviewer.online.",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Loopback host for reviewer start.")
     parser.add_argument("--port", type=int, default=_DEFAULT_PORT, help="Loopback port.")

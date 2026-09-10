@@ -178,7 +178,7 @@ stdin and stdout. No network port is opened.
 Before `tools/call` can succeed:
 
 1. GitHub is connected (`reviewer` or `reviewer login` in a terminal).
-2. A model key is stored (`reviewer setup --hosted-origin https://reviewer.niresh.tech`).
+2. A model key is stored (`reviewer setup --hosted-origin https://plugandplayreviewer.online`).
 3. The runner can reach the hosted control plane at the origin you paired with.
 
 ## Related surfaces

@@ -213,9 +213,13 @@ def test_demo_documents_live_github_loop_proof() -> None:
     text = (REPO / "docs" / "DEMO.md").read_text(encoding="utf-8")
     lowered = text.lower()
     assert "DNS A record" not in text
-    assert "https://reviewer.niresh.tech/api/github/webhook" in text
-    assert "GET https://reviewer.niresh.tech/health" in text
-    assert "GET https://reviewer.niresh.tech/ready" in text
+    # Read the origin from the constant the runner ships with, so a domain move does
+    # not fail here with a message about a hostname instead of about the doc.
+    from pr_reviewer.tui.github_connect import DEFAULT_HOSTED_ORIGIN as origin
+
+    assert f"{origin}/api/github/webhook" in text
+    assert f"GET {origin}/health" in text
+    assert f"GET {origin}/ready" in text
     assert "live-github-loop-proof.md" in text
     assert "yeahscene-ai/pull/8" in lowered
     assert "5158722711" in text

@@ -16,7 +16,7 @@ runner reads the diff, retrieves repo context, and calls your model.
 </p>
 
 The product domain will be `plugandplayreviewer.online`. The live control plane
-today is `https://reviewer.niresh.tech`. That name is not pointed yet.
+today is `https://plugandplayreviewer.online`. That name is not pointed yet.
 
 Source, diffs, and model keys stay on the runner. Finding titles and rationale
 may sit on the hosted dashboard so you can read them. A review comment does
@@ -54,7 +54,7 @@ prices in this repository.
 
 - Python 3.12, [uv](https://docs.astral.sh/uv/), and Docker for full mode
 - A model key on the runner. It never goes to the hosted database.
-- A hosted origin. `https://reviewer.niresh.tech` answers `/health` and
+- A hosted origin. `https://plugandplayreviewer.online` answers `/health` and
   `/ready` today.
 - A GitHub App pointed at that origin if you want live pull request events
 
@@ -82,11 +82,11 @@ want your own hosted instance.
 
 | Claim | Where |
 |---|---|
-| Hosted `/health` and `/ready` on `reviewer.niresh.tech` | [docs/DEPLOY.md](docs/DEPLOY.md) |
+| Hosted `/health` and `/ready` on `api.plugandplayreviewer.online` | [docs/DEPLOY.md](docs/DEPLOY.md) |
 | Public curl install on GitHub `main` | [docs/reports/clean-machine-install-proof.md](docs/reports/clean-machine-install-proof.md) |
 | Live install plus review on a real PR | [docs/reports/public-install-live-review-proof.md](docs/reports/public-install-live-review-proof.md) |
 | Live GitHub webhook to review comment | [docs/reports/live-github-loop-proof.md](docs/reports/live-github-loop-proof.md) |
-| Published holdout scorecard (7 Zod cases, gpt-4o-mini) | [docs/reports/holdout-quality-baseline.md](docs/reports/holdout-quality-baseline.md), [/scorecard](https://reviewer.niresh.tech/scorecard) |
+| Published holdout scorecard (7 Zod cases, gpt-4o-mini) | [docs/reports/holdout-quality-baseline.md](docs/reports/holdout-quality-baseline.md), [/scorecard](https://plugandplayreviewer.online/scorecard) |
 | Hosted schema cannot hold source, diffs, or model keys | `uv run python scripts/generate_data_boundaries_doc.py --check` |
 | Finding title and rationale are allowlisted hosted text | [docs/DATA_BOUNDARIES.md](docs/DATA_BOUNDARIES.md) |
 | Backend tests | `flock -w 3600 /tmp/pr-reviewer-pytest.lock uv run pytest -q` |

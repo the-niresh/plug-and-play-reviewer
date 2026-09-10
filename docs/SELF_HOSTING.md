@@ -2,7 +2,7 @@
 
 This guide walks through the full path from zero to a live review on your own
 machine. It assumes the hosted control plane is already running at
-`https://reviewer.niresh.tech`. The product domain will be
+`https://plugandplayreviewer.online`. The product domain will be
 `plugandplayreviewer.online`, but that name is not pointed yet. Use the live
 host above until it is.
 
@@ -37,7 +37,7 @@ reviewer --help
 ### 2. Store your model key
 
 ```sh
-reviewer setup --hosted-origin https://reviewer.niresh.tech
+reviewer setup --hosted-origin https://plugandplayreviewer.online
 ```
 
 Hidden input collects the model key. It is stored in the OS secret store, or in
@@ -81,7 +81,7 @@ metadata only. It never receives your source or diffs.
 ### 5. Start the local runner
 
 ```sh
-reviewer start --hosted-origin https://reviewer.niresh.tech --host 127.0.0.1
+reviewer start --hosted-origin https://plugandplayreviewer.online --host 127.0.0.1
 ```
 
 You can set `PR_REVIEWER_HOSTED_ORIGIN` instead of passing `--hosted-origin`
@@ -101,7 +101,7 @@ reviewer stop
 On Windows, use autostart instead of a manual start:
 
 ```powershell
-reviewer service install --hosted-origin https://reviewer.niresh.tech --host 127.0.0.1 --port 8799
+reviewer service install --hosted-origin https://plugandplayreviewer.online --host 127.0.0.1 --port 8799
 reviewer service start
 ```
 

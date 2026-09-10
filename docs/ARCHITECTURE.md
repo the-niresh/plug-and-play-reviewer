@@ -112,5 +112,5 @@ prompts, and extra repositories are the paid path later.
 ## Open Decisions - ❓
 
 - ❓ Whether a new Render or Railway hostname replaces the live compose
-  origin `https://reviewer.niresh.tech`.
+  origin `https://plugandplayreviewer.online`.
 - ❓ Which operating systems ship in v1.

@@ -6,7 +6,7 @@ import { ProductStage } from "@/components/landing/ProductStage";
 import { SiteNav } from "@/components/SiteNav";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PRODUCT_NAME, TAGLINE, controlPlaneHost, pageTitle, siteHost } from "@/lib/site";
+import { PRODUCT_NAME, TAGLINE, pageTitle, siteHost } from "@/lib/site";
 import type { ReviewFinding } from "@/lib/reviews";
 
 export const metadata: Metadata = {
@@ -154,7 +154,7 @@ const SETUP_STEPS = [
   },
   {
     title: "Hosted URL",
-    body: `Point the runner at the hosted URL. ${controlPlaneHost()} is the live control plane.`,
+    body: `Point the runner at the hosted URL. ${siteHost()} is the live control plane.`,
   },
   {
     title: "Local runner",

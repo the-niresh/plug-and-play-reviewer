@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from repo_paths import REPO_ROOT
 
@@ -111,7 +112,16 @@ def test_deploy_docs_explain_vercel_ui_and_api_proxy() -> None:
     assert "proxies `/api/*`" in text
     assert "separate hosted API origin" in text
     assert "PR_REVIEWER_HOSTED_ORIGIN` to the\nVercel web origin" in text
-    assert "api.reviewer.niresh.tech" in text
+    # The site and the API must be different hostnames or the /api/* rewrite would
+    # point the site at itself. Read both from the file that declares them so a domain
+    # move does not fail here with a message about the wrong thing.
+    site_ts = _read("apps/web/src/lib/site.ts")
+    site_origin = re.search(r'DEFAULT_SITE_ORIGIN = "([^"]+)"', site_ts)
+    api_origin = re.search(r'DEFAULT_API_ORIGIN = "([^"]+)"', site_ts)
+    assert site_origin and api_origin
+    assert site_origin.group(1) != api_origin.group(1)
+    assert site_origin.group(1) in text
+    assert api_origin.group(1) in text
     assert "Homepage:" in text
     assert "/api/auth/github/callback" in text
     assert "/api/github/webhook" in text

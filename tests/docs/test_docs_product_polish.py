@@ -33,6 +33,13 @@ PUBLIC_DOCS = (
 )
 
 
+def _live_hosted_origin() -> str:
+    """The origin the shipped runner points at, read from the constant that declares it."""
+    from pr_reviewer.tui.github_connect import DEFAULT_HOSTED_ORIGIN
+
+    return DEFAULT_HOSTED_ORIGIN
+
+
 def _text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -86,7 +93,7 @@ def test_install_says_what_you_need_before_starting() -> None:
 def test_deploy_and_runbook_separate_proved_from_owner_setup() -> None:
     deploy = _text(DEPLOY)
     runbook = _text(RUNBOOK)
-    assert "reviewer.niresh.tech" in deploy
+    assert _live_hosted_origin() in deploy
     assert "/health" in deploy
     assert "DATABASE_URL" in deploy
     assert "GITHUB_APP_ID" in deploy
@@ -110,7 +117,7 @@ def test_security_and_boundaries_match_the_hosted_local_split() -> None:
 def test_demo_does_not_say_the_live_host_is_missing() -> None:
     text = _text(DEMO)
     assert "does not exist yet" not in text
-    assert "reviewer.niresh.tech" in text
+    assert _live_hosted_origin() in text
 
 
 def test_public_docs_do_not_claim_self_improving() -> None:

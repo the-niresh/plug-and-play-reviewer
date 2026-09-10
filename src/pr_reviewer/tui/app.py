@@ -455,12 +455,15 @@ class ReviewerApp(App[None]):
         try:
             fetched = self._installation_client.fetch(hosted_origin, credential)
         except Exception as exc:  # noqa: BLE001 - every failure has to reach the screen in words
+            # Name the host this terminal is actually pointed at. A literal hostname
+            # here tells a self-hoster to go and check a server that is not theirs.
+            host = hosted_origin.removeprefix("https://").removeprefix("http://")
             if "401" in str(exc) or "unknown_credential" in str(exc):
                 return None, (
-                    "This terminal's pairing is no longer recognised by reviewer.niresh.tech. "
+                    f"This terminal's pairing is no longer recognised by {host}. "
                     "Sign in again to re-pair it."
                 )
-            return None, f"Could not reach reviewer.niresh.tech ({exc})."
+            return None, f"Could not reach {host} ({exc})."
         return fetched, None
 
     def _resolve_installation_snapshot(self) -> InstallationSnapshot | None:

@@ -7,7 +7,7 @@ not put model keys or diffs
 on the hosted plane. Those stay on the runner. Finding titles and rationale
 may be stored so the dashboard can show them.
 
-There is already a live compose instance at `https://reviewer.niresh.tech`.
+There is already a live compose instance at `https://plugandplayreviewer.online`.
 `GET /health` and `GET /ready` return `200` with `{"status":"ok"}`. Use that
 URL if you only need a working control plane today. Use the steps below when
 you want a Vercel UI, or a Render or Railway API instance of your own.
@@ -81,11 +81,11 @@ origin as the UI. Without that proxy, a Vercel frontend would show the page but
 GitHub sign-in would not work.
 
 When Vercel owns the web hostname, `NEXT_PUBLIC_CONTROL_PLANE_ORIGIN` must point
-to a separate hosted API origin. For example, use
-`NEXT_PUBLIC_SITE_ORIGIN=https://pr-reviewer-web.vercel.app` and
-`NEXT_PUBLIC_CONTROL_PLANE_ORIGIN=https://reviewer.niresh.tech`. If you later
-move `reviewer.niresh.tech` to Vercel, keep the API on another hostname such as
-`https://api.reviewer.niresh.tech`.
+to a separate hosted API origin. The live setup is
+`NEXT_PUBLIC_SITE_ORIGIN=https://plugandplayreviewer.online` on Vercel and
+`NEXT_PUBLIC_CONTROL_PLANE_ORIGIN=https://api.plugandplayreviewer.online`, which is
+the Render service. The two must be different hostnames: the site cannot proxy to
+itself.
 
 In that split setup, set the hosted API's `PR_REVIEWER_HOSTED_ORIGIN` to the
 Vercel web origin, not the API origin. The API uses it to build the GitHub OAuth

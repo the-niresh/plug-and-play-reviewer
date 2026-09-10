@@ -13,6 +13,14 @@ from repo_paths import REPO_ROOT
 from pr_reviewer.runner.secrets import FileSecretStore
 
 REPO = REPO_ROOT
+
+
+def _live_hosted_origin() -> str:
+    """The origin the shipped runner points at, read from the constant that declares it."""
+    from pr_reviewer.tui.github_connect import DEFAULT_HOSTED_ORIGIN
+
+    return DEFAULT_HOSTED_ORIGIN
+
 HOSTED_FLAGS = ("--neon", "--webhook-secret", "--github-app-private-key", "--pat", "--model-key")
 
 
@@ -214,5 +222,5 @@ def test_install_docs_describe_release_checksum_path() -> None:
     assert "install-from-release.sh" in text
     assert "SHA256SUMS" in text or "RELEASE.md" in text
     assert "uv tool install" in text
-    assert "reviewer.niresh.tech" in text
+    assert _live_hosted_origin() in text
 

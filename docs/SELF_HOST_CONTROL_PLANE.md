@@ -16,7 +16,7 @@ Both deploy targets start `pr-reviewer-api`:
 
 Neither file starts the runner. Do not add a runner service to these platforms.
 
-The live instance today is `https://reviewer.niresh.tech`. The product domain
+The live instance today is `https://plugandplayreviewer.online`. The product domain
 will be `plugandplayreviewer.online`, but it is not pointed yet.
 
 See [CONFIGURATION.md](CONFIGURATION.md) for the full list of control-plane

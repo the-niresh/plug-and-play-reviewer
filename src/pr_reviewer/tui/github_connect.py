@@ -10,9 +10,12 @@ GITHUB_APP_INSTALL_URL = "https://github.com/apps/{app_slug}/installations/new"
 GITHUB_SIGN_IN_PATH = "/api/auth/github/sign-in"
 
 # A real install has no .env and nothing to configure: this is the one hosted control plane
-# the terminal talks to. PR_REVIEWER_HOSTED_ORIGIN stays readable so a developer can point the
-# terminal at a non-production control plane, but it is an override, never a requirement.
-DEFAULT_HOSTED_ORIGIN = "https://reviewer.niresh.tech"
+# the terminal talks to. It is the website's origin, not the API's, because the sign-in link
+# built from it opens in a browser and the OAuth callback has to land on the same origin.
+# The site proxies /api/* through to the control plane. PR_REVIEWER_HOSTED_ORIGIN stays
+# readable so a developer can point the terminal at a non-production control plane, but it
+# is an override, never a requirement.
+DEFAULT_HOSTED_ORIGIN = "https://plugandplayreviewer.online"
 
 
 class HostedOriginError(ValueError):

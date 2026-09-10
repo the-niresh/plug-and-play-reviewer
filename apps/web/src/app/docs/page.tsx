@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { LogoBadge } from "@/components/Logo";
 import { SiteNav } from "@/components/SiteNav";
-import { controlPlaneHost, pageTitle } from "@/lib/site";
+import { pageTitle, siteHost } from "@/lib/site";
 
 export const metadata = {
   title: pageTitle("Docs"),
@@ -37,7 +37,7 @@ const SECTIONS = [
       "Pick the repositories the App may read. Without GitHub, no review can start.",
     ],
     commands: [
-      `reviewer setup --hosted-origin https://${controlPlaneHost()}`,
+      `reviewer setup --hosted-origin https://${siteHost()}`,
       "reviewer doctor",
       "reviewer start",
     ],
@@ -53,7 +53,7 @@ const SECTIONS = [
       "A model key never goes to the hosted database.",
     ],
     commands: [
-      `reviewer setup --hosted-origin https://${controlPlaneHost()}`,
+      `reviewer setup --hosted-origin https://${siteHost()}`,
       "reviewer status",
     ],
     docHref: `${REPO_DOCS}/INSTALL.md#setup`,

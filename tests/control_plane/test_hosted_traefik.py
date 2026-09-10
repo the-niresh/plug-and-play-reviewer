@@ -9,6 +9,14 @@ import pytest
 from repo_paths import REPO_ROOT
 
 REPO = REPO_ROOT
+
+
+def _live_hosted_origin() -> str:
+    """The origin the shipped runner points at, read from the constant that declares it."""
+    from pr_reviewer.tui.github_connect import DEFAULT_HOSTED_ORIGIN
+
+    return DEFAULT_HOSTED_ORIGIN
+
 SECRET_MARKERS = (
     "DATABASE_URL",
     "NEON",
@@ -21,12 +29,13 @@ SECRET_MARKERS = (
 
 def test_runbook_separates_live_host_from_owner_setup() -> None:
     text = (REPO / "docs" / "RUNBOOK.md").read_text(encoding="utf-8")
+    origin = _live_hosted_origin()
     assert "Nothing in this file is applied." not in text
-    assert "https://reviewer.niresh.tech" in text
+    assert origin in text
     assert "GET /health" in text
     assert "GET /ready" in text
-    assert "https://reviewer.niresh.tech/api/auth/github/callback" in text
-    assert "https://reviewer.niresh.tech/api/github/webhook" in text
+    assert f"{origin}/api/auth/github/callback" in text
+    assert f"{origin}/api/github/webhook" in text
     assert "Point the GitHub App homepage, callback, and webhook" in text
     assert "Render or Railway" in text
 

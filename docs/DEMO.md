@@ -8,7 +8,7 @@
 | ❓ | Open |
 
 Walk a signed webhook through to a human decision using commands that run
-on this machine. The hosted origin `https://reviewer.niresh.tech` answers
+on this machine. The hosted origin `https://plugandplayreviewer.online` answers
 `/health` and `/ready`. Live proofs from 2026-09-10:
 
 - [clean-machine-install-proof.md](reports/clean-machine-install-proof.md)
@@ -78,14 +78,14 @@ approval, the gate holds the finding so mock GitHub stays empty, a human
 `allow_public_post` posts once, and a newer head SHA supersedes the job so a
 stale post does not fire.
 
-## Hosted health on reviewer.niresh.tech - ✅ live
+## Hosted health on plugandplayreviewer.online - ✅ live
 
-`GET https://reviewer.niresh.tech/health` and
-`GET https://reviewer.niresh.tech/ready` return `200` and `{"status":"ok"}`.
+`GET https://plugandplayreviewer.online/health` and
+`GET https://plugandplayreviewer.online/ready` return `200` and `{"status":"ok"}`.
 That is the hosted control plane and its database check.
 
 The GitHub App webhook is pointed at
-`https://reviewer.niresh.tech/api/github/webhook`. Deliveries are accepted
+`https://plugandplayreviewer.online/api/github/webhook`. Deliveries are accepted
 on the live instance. See [RUNBOOK.md](RUNBOOK.md) for owner setup on a new
 host.
 
@@ -119,7 +119,7 @@ from human replies automatically.
 
 [DEPLOY.md](DEPLOY.md) documents Render and Railway steps. A new instance
 still needs the owner's Neon `DATABASE_URL`, GitHub App secrets, and
-dashboard env vars. The live compose host at `reviewer.niresh.tech` is
+dashboard env vars. The live compose host at `plugandplayreviewer.online` is
 separate from a fresh self-hosted control plane.
 
 ## Published holdout baseline - ✅ measured
@@ -127,7 +127,7 @@ separate from a fresh self-hosted control plane.
 Recorded in [holdout-quality-baseline.md](reports/holdout-quality-baseline.md).
 Seven human-judged holdout cases from the Zod repository only (gpt-4o-mini,
 diff-only). That sample is not proof on every language or repo. See
-[/scorecard](https://reviewer.niresh.tech/scorecard).
+[/scorecard](https://plugandplayreviewer.online/scorecard).
 
 ## What this demo is not
 
@@ -139,6 +139,6 @@ diff-only). That sample is not proof on every language or repo. See
 ## Settled - ✅
 
 - ✅ Local webhook tests and the Playwright approval path run today.
-- ✅ Hosted `/health` and `/ready` on `reviewer.niresh.tech` answer today.
+- ✅ Hosted `/health` and `/ready` on `plugandplayreviewer.online` answer today.
 - ✅ A live GitHub review comment and human reply feedback were captured on
   PR #8. See [live-github-loop-proof.md](reports/live-github-loop-proof.md).
