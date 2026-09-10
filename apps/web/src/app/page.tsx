@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { RailwayMark, RenderMark, VercelMark } from "@/components/deploy-marks";
+import { RailwayMark, RenderMark } from "@/components/deploy-marks";
 import { GithubMark } from "@/components/github-mark";
 import { ProductStage } from "@/components/landing/ProductStage";
 import { SiteNav } from "@/components/SiteNav";
@@ -16,10 +16,6 @@ export const metadata = {
 };
 
 const SIGN_IN_URL = "/api/auth/github/sign-in?return_to=/dashboard";
-
-const VERCEL_DEPLOY_URL =
-  process.env.NEXT_PUBLIC_VERCEL_DEPLOY_URL ??
-  "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthe-niresh%2Fplug-and-play-reviewer&project-name=pr-reviewer-web&repository-name=plug-and-play-reviewer&env=NEXT_PUBLIC_SITE_ORIGIN,NEXT_PUBLIC_CONTROL_PLANE_ORIGIN,NEXT_PUBLIC_GITHUB_APP_SLUG&envDescription=Public%20web%20origin,%20hosted%20API%20origin,%20and%20GitHub%20App%20slug";
 
 const RENDER_DEPLOY_URL =
   process.env.NEXT_PUBLIC_RENDER_DEPLOY_URL ??
@@ -202,33 +198,6 @@ export default function HomePage() {
               >
                 <GithubMark className="size-4" />
                 Sign in with GitHub
-              </a>
-              <a
-                href={VERCEL_DEPLOY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="deploy-target"
-              >
-                <VercelMark className="size-4 shrink-0" />
-                Deploy frontend on Vercel
-              </a>
-              <a
-                href={RENDER_DEPLOY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="deploy-target"
-              >
-                <RenderMark className="size-4 shrink-0" />
-                Deploy API on Render
-              </a>
-              <a
-                href={RAILWAY_DEPLOY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="deploy-target"
-              >
-                <RailwayMark className="size-4 shrink-0" />
-                Deploy API on Railway
               </a>
             </div>
             <a href="#how-a-review-moves" className="landing-link mt-6 inline-block text-sm">
@@ -452,6 +421,31 @@ export default function HomePage() {
               ))}
             </ol>
             <p className="text-muted-foreground mt-5 max-w-prose text-sm leading-relaxed">
+              Step 02 is the only part you can hand to a host. These deploy the control
+              plane, not the runner: the runner must stay on a machine you trust, which is
+              the whole point.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <a
+                href={RENDER_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deploy-target"
+              >
+                <RenderMark className="size-4 shrink-0" />
+                Deploy API on Render
+              </a>
+              <a
+                href={RAILWAY_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deploy-target"
+              >
+                <RailwayMark className="size-4 shrink-0" />
+                Deploy API on Railway
+              </a>
+            </div>
+            <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
               One-click Render still needs your own secrets and database.
               Railway starts from a repo import until a public template id exists.
             </p>

@@ -167,13 +167,19 @@ def test_required_routes_exist() -> None:
         assert path.is_file(), f"missing route file {path}"
 
 
-def test_landing_page_has_a_deploy_button() -> None:
+def test_landing_page_offers_control_plane_hosting_only() -> None:
+    """Render and Railway host the control plane. Nothing on the page clones the frontend.
+
+    The "Deploy frontend on Vercel" button was removed on 2026-09-11: it cloned the very
+    site the visitor was reading, which is a fork action, not a product action, and it
+    competed with sign-in in the hero.
+    """
     source = LANDING_PAGE.read_text(encoding="utf-8")
-    assert "Deploy frontend on Vercel" in source
     assert "Deploy API on Render" in source
     assert "Deploy API on Railway" in source
-    assert "vercel.com/new/clone" in source
     assert "render.com/deploy" in source
+    assert "Deploy frontend on Vercel" not in source
+    assert "vercel.com/new/clone" not in source
 
 
 def test_landing_page_links_to_docs_and_dashboard() -> None:

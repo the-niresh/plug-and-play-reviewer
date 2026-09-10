@@ -136,22 +136,37 @@ def test_readme_has_deploy_buttons_for_vercel_render_and_railway() -> None:
     assert "Railway starts from a repo import until a public template id exists" in text
 
 
-def test_landing_has_all_three_deploy_buttons() -> None:
+def test_landing_does_not_offer_to_clone_the_frontend() -> None:
+    """The landing page must not tell a visitor to deploy their own copy of itself.
+
+    A "Deploy frontend on Vercel" button clones the marketing site and dashboard the
+    visitor is currently reading. Nobody using the product needs that; it is a fork
+    button dressed as a product CTA, and it competed with the one action that matters
+    (sign in). Removed 2026-09-11. Self-hosting the *control plane* is a real path and
+    keeps its buttons, in the setup section rather than the hero.
+    """
     text = _read("apps/web/src/app/page.tsx")
-    assert "VERCEL_DEPLOY_URL" in text
+    assert "VERCEL_DEPLOY_URL" not in text
+    assert "Deploy frontend on Vercel" not in text
+    assert "vercel.com/new/clone" not in text
+
+
+def test_landing_offers_control_plane_hosting_outside_the_hero() -> None:
+    text = _read("apps/web/src/app/page.tsx")
     assert "RENDER_DEPLOY_URL" in text
     assert "RAILWAY_DEPLOY_URL" in text
-    assert "Deploy frontend on Vercel" in text
     assert "Deploy API on Render" in text
     assert "Deploy API on Railway" in text
-    assert "vercel.com/new/clone" in text
     assert "render.com/deploy" in text
     assert "railway.com/new" in text
+    # They must sit in the setup section, after the hero CTA, not beside sign-in.
+    assert text.index("Sign in with GitHub") < text.index("Deploy API on Render")
+    assert text.index("how-to-set-it-up") < text.index("Deploy API on Render")
 
 
 def test_landing_deploy_links_open_in_a_new_tab() -> None:
     text = _read("apps/web/src/app/page.tsx")
-    for name in ("VERCEL_DEPLOY_URL", "RENDER_DEPLOY_URL", "RAILWAY_DEPLOY_URL"):
+    for name in ("RENDER_DEPLOY_URL", "RAILWAY_DEPLOY_URL"):
         href_block = text.split(f"href={{{name}}}", 1)[1][:240]
         assert 'target="_blank"' in href_block, name
         assert 'rel="noopener noreferrer"' in href_block, name
