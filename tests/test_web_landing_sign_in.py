@@ -21,6 +21,7 @@ from pr_reviewer.control_plane.github_oauth import (
 WEB_SRC = Path(__file__).resolve().parent.parent / "apps" / "web" / "src"
 LANDING_PAGE = WEB_SRC / "app" / "page.tsx"
 MIDDLEWARE = WEB_SRC / "middleware.ts"
+SESSION = WEB_SRC / "lib" / "session.ts"
 
 SIGN_IN_HREF = re.compile(r"/api/auth/github/sign-in\?return_to=([^\"'`]+)")
 
@@ -70,13 +71,13 @@ def test_middleware_exists() -> None:
 
 
 def test_middleware_redirects_a_signed_in_visitor_away_from_the_landing_page() -> None:
-    source = MIDDLEWARE.read_text(encoding="utf-8")
-    assert LIVE_SIGN_IN_COOKIE_NAME in source, (
-        "middleware does not reference the real sign-in cookie name "
-        f"({LIVE_SIGN_IN_COOKIE_NAME!r} from github_oauth.py)"
-    )
-    assert "/dashboard" in source
-    assert "NextResponse.redirect" in source
+    middleware = MIDDLEWARE.read_text(encoding="utf-8")
+    session = SESSION.read_text(encoding="utf-8")
+    assert 'from "@/lib/session"' in middleware
+    assert "request.cookies.has(SIGN_IN_COOKIE_NAME)" in middleware
+    assert f'SIGN_IN_COOKIE_NAME = "{LIVE_SIGN_IN_COOKIE_NAME}"' in session
+    assert "/dashboard" in middleware
+    assert "NextResponse.redirect" in middleware
 
 
 def test_middleware_only_matches_the_landing_route() -> None:
