@@ -27,7 +27,9 @@ const RENDER_DEPLOY_URL =
 
 const RAILWAY_DEPLOY_URL =
   process.env.NEXT_PUBLIC_RAILWAY_DEPLOY_URL ??
-  "https://railway.com/new/github.com/the-niresh/plug-and-play-reviewer";
+  // Railway's repo-deploy form. Verified 2026-09-11: the /new/github.com/<owner>/<repo>
+  // shape 404s, this one resolves.
+  "https://railway.com/new/template?template=https://github.com/the-niresh/plug-and-play-reviewer";
 
 const EXAMPLE_FINDING: ReviewFinding = {
   id: "example-finding",
