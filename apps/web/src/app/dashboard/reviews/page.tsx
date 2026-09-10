@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { PullRequestLink } from "@/components/PullRequestLink";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { fetchReviews, severityTone, worstSeverity } from "@/lib/reviews";
 
@@ -99,7 +100,12 @@ export default async function ReviewsPage() {
                         {review.repository_name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3">#{review.pull_request_number ?? "?"}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-2">
+                        <span>#{review.pull_request_number ?? "?"}</span>
+                        <PullRequestLink url={review.pull_request_url} />
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       {/* stopped_early must never read as a finished review. */}
                       <Badge variant={review.stopped_early ? "warning" : "muted"}>

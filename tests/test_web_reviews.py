@@ -111,6 +111,7 @@ def test_signed_in_viewer_sees_their_own_repositorys_findings() -> None:
     assert len(repo["reviews"]) == 1
     review = repo["reviews"][0]
     assert review["pull_request_number"] == 3
+    assert review["pull_request_url"] == "https://github.com/octocat/widget/pull/3"
     assert review["findings"][0]["title"] == "Unsanitized shell call"
     assert "evidence" not in review["findings"][0]
 
@@ -156,6 +157,8 @@ def test_signed_in_viewer_can_read_their_own_review_by_id() -> None:
     body = response.json()
     assert body["review_job_id"] == review_job_id
     assert body["pull_request_number"] == 3
+    assert body["pull_request_url"] == "https://github.com/octocat/widget/pull/3"
+    assert body["pull_request_url"] == "https://github.com/octocat/widget/pull/3"
 
 
 def test_a_viewer_cannot_read_another_installations_review_by_id() -> None:

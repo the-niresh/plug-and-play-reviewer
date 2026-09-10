@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
+import { PullRequestLink } from "@/components/PullRequestLink";
 import { SeverityBreakdown } from "@/components/SeverityBreakdown";
 import {
   fetchReviews,
@@ -194,7 +195,10 @@ export default async function DashboardPage() {
                 <span className="text-muted-foreground truncate font-mono text-xs">
                   {review.repository_name}
                 </span>
-                <span className="font-medium">PR #{review.pull_request_number ?? "?"}</span>
+                <span className="flex items-center gap-2 font-medium">
+                  <span>PR #{review.pull_request_number ?? "?"}</span>
+                  <PullRequestLink url={review.pull_request_url} />
+                </span>
               </span>
               <span className="flex items-center gap-3">
                 {/* stopped_early must never read as a finished review, even summarised

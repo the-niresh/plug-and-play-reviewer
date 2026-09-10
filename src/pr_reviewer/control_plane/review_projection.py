@@ -28,6 +28,7 @@ from pr_reviewer.control_plane.runner_presence import (
     list_runners_for_viewer,
 )
 from pr_reviewer.db.client import Row, connection
+from pr_reviewer.github.pull_request_url import github_pull_request_url
 
 
 @dataclass(frozen=True)
@@ -228,6 +229,7 @@ class ReviewSummary(BaseModel):
 
     review_job_id: str
     pull_request_number: int | None
+    pull_request_url: str | None
     head_sha: str | None
     status: str
     stopped_early: bool
@@ -279,7 +281,9 @@ def _finding_summary(conn: Connection[Row], row: Row) -> ReviewFindingSummary:
     )
 
 
-def _review_summary_for_job(conn: Connection[Row], job_row: Row) -> ReviewSummary:
+def _review_summary_for_job(
+    conn: Connection[Row], job_row: Row, *, repository_name: str | None = None
+) -> ReviewSummary:
     review_job_id = str(job_row["id"])
     finding_rows = conn.execute(
         """
@@ -301,6 +305,10 @@ def _review_summary_for_job(conn: Connection[Row], job_row: Row) -> ReviewSummar
     return ReviewSummary(
         review_job_id=review_job_id,
         pull_request_number=job_row["pull_request_number"],
+        pull_request_url=github_pull_request_url(
+            repository_name or "",
+            job_row["pull_request_number"],
+        ),
         head_sha=job_row["head_sha"],
         status=status,
         stopped_early=stopped_early,
@@ -335,7 +343,11 @@ def reviews_for_repository(
             (installation_id, github_repository_id),
         ).fetchall()
 
-        summaries = [_review_summary_for_job(conn, job_row) for job_row in job_rows]
+        repository_name = granted[github_repository_id]
+        summaries = [
+            _review_summary_for_job(conn, job_row, repository_name=repository_name)
+            for job_row in job_rows
+        ]
     return summaries
 
 
@@ -366,7 +378,8 @@ def review_by_id(assertion: LiveInstallationAssertion, review_job_id: str) -> Re
         if granted is None or job_row["github_repository_id"] not in granted:
             return None
 
-        return _review_summary_for_job(conn, job_row)
+        repository_name = granted[job_row["github_repository_id"]]
+        return _review_summary_for_job(conn, job_row, repository_name=repository_name)
 
 
 class RepositoryReviews(BaseModel):

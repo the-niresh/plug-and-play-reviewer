@@ -107,6 +107,7 @@ export type ReviewFinding = {
 export type ReviewSummary = {
   review_job_id: string;
   pull_request_number: number | null;
+  pull_request_url: string | null;
   head_sha: string | null;
   status: string;
   stopped_early: boolean;

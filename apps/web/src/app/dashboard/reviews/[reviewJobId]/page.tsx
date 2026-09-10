@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { PullRequestLink } from "@/components/PullRequestLink";
 import { FindingCard } from "@/components/FindingCard";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { ReviewBehaviorPanels } from "@/components/ReviewBehaviorPanels";
@@ -77,8 +78,9 @@ export default async function ReviewDetailPage({ params }: PageProps) {
       </Link>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          PR #{review.pull_request_number ?? "?"}
+        <h1 className="flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-tight">
+          <span>PR #{review.pull_request_number ?? "?"}</span>
+          <PullRequestLink url={review.pull_request_url} />
         </h1>
         {/* A review that stopped early because tokens ran out must never present as
             complete: the badge names its real state, never the raw status enum. */}
