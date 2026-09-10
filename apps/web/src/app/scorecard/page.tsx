@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import { SiteNav } from "@/components/SiteNav";
 import { Badge } from "@/components/ui/badge";
 import { pageTitle } from "@/lib/site";
 
@@ -64,7 +65,9 @@ export default function ScorecardPage() {
   const metricKeys = Object.keys(METRIC_LABELS) as (keyof ScorecardMetrics)[];
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-14">
+    <>
+      <SiteNav />
+      <main className="mx-auto w-full max-w-3xl px-6 py-14">
       <h1 className="text-3xl font-semibold tracking-tight">Scorecard</h1>
       <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
         Measured quality, or the real refusal. Nothing below is a placeholder.
@@ -151,5 +154,6 @@ export default function ScorecardPage() {
         </table>
       </div>
     </main>
+    </>
   );
 }

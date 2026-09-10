@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
+import { SiteNav } from "@/components/SiteNav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -69,6 +70,7 @@ export function DashboardShell({
 
   return (
     <>
+      <SiteNav />
       <header className="border-b">
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
           <nav aria-label="Dashboard" className="flex items-center gap-1">
@@ -86,7 +88,7 @@ export function DashboardShell({
                   key={item.href}
                   href={item.href}
                   aria-current={isCurrent ? "page" : undefined}
-                  className="text-muted-foreground hover:text-foreground hover:bg-secondary aria-[current=page]:bg-secondary aria-[current=page]:text-foreground rounded-md px-3 py-1.5 text-sm font-medium transition-colors aria-[current=page]:font-semibold focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="text-muted-foreground hover:text-foreground aria-[current=page]:text-foreground px-3 py-1.5 text-sm font-medium underline-offset-4 transition-colors aria-[current=page]:font-semibold aria-[current=page]:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   {item.label}
                 </Link>

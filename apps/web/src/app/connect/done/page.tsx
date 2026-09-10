@@ -1,4 +1,5 @@
 import { ConnectDoneCountdown } from "@/components/ConnectDoneCountdown";
+import { SiteNav } from "@/components/SiteNav";
 import { pageTitle } from "@/lib/site";
 
 export const metadata = {
@@ -11,12 +12,15 @@ export const metadata = {
 // then get out of their way onto the dashboard. See ConnectDoneCountdown for the timer.
 export default function ConnectDonePage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+    <>
+      <SiteNav />
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-6 py-16 text-center">
       <h1 className="text-2xl font-semibold tracking-tight">You&apos;re signed in</h1>
       <p className="text-muted-foreground mt-3 max-w-prose text-sm leading-relaxed">
         Setup is finished. Go back to your terminal to start a review.
       </p>
       <ConnectDoneCountdown />
     </main>
+    </>
   );
 }

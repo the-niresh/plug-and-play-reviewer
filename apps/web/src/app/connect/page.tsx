@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SiteNav } from "@/components/SiteNav";
 import { GithubMark } from "@/components/github-mark";
 import { pageTitle } from "@/lib/site";
 
@@ -21,7 +22,9 @@ export const metadata = {
 
 export default function ConnectPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-16">
+    <>
+      <SiteNav />
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-16">
       <Card>
         <CardHeader>
           <CardTitle>Choose repositories</CardTitle>
@@ -48,5 +51,6 @@ export default function ConnectPage() {
         </CardContent>
       </Card>
     </main>
+    </>
   );
 }

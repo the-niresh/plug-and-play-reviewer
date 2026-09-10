@@ -3,39 +3,39 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Light tokens on bare :root; dark redefined under prefers-color-scheme. One green
-   accent on both. Mapped onto shadcn token names so components stay on-brand. */
+/* Technical Broadsheet: print-newspaper authority, git-orange accent, hairline rules. */
 :root {
-  --radius: 0.5rem;
+  --radius: 0px;
 
-  --background: oklch(98% 0.008 260);
-  --foreground: oklch(22% 0.02 260);
+  --background: #fafaf7;
+  --foreground: #111111;
 
-  --card: oklch(100% 0 0);
-  --card-foreground: oklch(22% 0.02 260);
-  --popover: oklch(100% 0 0);
-  --popover-foreground: oklch(22% 0.02 260);
+  --card: #ffffff;
+  --card-foreground: #111111;
+  --popover: #ffffff;
+  --popover-foreground: #111111;
 
-  --primary: oklch(52% 0.14 155);
-  --primary-foreground: oklch(98% 0.01 155);
+  --primary: #f05032;
+  --primary-foreground: #fafafa;
 
-  --secondary: oklch(94% 0.012 260);
-  --secondary-foreground: oklch(22% 0.02 260);
+  --secondary: #f0f0eb;
+  --secondary-foreground: #111111;
 
-  --muted: oklch(94% 0.012 260);
-  --muted-foreground: oklch(48% 0.02 260);
+  --muted: #f0f0eb;
+  /* #5c5c5c on #fafaf7 is about 5.8:1 */
+  --muted-foreground: #5c5c5c;
 
-  --accent: oklch(94% 0.012 260);
-  --accent-foreground: oklch(22% 0.02 260);
+  --accent: #f0f0eb;
+  --accent-foreground: #111111;
 
-  --destructive: oklch(55% 0.2 25);
-  --destructive-foreground: oklch(98% 0.01 25);
-  --warning: oklch(68% 0.14 75);
-  --success: oklch(52% 0.14 155);
+  --destructive: #e5484d;
+  --destructive-foreground: #fafafa;
+  --warning: #c47f17;
+  --success: #2f7a3e;
 
-  --border: oklch(88% 0.015 260);
-  --input: oklch(88% 0.015 260);
-  --ring: oklch(52% 0.14 155);
+  --border: #d9d9d4;
+  --input: #d9d9d4;
+  --ring: #f05032;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -43,43 +43,42 @@
     ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, monospace;
 
   --space-section: clamp(3.5rem, 3rem + 4vw, 7rem);
-  --landing-grid: oklch(82% 0.015 260 / 0.45);
-  --landing-glow: oklch(52% 0.14 155 / 0.12);
+  --landing-rule: #d9d9d4;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(16% 0.014 260);
-    --foreground: oklch(95% 0.006 260);
+    --background: #0a0a0a;
+    --foreground: #fafafa;
 
-    --card: oklch(21% 0.018 260);
-    --card-foreground: oklch(95% 0.006 260);
-    --popover: oklch(21% 0.018 260);
-    --popover-foreground: oklch(95% 0.006 260);
+    --card: #0a0a0a;
+    --card-foreground: #fafafa;
+    --popover: #0a0a0a;
+    --popover-foreground: #fafafa;
 
-    --primary: oklch(80% 0.17 155);
-    --primary-foreground: oklch(18% 0.03 155);
+    --primary: #f05032;
+    --primary-foreground: #fafafa;
 
-    --secondary: oklch(26% 0.02 260);
-    --secondary-foreground: oklch(95% 0.006 260);
+    --secondary: #171717;
+    --secondary-foreground: #fafafa;
 
-    --muted: oklch(24% 0.018 260);
-    --muted-foreground: oklch(72% 0.02 260);
+    --muted: #171717;
+    /* #a3a3a3 on #0a0a0a is about 7.2:1 */
+    --muted-foreground: #a3a3a3;
 
-    --accent: oklch(26% 0.02 260);
-    --accent-foreground: oklch(95% 0.006 260);
+    --accent: #171717;
+    --accent-foreground: #fafafa;
 
-    --destructive: oklch(64% 0.19 25);
-    --destructive-foreground: oklch(97% 0.01 25);
-    --warning: oklch(78% 0.15 75);
-    --success: oklch(80% 0.17 155);
+    --destructive: #e5484d;
+    --destructive-foreground: #fafafa;
+    --warning: #e8b84a;
+    --success: #6fcf7f;
 
-    --border: oklch(30% 0.02 260);
-    --input: oklch(30% 0.02 260);
-    --ring: oklch(80% 0.17 155);
+    --border: #262626;
+    --input: #262626;
+    --ring: #f05032;
 
-    --landing-grid: oklch(30% 0.02 260 / 0.22);
-    --landing-glow: oklch(80% 0.17 155 / 0.14);
+    --landing-rule: #262626;
   }
 }
 
@@ -109,9 +108,9 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
 }
 
 @layer base {
@@ -121,6 +120,7 @@
 
   html {
     color-scheme: light dark;
+    overflow-x: hidden;
   }
 
   body {
@@ -128,6 +128,7 @@
     margin: 0;
     padding: 0;
     line-height: 1.5;
+    overflow-x: hidden;
   }
 
   /* Digits that line up in a column read as data, not prose. */
@@ -144,20 +145,7 @@
 .landing-root {
   font-family: var(--font-landing-sans), var(--font-sans);
   background-color: var(--background);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, var(--landing-glow), transparent 70%),
-    linear-gradient(to right, var(--landing-grid) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--landing-grid) 1px, transparent 1px);
-  background-size: auto, 28px 28px, 28px 28px;
-  background-attachment: fixed;
-}
-
-.landing-card {
-  @apply bg-card/90 border-border rounded-xl border shadow-sm transition-[transform,box-shadow,border-color] duration-200;
-}
-
-.landing-card:hover {
-  @apply border-primary/35 -translate-y-0.5 shadow-md;
+  overflow-x: hidden;
 }
 
 .landing-kicker {
@@ -167,9 +155,72 @@
 .landing-root .landing-display {
   font-family: var(--font-landing-display), ui-serif, serif;
   font-feature-settings: "opsz" 72;
+  letter-spacing: -0.03em;
 }
 
 .landing-root .font-mono,
 .landing-root .landing-stage {
   font-family: var(--font-landing-mono), var(--font-mono);
+}
+
+.landing-rule {
+  border: 1px solid var(--landing-rule);
+}
+
+.landing-hero-title {
+  font-size: clamp(2.5rem, 1.6rem + 4vw, 4.75rem);
+  line-height: 1.02;
+}
+
+.landing-section-title {
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  line-height: 1.08;
+}
+
+.landing-link {
+  @apply text-primary underline-offset-4 hover:underline focus-visible:ring-ring/50 rounded-sm focus-visible:ring-[3px] focus-visible:outline-none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-reveal {
+    animation: landing-rise 420ms ease both;
+  }
+
+  .landing-reveal-delay-1 {
+    animation-delay: 80ms;
+  }
+
+  .landing-reveal-delay-2 {
+    animation-delay: 160ms;
+  }
+
+  .landing-reveal-delay-3 {
+    animation-delay: 240ms;
+  }
+
+  .landing-reveal-delay-4 {
+    animation-delay: 320ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal,
+  .landing-reveal-delay-1,
+  .landing-reveal-delay-2,
+  .landing-reveal-delay-3,
+  .landing-reveal-delay-4 {
+    animation: none;
+  }
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CircleAlert, ShieldCheck } from "lucide-react";
 
+import { SiteNav } from "@/components/SiteNav";
 import { GithubMark } from "@/components/github-mark";
 import { cn } from "@/lib/utils";
 
@@ -80,7 +81,9 @@ export default function OnboardingPage() {
   const daemonUp = mode !== null;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-16">
+    <>
+      <SiteNav />
+      <main className="mx-auto w-full max-w-3xl px-6 py-16">
       <header className="mb-10">
         <p className="text-muted-foreground mb-3 text-xs font-medium tracking-[0.14em] uppercase">
           Runner setup
@@ -209,5 +212,6 @@ export default function OnboardingPage() {
         </Button>
       </div>
     </main>
+    </>
   );
 }

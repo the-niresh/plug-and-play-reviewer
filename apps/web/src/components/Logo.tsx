@@ -20,7 +20,7 @@ const SPOT = "#1F1F1F";
 type LogoProps = {
   className?: string;
   title?: string;
-  variant?: "color" | "mono";
+  variant?: "color" | "mono" | "nav";
 };
 
 /** A git commit node: a diamond, the way the git mark itself draws a version. */
@@ -30,15 +30,17 @@ function commitDiamond(cx: number, cy: number, r: number): string {
 
 export function Logo({ className, title, variant = "color" }: LogoProps) {
   const mono = variant === "mono";
+  const nav = variant === "nav";
   const git = mono ? "currentColor" : GIT_ORANGE;
-  const shell = mono ? "none" : LADYBUG_RED;
-  const spot = mono ? "currentColor" : SPOT;
+  const shell = mono || nav ? "none" : LADYBUG_RED;
+  const spot = mono || nav ? "currentColor" : SPOT;
+  const detailStroke = nav ? "var(--foreground)" : undefined;
 
   return (
     <svg
       viewBox="0 0 48 48"
       fill="none"
-      stroke="currentColor"
+      stroke={detailStroke ?? "currentColor"}
       strokeWidth={2.2}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -57,7 +59,7 @@ export function Logo({ className, title, variant = "color" }: LogoProps) {
 
       {/* magnifying glass */}
       <circle cx="24" cy="21" r="12.5" />
-      <path d="M33.5 30.5L41 38" strokeWidth={3.4} />
+      <path d="M33.5 30.5L41 38" stroke={detailStroke ?? "currentColor"} strokeWidth={3.4} />
 
       {/* the ladybug, sized so no leg or antenna reaches the rim */}
       <path d="M19.9 19.5L17.2 18.2" />
@@ -68,8 +70,20 @@ export function Logo({ className, title, variant = "color" }: LogoProps) {
       <path d="M27.9 26.4L30.5 28" />
       <path d="M23 14.8L21.8 12.8" />
       <path d="M25 14.8L26.2 12.8" />
-      <circle cx="24" cy="16.4" r="2.1" fill="currentColor" />
-      <ellipse cx="24" cy="23" rx="4.4" ry="5.2" fill={shell} />
+      <circle
+        cx="24"
+        cy="16.4"
+        r="2.1"
+        fill={nav ? "var(--foreground)" : "currentColor"}
+      />
+      <ellipse
+        cx="24"
+        cy="23"
+        rx="4.4"
+        ry="5.2"
+        fill={nav ? "none" : shell}
+        stroke={nav ? "var(--foreground)" : undefined}
+      />
       <path d="M24 18.4v9.6" />
       <circle cx="22.2" cy="21" r="0.85" fill={spot} stroke="none" />
       <circle cx="25.8" cy="21" r="0.85" fill={spot} stroke="none" />
