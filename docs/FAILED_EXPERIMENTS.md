@@ -17,7 +17,7 @@ Each section names the catching commit and the test that now prevents a
 repeat. This file has no quality numbers. A holdout has not been labelled
 yet, so no precision, recall, latency, or cost figure belongs here.
 
-`tests/test_failed_experiments.py` fails if any of the nine names or catching
+`tests/evals/test_failed_experiments.py` fails if any of the nine names or catching
 tests disappear from this file.
 
 ## 1. Optimistic precision denominator
@@ -36,8 +36,8 @@ a match, no extras, and no `needs_human_match`.
 
 Tests that now prevent it:
 
-- `tests/test_eval_matching.py::test_semantic_near_miss_needs_human_match_and_is_not_a_pass`
-- `tests/test_eval_metrics.py::test_metrics_cover_precision_recall_and_cost`
+- `tests/evals/test_eval_matching.py::test_semantic_near_miss_needs_human_match_and_is_not_a_pass`
+- `tests/evals/test_eval_metrics.py::test_metrics_cover_precision_recall_and_cost`
 
 Also recorded in `docs/EVAL_DATASET.md`.
 
@@ -55,7 +55,7 @@ and shape-based redaction`). Typed fields reject a header even without END
 
 Test that now prevents it:
 
-- `tests/test_connector_contracts.py::test_redaction_removes_pem_bodies_not_just_headers`
+- `tests/integration/test_connector_contracts.py::test_redaction_removes_pem_bodies_not_just_headers`
 
 ## 3. Direct-import-only boundary check
 
@@ -72,8 +72,8 @@ AST import graph to a fixed point.
 
 Tests that now prevent it:
 
-- `tests/test_package_boundaries.py::test_guarded_package_inventory_matches_snapshot`
-- `tests/test_package_boundaries.py::test_guarded_packages_have_no_transitive_forbidden_reach`
+- `tests/security/test_package_boundaries.py::test_guarded_package_inventory_matches_snapshot`
+- `tests/security/test_package_boundaries.py::test_guarded_packages_have_no_transitive_forbidden_reach`
 
 ## 4. mine_eval_candidates stub
 
@@ -90,9 +90,9 @@ commit and skip oversized diffs`) emits one candidate per commit.
 
 Tests that now prevent it:
 
-- `tests/test_eval_mining.py::test_mining_emits_candidates_not_labels`
-- `tests/test_eval_mining.py::test_commit_message_is_evidence_not_ground_truth`
-- `tests/test_eval_mining.py::test_mining_emits_one_candidate_per_commit`
+- `tests/evals/test_eval_mining.py::test_mining_emits_candidates_not_labels`
+- `tests/evals/test_eval_mining.py::test_commit_message_is_evidence_not_ground_truth`
+- `tests/evals/test_eval_mining.py::test_mining_emits_one_candidate_per_commit`
 
 ## 5. confidence default
 
@@ -113,9 +113,9 @@ that routing source never reads confidence.
 
 Tests that now prevent it:
 
-- `tests/test_eval_regression_gate.py::test_routing_source_does_not_read_confidence`
-- `tests/test_notification_policy.py::test_model_cannot_bypass_routing_through_severity_confidence_rationale_or_title`
-- `tests/test_code_graph.py::test_missing_confidence_does_not_count_toward_sensitivity`
+- `tests/evals/test_eval_regression_gate.py::test_routing_source_does_not_read_confidence`
+- `tests/reviewer/test_notification_policy.py::test_model_cannot_bypass_routing_through_severity_confidence_rationale_or_title`
+- `tests/retrieval/test_code_graph.py::test_missing_confidence_does_not_count_toward_sensitivity`
 
 ## 6. Fence breakout in wrap_untrusted
 
@@ -131,7 +131,7 @@ wrapping, then asserts exactly one of each.
 
 Test that now prevents it:
 
-- `tests/test_prompt_boundaries.py::test_wrap_untrusted_strips_inner_delimiter_breakout`
+- `tests/security/test_prompt_boundaries.py::test_wrap_untrusted_strips_inner_delimiter_breakout`
 
 ## 7. Fail-open dashboard guard
 
@@ -149,7 +149,7 @@ not the fix.
 
 Test that now prevents it:
 
-- `tests/test_dashboard_auth.py::test_unauthenticated_docs_and_unknown_paths_are_not_ok`
+- `tests/control_plane/test_dashboard_auth.py::test_unauthenticated_docs_and_unknown_paths_are_not_ok`
 
 ## 8. Invented useful_findings_per_dollar
 
@@ -167,8 +167,8 @@ and drift checks`) divides `useful_finding_count` by cost and raises
 
 Tests that now prevent it:
 
-- `tests/test_eval_regression_gate.py::test_useful_findings_per_dollar_is_blocked_without_cost`
-- `tests/test_eval_regression_gate.py::test_useful_findings_per_dollar_uses_useful_finding_count`
+- `tests/evals/test_eval_regression_gate.py::test_useful_findings_per_dollar_is_blocked_without_cost`
+- `tests/evals/test_eval_regression_gate.py::test_useful_findings_per_dollar_uses_useful_finding_count`
 
 ## 9. Unknown-age feedback default
 
@@ -183,4 +183,4 @@ dropped.
 
 Test that now prevents it:
 
-- `tests/test_feedback_candidates.py::test_missing_observed_at_is_dropped_while_a_fresh_event_is_kept`
+- `tests/integration/test_feedback_candidates.py::test_missing_observed_at_is_dropped_while_a_fresh_event_is_kept`

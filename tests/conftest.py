@@ -1,14 +1,26 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Iterator
+import sys
+from pathlib import Path
 
-import pytest
+_TESTS_ROOT = Path(__file__).resolve().parent
+if str(_TESTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(_TESTS_ROOT))
+for _subdir in sorted(_TESTS_ROOT.iterdir()):
+    if _subdir.is_dir() and not _subdir.name.startswith(("_", ".")):
+        _entry = str(_subdir)
+        if _entry not in sys.path:
+            sys.path.insert(0, _entry)
 
-from pr_reviewer.config import default_database_url
+from collections.abc import Callable, Iterator  # noqa: E402
 
-os.environ.setdefault("DATABASE_URL", default_database_url())
-os.environ.setdefault("GITHUB_WEBHOOK_SECRET", "test-secret")
+import pytest  # noqa: E402
+
+from pr_reviewer.config import default_database_url  # noqa: E402
+
+os.environ["DATABASE_URL"] = default_database_url()
+os.environ["GITHUB_WEBHOOK_SECRET"] = "test-secret"
 
 from pr_reviewer.contracts.runner import VerifiedInstallationAccess  # noqa: E402
 from pr_reviewer.db.client import close_pool, connection  # noqa: E402
