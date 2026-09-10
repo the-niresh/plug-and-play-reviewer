@@ -29,9 +29,9 @@ export function SiteNav() {
         <Link
           href="/"
           aria-current={pathname === "/" ? "page" : undefined}
-          className="text-foreground hover:text-primary focus-visible:ring-ring/50 aria-[current=page]:text-primary inline-flex min-w-0 shrink items-center gap-2 text-sm font-semibold tracking-tight transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+          className="text-foreground focus-visible:ring-ring/50 aria-[current=page]:border-foreground inline-flex min-w-0 shrink items-center gap-2.5 text-sm font-semibold tracking-tight transition-colors focus-visible:ring-[3px] focus-visible:outline-none aria-[current=page]:border-b-2 aria-[current=page]:pb-0.5"
         >
-          <Logo className="size-9 shrink-0" title={PRODUCT_NAME} variant="nav" />
+          <Logo className="size-10 shrink-0" title={PRODUCT_NAME} variant="color" />
           <span className="hidden truncate sm:inline">{PRODUCT_NAME}</span>
           <span className="sr-only sm:hidden">{PRODUCT_NAME}</span>
         </Link>
@@ -46,7 +46,7 @@ export function SiteNav() {
                 key={item.href}
                 href={item.href}
                 aria-current={isCurrent ? "page" : undefined}
-                className="text-muted-foreground hover:text-foreground aria-[current=page]:text-foreground px-2 py-1.5 text-xs underline-offset-4 transition-colors aria-[current=page]:font-semibold aria-[current=page]:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:px-3 sm:text-sm"
+                className="text-muted-foreground hover:text-foreground aria-[current=page]:text-foreground aria-[current=page]:border-foreground px-2 py-1.5 text-xs transition-colors aria-[current=page]:border-b-2 aria-[current=page]:font-semibold focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:px-3 sm:text-sm"
               >
                 {item.label}
               </Link>

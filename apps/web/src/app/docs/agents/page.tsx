@@ -60,9 +60,7 @@ export default function AgentSurfacesPage() {
         <div className="mt-12 flex flex-col gap-5">
           {SURFACES.map((surface) => (
             <section key={surface.tag} className="bg-card rounded-lg border p-5">
-              <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-                {surface.tag}
-              </p>
+              <p className="section-label">{surface.tag}</p>
               <h2 className="mt-2 text-lg font-semibold tracking-tight">{surface.title}</h2>
               <p className="text-muted-foreground mt-2 max-w-prose text-sm leading-relaxed">
                 {surface.body}
@@ -80,7 +78,7 @@ export default function AgentSurfacesPage() {
             </section>
           ))}
         </div>
-        <p className="text-muted-foreground border-primary/50 mt-10 max-w-prose border-l-2 pl-4 text-sm leading-relaxed">
+        <p className="text-muted-foreground border-border mt-10 max-w-prose border-l-2 pl-4 text-sm leading-relaxed">
           If GitHub is not connected, every surface returns a typed refusal. It never
           guesses and never runs a partial review.
         </p>

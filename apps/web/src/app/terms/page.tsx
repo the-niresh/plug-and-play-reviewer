@@ -73,7 +73,7 @@ export default function TermsPage() {
           Plain terms for a free, open source tool. If any of this conflicts with the{" "}
           <Link
             href="https://github.com/the-niresh/plug-and-play-reviewer/blob/main/LICENSE"
-            className="text-primary rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+            className="text-foreground rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
           >
             MIT licence
           </Link>
@@ -83,9 +83,7 @@ export default function TermsPage() {
         <div className="mt-12 flex flex-col">
           {TERMS.map((section) => (
             <section key={section.tag} className="border-t py-8">
-              <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-                {section.tag}
-              </p>
+              <p className="section-label">{section.tag}</p>
               <h2 className="mt-2 text-xl font-semibold tracking-tight">
                 {section.title}
               </h2>
@@ -102,7 +100,7 @@ export default function TermsPage() {
           See also the{" "}
           <Link
             href="/privacy"
-            className="text-primary rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+            className="text-foreground rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
           >
             privacy policy
           </Link>

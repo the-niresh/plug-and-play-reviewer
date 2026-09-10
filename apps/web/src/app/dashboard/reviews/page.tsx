@@ -54,7 +54,7 @@ export default async function ReviewsPage() {
           </p>
           <Link
             href="/dashboard/settings"
-            className="text-primary mt-4 inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="text-foreground mt-4 inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             Check connected repositories
           </Link>

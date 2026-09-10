@@ -51,7 +51,7 @@ export default function PrivacyPage() {
         </p>
 
         <section className="mt-12 border-t pt-8">
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
+          <p className="section-label">
             Enforcement
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mt-8 border-t pt-8">
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
+          <p className="section-label">
             Hosted
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
@@ -84,7 +84,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mt-8 border-t pt-8">
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
+          <p className="section-label">
             Never hosted
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mt-8 border-t pt-8">
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
+          <p className="section-label">
             Local
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mt-8 border-t pt-8">
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
+          <p className="section-label">
             Cookies
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
@@ -142,7 +142,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mt-8 border-t pt-8">
-          <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
+          <p className="section-label">
             Your data
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
@@ -153,7 +153,7 @@ export default function PrivacyPage() {
             and finding text deleted, open an issue or use the contact route in{" "}
             <Link
               href="https://github.com/the-niresh/plug-and-play-reviewer/blob/main/SECURITY.md"
-              className="text-primary rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+              className="text-foreground rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
             >
               SECURITY.md
             </Link>

@@ -96,9 +96,7 @@ export default function DocsPage() {
               key={section.tag}
               className="border-t py-8 first:border-t-0 first:pt-0"
             >
-              <p className="text-primary font-mono text-xs tracking-[0.14em] uppercase">
-                {section.tag}
-              </p>
+              <p className="section-label">{section.tag}</p>
               <h2 className="mt-2 text-xl font-semibold tracking-tight">{section.title}</h2>
               <div className="text-muted-foreground mt-3 max-w-prose space-y-2 text-sm leading-relaxed">
                 {section.body.map((sentence) => (
@@ -119,14 +117,14 @@ export default function DocsPage() {
                   href={section.docHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="text-foreground inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   {section.docLabel}
                 </a>
                 {section.tag === "agent plugin" ? (
                   <Link
                     href="/docs/agents"
-                    className="text-primary inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                    className="text-foreground inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                   >
                     See the four surfaces
                   </Link>

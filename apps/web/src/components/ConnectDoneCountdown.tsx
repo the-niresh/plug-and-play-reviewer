@@ -46,7 +46,7 @@ export function ConnectDoneCountdown() {
       </div>
       <Link
         href={REDIRECT_PATH}
-        className="text-primary mt-6 inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="text-foreground mt-6 inline-block rounded-sm text-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         Go to the dashboard now
       </Link>

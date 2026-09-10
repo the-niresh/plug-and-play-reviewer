@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Technical Broadsheet: print-newspaper authority, git-orange accent, hairline rules. */
+/* Technical Broadsheet: print-newspaper authority, monochrome UI, colour only in the logo. */
 :root {
   --radius: 0px;
 
@@ -15,8 +15,8 @@
   --popover: #ffffff;
   --popover-foreground: #111111;
 
-  --primary: #f05032;
-  --primary-foreground: #fafafa;
+  --primary: #111111;
+  --primary-foreground: #fafaf7;
 
   --secondary: #f0f0eb;
   --secondary-foreground: #111111;
@@ -33,9 +33,9 @@
   --warning: #c47f17;
   --success: #2f7a3e;
 
-  --border: #d9d9d4;
-  --input: #d9d9d4;
-  --ring: #f05032;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #111111;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -43,7 +43,7 @@
     ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, monospace;
 
   --space-section: clamp(3.5rem, 3rem + 4vw, 7rem);
-  --landing-rule: #d9d9d4;
+  --landing-rule: #e5e5e5;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -56,8 +56,8 @@
     --popover: #0a0a0a;
     --popover-foreground: #fafafa;
 
-    --primary: #f05032;
-    --primary-foreground: #fafafa;
+    --primary: #fafafa;
+    --primary-foreground: #0a0a0a;
 
     --secondary: #171717;
     --secondary-foreground: #fafafa;
@@ -76,7 +76,7 @@
 
     --border: #262626;
     --input: #262626;
-    --ring: #f05032;
+    --ring: #fafafa;
 
     --landing-rule: #262626;
   }
@@ -148,8 +148,10 @@
   overflow-x: hidden;
 }
 
-.landing-kicker {
-  @apply text-primary font-mono text-xs tracking-[0.14em] uppercase;
+.section-label {
+  @apply text-muted-foreground text-xs font-medium;
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
 }
 
 .landing-root .landing-display {
@@ -173,12 +175,16 @@
 }
 
 .landing-section-title {
-  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
-  line-height: 1.08;
+  font-size: clamp(2rem, 1.4rem + 2.5vw, 3.25rem);
+  line-height: 1.06;
 }
 
 .landing-link {
-  @apply text-primary underline-offset-4 hover:underline focus-visible:ring-ring/50 rounded-sm focus-visible:ring-[3px] focus-visible:outline-none;
+  @apply text-foreground underline-offset-4 hover:underline focus-visible:ring-ring/50 rounded-sm focus-visible:ring-[3px] focus-visible:outline-none;
+}
+
+.deploy-target {
+  @apply border-border text-foreground hover:bg-secondary inline-flex min-w-0 items-center gap-2 border px-4 py-2.5 text-sm font-medium transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none;
 }
 
 @media (prefers-reduced-motion: no-preference) {

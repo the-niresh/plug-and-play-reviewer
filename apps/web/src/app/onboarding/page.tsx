@@ -100,7 +100,7 @@ export default function OnboardingPage() {
       <ol className="mb-12 grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4">
         {steps.map((step, index) => (
           <li key={step.id} className="bg-card px-4 py-3">
-            <span className="text-primary font-mono text-xs">
+            <span className="text-muted-foreground font-mono text-xs">
               {String(index + 1).padStart(2, "0")}
             </span>
             <p className="mt-1 text-sm font-medium">{step.title}</p>

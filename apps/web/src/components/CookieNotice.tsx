@@ -64,7 +64,7 @@ export function CookieNotice() {
           read. That part is your choice, and nothing loads until you pick.{" "}
           <Link
             href="/privacy"
-            className="text-primary rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+            className="text-foreground rounded-sm underline-offset-4 hover:underline focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
           >
             Read the privacy policy
           </Link>

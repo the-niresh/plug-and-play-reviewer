@@ -59,27 +59,22 @@ const EXAMPLE_FINDING: ReviewFinding = {
 
 const FLOW_STEPS = [
   {
-    kicker: "01",
     title: "GitHub PR",
     body: "The GitHub App receives the pull request event and the head SHA.",
   },
   {
-    kicker: "02",
     title: "hosted job",
     body: "The control plane stores job metadata only. It does not receive the diff.",
   },
   {
-    kicker: "03",
     title: "local runner",
     body: "Your runner claims the job, fetches the patch, and keeps the source local.",
   },
   {
-    kicker: "04",
     title: "retrieval",
     body: "Repo chunks join the packed diff before the model call.",
   },
   {
-    kicker: "05",
     title: "review comment",
     body: "A comment does not post until a human approves it.",
   },
@@ -150,12 +145,12 @@ const SETUP_STEPS = [
 ] as const;
 
 const SECTIONS = [
-  { id: "how-a-review-moves", kicker: "01", title: "How a review moves" },
-  { id: "hosted-vs-local", kicker: "02", title: "Hosted vs local" },
-  { id: "what-already-works", kicker: "03", title: "What already works" },
-  { id: "what-teams-can-change", kicker: "04", title: "What teams can change" },
-  { id: "what-the-evals-show", kicker: "05", title: "What the evals show" },
-  { id: "how-to-set-it-up", kicker: "06", title: "How to set it up" },
+  { id: "how-a-review-moves", title: "How a review moves" },
+  { id: "hosted-vs-local", title: "Hosted vs local" },
+  { id: "what-already-works", title: "What already works" },
+  { id: "what-teams-can-change", title: "What teams can change" },
+  { id: "what-the-evals-show", title: "What the evals show" },
+  { id: "how-to-set-it-up", title: "How to set it up" },
 ] as const;
 
 export default function HomePage() {
@@ -163,7 +158,7 @@ export default function HomePage() {
     <div className="landing-root">
       <a
         href="#how-a-review-moves"
-        className="bg-primary text-primary-foreground focus:ring-ring absolute left-4 z-50 -translate-y-[120%] px-3 py-2 text-sm focus:translate-y-4 focus:ring-2 focus:outline-none"
+        className="bg-foreground text-background focus:ring-ring absolute left-4 z-50 -translate-y-[120%] px-3 py-2 text-sm focus:translate-y-4 focus:ring-2 focus:outline-none"
       >
         Skip to how a review moves
       </a>
@@ -171,8 +166,8 @@ export default function HomePage() {
       <main className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <section className="border-border grid gap-10 border-b py-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-end lg:gap-14 lg:py-20">
           <div className="min-w-0">
-            <p className="landing-kicker">{PRODUCT_NAME}</p>
-            <p className="text-muted-foreground mt-4 font-mono text-xs tracking-wide uppercase">
+            <p className="section-label">{PRODUCT_NAME}</p>
+            <p className="text-muted-foreground mt-4 text-sm">
               Built for solo devs shipping 2 to 3 pull requests a day
             </p>
             <h1 className="landing-display landing-hero-title mt-6 max-w-[14ch] font-semibold text-balance">
@@ -198,7 +193,7 @@ export default function HomePage() {
               An open source PR reviewer built for private AI code review.
               It is AI code review self hosted on a laptop or a server you run.
             </p>
-            <div className="mt-10 flex flex-col gap-4">
+            <div className="mt-10 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
               <a
                 href={SIGN_IN_URL}
                 className={cn(buttonVariants({ size: "lg" }), "w-fit gap-2")}
@@ -206,35 +201,33 @@ export default function HomePage() {
                 <GithubMark className="size-4" />
                 Sign in with GitHub
               </a>
-              <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
-                <a
-                  href={VERCEL_DEPLOY_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="landing-link inline-flex items-center gap-1.5 text-sm"
-                >
-                  <VercelMark className="size-3.5" />
-                  Deploy frontend on Vercel
-                </a>
-                <a
-                  href={RENDER_DEPLOY_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="landing-link inline-flex items-center gap-1.5 text-sm"
-                >
-                  <RenderMark className="size-3.5" />
-                  Deploy API on Render
-                </a>
-                <a
-                  href={RAILWAY_DEPLOY_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="landing-link inline-flex items-center gap-1.5 text-sm"
-                >
-                  <RailwayMark className="size-3.5" />
-                  Deploy API on Railway
-                </a>
-              </div>
+              <a
+                href={VERCEL_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deploy-target"
+              >
+                <VercelMark className="size-4 shrink-0" />
+                Deploy frontend on Vercel
+              </a>
+              <a
+                href={RENDER_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deploy-target"
+              >
+                <RenderMark className="size-4 shrink-0" />
+                Deploy API on Render
+              </a>
+              <a
+                href={RAILWAY_DEPLOY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deploy-target"
+              >
+                <RailwayMark className="size-4 shrink-0" />
+                Deploy API on Railway
+              </a>
             </div>
             <a href="#how-a-review-moves" className="landing-link mt-6 inline-block text-sm">
               See how a review moves
@@ -249,8 +242,7 @@ export default function HomePage() {
           id="how-a-review-moves"
           className="border-border scroll-mt-20 border-b py-14 lg:py-[var(--space-section)]"
         >
-          <p className="landing-kicker">{SECTIONS[0].kicker}</p>
-          <h2 className="landing-display landing-section-title mt-2 font-semibold">
+          <h2 className="landing-display landing-section-title font-semibold">
             {SECTIONS[0].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose text-base leading-relaxed">
@@ -260,15 +252,14 @@ export default function HomePage() {
           <ol className="mt-10 grid gap-0 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
             {FLOW_STEPS.map((step, index) => (
               <li
-                key={step.kicker}
+                key={step.title}
                 className={cn(
                   "border-border min-w-0 border-t px-0 py-5",
                   "lg:border-t-0 lg:border-l lg:px-4 lg:first:border-l-0 lg:first:pl-0",
                   index > 0 && "lg:pt-0",
                 )}
               >
-                <p className="landing-kicker text-[11px]">{step.kicker}</p>
-                <h3 className="mt-3 font-mono text-sm font-semibold">{step.title}</h3>
+                <h3 className="font-mono text-sm font-semibold">{step.title}</h3>
                 <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                   {step.body}
                 </p>
@@ -281,8 +272,7 @@ export default function HomePage() {
           id="hosted-vs-local"
           className="border-border scroll-mt-20 border-b py-12 lg:py-20"
         >
-          <p className="landing-kicker">{SECTIONS[1].kicker}</p>
-          <h2 className="landing-display landing-section-title mt-2 font-semibold">
+          <h2 className="landing-display landing-section-title font-semibold">
             {SECTIONS[1].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
@@ -301,13 +291,13 @@ export default function HomePage() {
                 <h3 className="font-mono text-sm font-semibold">{row.item}</h3>
                 <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <dt className="text-warning text-[11px] font-medium tracking-wide uppercase">
+                    <dt className="text-foreground text-[11px] font-semibold">
                       Hosted
                     </dt>
                     <dd className="text-muted-foreground mt-1">{row.hosted}</dd>
                   </div>
                   <div>
-                    <dt className="text-success text-[11px] font-medium tracking-wide uppercase">
+                    <dt className="text-foreground text-[11px] font-semibold">
                       Local
                     </dt>
                     <dd className="text-muted-foreground mt-1">{row.local}</dd>
@@ -326,10 +316,10 @@ export default function HomePage() {
                   <th scope="col" className="px-4 py-3 font-medium">
                     Data
                   </th>
-                  <th scope="col" className="text-warning px-4 py-3 font-medium">
+                  <th scope="col" className="text-foreground px-4 py-3 font-semibold">
                     Hosted
                   </th>
-                  <th scope="col" className="text-success px-4 py-3 font-medium">
+                  <th scope="col" className="text-foreground px-4 py-3 font-semibold">
                     Local
                   </th>
                 </tr>
@@ -353,8 +343,7 @@ export default function HomePage() {
           id="what-already-works"
           className="border-border scroll-mt-20 border-b py-[var(--space-section)]"
         >
-          <p className="landing-kicker">{SECTIONS[2].kicker}</p>
-          <h2 className="landing-display landing-section-title mt-2 font-semibold">
+          <h2 className="landing-display landing-section-title font-semibold">
             {SECTIONS[2].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
@@ -392,8 +381,7 @@ export default function HomePage() {
           className="border-border scroll-mt-20 grid gap-10 border-b py-12 lg:grid-cols-2 lg:gap-16 lg:py-20"
         >
           <article>
-            <p className="landing-kicker">{SECTIONS[3].kicker}</p>
-            <h2 className="landing-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h2 className="landing-display landing-section-title font-semibold">
               {SECTIONS[3].title}
             </h2>
             <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
@@ -406,8 +394,8 @@ export default function HomePage() {
             </p>
           </article>
           <article className="border-border border-t pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
-            <p className="landing-kicker">Access shape</p>
-            <h2 className="landing-display mt-2 text-2xl font-semibold tracking-tight">
+            <p className="section-label">Access shape</p>
+            <h2 className="landing-display landing-section-title mt-2 font-semibold">
               What stays free and what is for teams
             </h2>
             <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
@@ -425,8 +413,7 @@ export default function HomePage() {
           id="what-the-evals-show"
           className="border-border scroll-mt-20 border-b py-14 lg:py-[var(--space-section)]"
         >
-          <p className="landing-kicker">{SECTIONS[4].kicker}</p>
-          <h2 className="landing-display landing-section-title mt-2 font-semibold">
+          <h2 className="landing-display landing-section-title font-semibold">
             {SECTIONS[4].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
@@ -446,19 +433,16 @@ export default function HomePage() {
           className="border-border scroll-mt-20 grid gap-12 border-b py-12 lg:grid-cols-[1.1fr_0.9fr] lg:py-20"
         >
           <div>
-            <p className="landing-kicker">{SECTIONS[5].kicker}</p>
-            <h2 className="landing-display landing-section-title mt-2 font-semibold">
+            <h2 className="landing-display landing-section-title font-semibold">
               {SECTIONS[5].title}
             </h2>
             <ol className="mt-8 flex flex-col gap-3">
-              {SETUP_STEPS.map((step, index) => (
+              {SETUP_STEPS.map((step) => (
                 <li
                   key={step.title}
                   className="border-border border-t px-0 py-4 first:border-t-0 first:pt-0"
                 >
-                  <p className="font-mono text-sm font-semibold">
-                    {String(index + 1).padStart(2, "0")}  {step.title}
-                  </p>
+                  <p className="font-mono text-sm font-semibold">{step.title}</p>
                   <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                     {step.body}
                   </p>
@@ -477,8 +461,8 @@ export default function HomePage() {
             </Link>
           </div>
           <aside className="border-border border-t pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
-            <p className="landing-kicker">07</p>
-            <h2 className="landing-display mt-2 text-xl font-semibold tracking-tight">
+            <p className="section-label">Not automatic yet</p>
+            <h2 className="landing-display landing-section-title mt-2 font-semibold">
               What is not automatic yet
             </h2>
             <ul className="text-muted-foreground mt-4 space-y-3 text-sm leading-relaxed">
