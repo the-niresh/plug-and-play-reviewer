@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import socket
 import subprocess
 import time
@@ -14,6 +15,20 @@ from repo_paths import REPO_ROOT
 REPO = REPO_ROOT
 WEB = REPO / "apps" / "web"
 NEXT_DIR = WEB / ".next"
+SITE_TS = WEB / "src" / "lib" / "site.ts"
+
+
+def _default_site_origin() -> str:
+    """Read the origin out of site.ts instead of repeating it here.
+
+    A hardcoded copy of the hostname turns every domain move into a red test that says
+    nothing about the site being wrong, which is how the last rename went.
+    """
+    match = re.search(
+        r'DEFAULT_SITE_ORIGIN = "([^"]+)"', SITE_TS.read_text(encoding="utf-8")
+    )
+    assert match, "site.ts no longer declares DEFAULT_SITE_ORIGIN"
+    return match.group(1)
 
 
 def _free_port() -> int:
@@ -84,7 +99,7 @@ def test_build_prerenders_sitemap_body(production_build: None) -> None:
     assert body.is_file(), "next build must prerender /sitemap.xml"
     text = body.read_text(encoding="utf-8")
     assert text.startswith("<?xml")
-    assert "<loc>https://reviewer.niresh.tech/</loc>" in text
+    assert f"<loc>{_default_site_origin()}/</loc>" in text
     assert "/dashboard" not in text
 
 
@@ -98,4 +113,4 @@ def test_sitemap_xml_lists_public_routes(next_origin: str) -> None:
     with urllib.request.urlopen(f"{next_origin}/sitemap.xml", timeout=5) as response:
         body = response.read().decode("utf-8")
     for route in ("/", "/docs", "/docs/agents", "/scorecard"):
-        assert f"https://reviewer.niresh.tech{route if route != '/' else '/'}" in body
+        assert f"{_default_site_origin()}{route if route != '/' else '/'}" in body

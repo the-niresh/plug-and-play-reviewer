@@ -9,6 +9,7 @@ export const metadata = {
   title: pageTitle("Scorecard"),
   description:
     "Measured quality, or a real refusal. This page does not invent a baseline.",
+  alternates: { canonical: "/scorecard" },
 };
 
 type ScorecardMetrics = {

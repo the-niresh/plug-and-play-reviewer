@@ -2,8 +2,10 @@ import { SiteNav } from "@/components/SiteNav";
 import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: pageTitle("Agent surfaces"),
-  description: "MCP, JSON CLI, ACP, and A2A all start the same review.",
+  title: pageTitle("Agent Surfaces"),
+  description:
+    "Drive the PR reviewer from another agent over MCP, the JSON CLI, ACP, or A2A.",
+  alternates: { canonical: "/docs/agents" },
 };
 
 const SURFACES = [

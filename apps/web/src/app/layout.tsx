@@ -34,9 +34,24 @@ export const metadata: Metadata = {
   title: pageTitle(),
   description:
     "The PR reviewer that runs on your machine. Source, diffs, and model keys never leave it.",
+  applicationName: PRODUCT_NAME,
+  // robots.txt cannot say how large a preview may be, and a small preview is what a
+  // result looks like when it loses to a competitor. These are per-page meta tags.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
     siteName: PRODUCT_NAME,
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",

@@ -2,12 +2,13 @@ import Link from "next/link";
 
 import { LogoBadge } from "@/components/Logo";
 import { SiteNav } from "@/components/SiteNav";
-import { pageTitle, siteHost } from "@/lib/site";
+import { controlPlaneHost, pageTitle } from "@/lib/site";
 
 export const metadata = {
   title: pageTitle("Docs"),
   description:
-    "Install the runner, connect GitHub, add a model key, and use the agent plugin.",
+    "Install the runner, connect GitHub, add a model key, and start reviewing pull requests.",
+  alternates: { canonical: "/docs" },
 };
 
 const REPO_DOCS = "https://github.com/the-niresh/plug-and-play-reviewer/blob/main/docs";
@@ -36,7 +37,7 @@ const SECTIONS = [
       "Pick the repositories the App may read. Without GitHub, no review can start.",
     ],
     commands: [
-      `reviewer setup --hosted-origin https://${siteHost()}`,
+      `reviewer setup --hosted-origin https://${controlPlaneHost()}`,
       "reviewer doctor",
       "reviewer start",
     ],
@@ -52,7 +53,7 @@ const SECTIONS = [
       "A model key never goes to the hosted database.",
     ],
     commands: [
-      `reviewer setup --hosted-origin https://${siteHost()}`,
+      `reviewer setup --hosted-origin https://${controlPlaneHost()}`,
       "reviewer status",
     ],
     docHref: `${REPO_DOCS}/INSTALL.md#setup`,

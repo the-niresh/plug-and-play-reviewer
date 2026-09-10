@@ -6,13 +6,35 @@ import { ProductStage } from "@/components/landing/ProductStage";
 import { SiteNav } from "@/components/SiteNav";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PRODUCT_NAME, pageTitle, siteHost } from "@/lib/site";
+import { PRODUCT_NAME, TAGLINE, controlPlaneHost, pageTitle, siteHost } from "@/lib/site";
 import type { ReviewFinding } from "@/lib/reviews";
 
 export const metadata: Metadata = {
   title: pageTitle(),
   description:
-    "Private AI code review. Hosted jobs, a local runner, and your own LLM provider API key.",
+    "A private AI PR reviewer for GitHub. The runner stays on your machine, so source, diffs, and model keys never leave it. Bring your own LLM API key.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: pageTitle(),
+    description: `${TAGLINE}. Hosted jobs, a local runner, your own model key.`,
+    url: "/",
+  },
+};
+
+/** Structured data, so a search result can show this as a free developer tool rather
+ *  than as one more page of prose. Every value below is a literal in this file, so the
+ *  JSON that reaches the page carries nothing a visitor supplied. */
+const SOFTWARE_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: PRODUCT_NAME,
+  applicationCategory: "DeveloperApplication",
+  applicationSubCategory: "Code Review",
+  operatingSystem: "macOS, Linux, Windows",
+  description: `${TAGLINE}. Source, diffs, and model keys stay on your own machine.`,
+  license: "https://opensource.org/licenses/MIT",
+  codeRepository: "https://github.com/the-niresh/plug-and-play-reviewer",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
 const SIGN_IN_URL = "/api/auth/github/sign-in?return_to=/dashboard";
@@ -132,7 +154,7 @@ const SETUP_STEPS = [
   },
   {
     title: "Hosted URL",
-    body: `Point the runner at the hosted URL. ${siteHost()} is the live control plane.`,
+    body: `Point the runner at the hosted URL. ${controlPlaneHost()} is the live control plane.`,
   },
   {
     title: "Local runner",
@@ -157,6 +179,10 @@ const SECTIONS = [
 export default function HomePage() {
   return (
     <div className="landing-root">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(SOFTWARE_JSON_LD) }}
+      />
       <a
         href="#how-a-review-moves"
         className="bg-foreground text-background focus:ring-ring absolute left-4 z-50 -translate-y-[120%] px-3 py-2 text-sm focus:translate-y-4 focus:ring-2 focus:outline-none"

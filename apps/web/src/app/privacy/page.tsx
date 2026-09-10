@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { SiteNav } from "@/components/SiteNav";
-import { PRODUCT_NAME, pageTitle, siteHost } from "@/lib/site";
+import { PRODUCT_NAME, controlPlaneHost, pageTitle } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: pageTitle("Privacy"),
   description:
     "What the hosted control plane stores, what never leaves your runner, and the schema check that enforces the line.",
+  alternates: { canonical: "/privacy" },
 };
 
 /** Mirrors docs/DATA_BOUNDARIES.md, which is generated from
@@ -45,7 +46,7 @@ export default function PrivacyPage() {
           Privacy
         </h1>
         <p className="text-muted-foreground mt-3 leading-relaxed">
-          {PRODUCT_NAME} is two programs. A hosted control plane at {siteHost()} takes
+          {PRODUCT_NAME} is two programs. A hosted control plane at {controlPlaneHost()} takes
           GitHub events and stores job metadata. A runner on your own machine reads the
           code and calls your model. This page says exactly what each one holds.
         </p>

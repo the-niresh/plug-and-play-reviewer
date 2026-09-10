@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: pageTitle("Terms"),
   description:
     "Terms of use: what the reviewer is, what it is not, who pays the model bill, and the absence of any warranty.",
+  alternates: { canonical: "/terms" },
 };
 
 const TERMS = [

@@ -106,21 +106,20 @@ from the table above. For the first pass you can set
 
 ### Step 3. Deploy
 
-Deploy the Blueprint. Render runs:
+Deploy the Blueprint. Render runs one command, which migrates and then serves:
 
 ```
-/app/.venv/bin/pr-reviewer-db-migrate
+/bin/sh -c "/app/.venv/bin/pr-reviewer-db-migrate && exec /app/.venv/bin/pr-reviewer-api"
 ```
 
-as `preDeployCommand`, then starts:
+The migration is part of the start command on purpose. Render's separate pre-deploy
+command is a paid feature, and on the free plan a service with no migration step comes
+up healthy against an empty schema. Health check path: `/health`.
 
-```
-/app/.venv/bin/pr-reviewer-api
-```
+The blueprint also pins `plan: free`. Leave that out and Render bills you for its
+default instance size.
 
-Health check path: `/health`.
-
-<!-- SCREENSHOT: Render deploy log showing preDeployCommand migrate and pr-reviewer-api start -->
+<!-- SCREENSHOT: Render deploy log showing the migrate and start command -->
 
 ### Step 4. Set the public origin and redeploy
 
@@ -160,7 +159,8 @@ Open the service **Variables** tab. Railway does not read secrets from
 
 ### Step 3. Deploy
 
-Railway runs the same pre-deploy migrate and start commands as Render:
+Railway has a real pre-deploy step, so unlike the Render free plan it runs the
+migration separately:
 
 - `preDeployCommand`: `/app/.venv/bin/pr-reviewer-db-migrate`
 - `startCommand`: `/app/.venv/bin/pr-reviewer-api`
@@ -201,7 +201,8 @@ checks that the process is up, not that GitHub can reach it.
 
 - Process up, database down: `/health` is `200`, `/ready` is not.
 - Wrong port: the API reads `PORT` from the environment and defaults to `8000`.
-- Migrations missing: check that `preDeployCommand` ran `pr-reviewer-db-migrate`.
+- Migrations missing: check the deploy log for `Database migrations complete.`
+  before the API starts. The start command runs the migration first.
 - Healthy but no reviews: the webhook or callback URL does not match the
   deployed origin. Recheck the three settings in the section above.
 

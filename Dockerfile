@@ -11,14 +11,6 @@ COPY src ./src
 RUN uv sync --locked --no-dev
 ENV PATH=/app/.venv/bin:$PATH
 
-FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea AS api
-COPY --from=python-deps /app /app
-WORKDIR /app
-ENV PATH=/app/.venv/bin:$PATH
-USER 65532:65532
-EXPOSE 8000
-ENTRYPOINT ["/app/.venv/bin/pr-reviewer-api"]
-
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea AS worker
 COPY --from=python-deps /app /app
 WORKDIR /app
@@ -45,3 +37,18 @@ COPY --from=ui-build --chown=65532:65532 /app /app
 USER 65532:65532
 EXPOSE 3000
 ENTRYPOINT ["bun", "run", "start", "--", "--hostname", "0.0.0.0", "--port", "3000"]
+
+# The control plane, and deliberately the LAST stage in this file. Render builds a
+# Dockerfile's final stage and its blueprint spec has no field for a build target, so
+# whatever ends up last here is what a Render deploy runs.
+#
+# CMD, not ENTRYPOINT, for the same reason: Render's Docker Command overrides CMD only.
+# With an ENTRYPOINT it would append the command as arguments instead, the API would
+# ignore them, and the service would come up healthy having skipped its migration.
+FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea AS api
+COPY --from=python-deps /app /app
+WORKDIR /app
+ENV PATH=/app/.venv/bin:$PATH
+USER 65532:65532
+EXPOSE 8000
+CMD ["/app/.venv/bin/pr-reviewer-api"]

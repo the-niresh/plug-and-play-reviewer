@@ -158,4 +158,5 @@ Until those three match, OAuth and webhooks will not reach this instance.
 - Wrong port: the service never becomes healthy. The API reads `PORT` from
   the environment and defaults to `8000`.
 - Migrations missing: `/ready` may pass (`select 1`) while later routes
-  fail. Check that `preDeployCommand` ran `pr-reviewer-db-migrate`.
+  fail. Check the deploy log for `Database migrations complete.` before the API
+  starts.

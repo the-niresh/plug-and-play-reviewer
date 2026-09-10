@@ -11,10 +11,17 @@ services:
   - type: web
     name: reviewer
     runtime: docker
+    # `plan` is not optional here. Leave it out and Render bills you for a 0.5c-512mb
+    # instance, which is its default for a new web service.
+    plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
-    dockerCommand: /app/.venv/bin/pr-reviewer-api
-    preDeployCommand: /app/.venv/bin/pr-reviewer-db-migrate
+    # Migrate, then serve, in one command on purpose. Render's pre-deploy command is a
+    # paid feature, so on the free plan the migration has to be part of the start
+    # command or it never runs and the service comes up healthy against an empty schema.
+    # `exec` hands PID 1 to the API so Render's shutdown signal still reaches it. The
+    # migration is idempotent, so a free instance waking from a spin-down just re-checks.
+    dockerCommand: /bin/sh -c "/app/.venv/bin/pr-reviewer-db-migrate && exec /app/.venv/bin/pr-reviewer-api"
     healthCheckPath: /health
     autoDeploy: true
     envVars:

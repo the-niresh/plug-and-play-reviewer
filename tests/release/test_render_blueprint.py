@@ -32,7 +32,7 @@ def test_render_blueprint_uses_one_web_process_with_boot_config_only() -> None:
     assert text.count("- type: web") == 1
     assert "name: reviewer" in text
     assert API in text
-    assert f"preDeployCommand: {MIGRATE}" in text
+    assert f"dockerCommand: /bin/sh -c \"{MIGRATE} && exec {API}\"" in text
     assert "NEXT_PUBLIC_CONTROL_PLANE_ORIGIN" not in text
     assert "Access-Control-Allow-Origin" not in text
     assert "cors" not in text.lower()
@@ -100,3 +100,31 @@ def test_deploy_guide_names_every_boot_env_and_the_health_paths() -> None:
     assert "/health" in guide
     assert "/ready" in guide
     assert "pr-reviewer-db-migrate" in guide
+
+
+def test_render_blueprint_stays_on_the_free_plan_and_still_migrates() -> None:
+    """Two Render defaults quietly break this deploy, so both are pinned here.
+
+    Omitting `plan` bills a 0.5c-512mb instance: Render's default for a new web
+    service. And the pre-deploy command is a paid feature, so on the free plan the
+    migration has to ride along with the start command. Without it the service comes
+    up healthy against an empty schema, which looks like success and reviews nothing.
+    """
+    payload = yaml.safe_load(RENDER_BLUEPRINT.read_text(encoding="utf-8"))
+    service = payload["services"][0]
+    assert service["plan"] == "free"
+    assert "preDeployCommand" not in service
+    assert service["dockerCommand"] == f'/bin/sh -c "{MIGRATE} && exec {API}"'
+
+
+def test_the_last_dockerfile_stage_is_the_one_render_deploys() -> None:
+    """Render builds a Dockerfile's final stage and cannot be told a target.
+
+    It also overrides CMD, not ENTRYPOINT. If the api stage stopped being last, or went
+    back to an ENTRYPOINT, a Render deploy would build the bun UI image or silently drop
+    the migration from the start command.
+    """
+    lines = (REPO / "Dockerfile").read_text(encoding="utf-8").splitlines()
+    stages = [line.split(" AS ")[-1].strip() for line in lines if line.startswith("FROM ")]
+    assert stages[-1] == "api"
+    assert f'CMD ["{API}"]' in "\n".join(lines)

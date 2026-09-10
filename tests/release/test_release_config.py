@@ -94,7 +94,9 @@ def test_root_dockerfile_is_non_root_and_digest_pinned() -> None:
     assert refs, "Dockerfile needs a FROM line"
     assert all(_is_pinned(ref) for ref in refs), refs
     assert "uv sync --locked --no-dev" in text
-    assert 'ENTRYPOINT ["/app/.venv/bin/pr-reviewer-api"]' in text
+    # CMD, not ENTRYPOINT: Render's Docker Command overrides CMD only, and the free
+    # plan has no pre-deploy step, so the migration has to ride on the start command.
+    assert 'CMD ["/app/.venv/bin/pr-reviewer-api"]' in text
     assert 'ENTRYPOINT ["/app/.venv/bin/pr-reviewer-worker"]' in text
     assert "bun run build" in text
     assert ".env" not in "\n".join(
