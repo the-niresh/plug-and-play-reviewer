@@ -4,9 +4,10 @@ import { GithubMark } from "@/components/github-mark";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { fetchReviews } from "@/lib/reviews";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Settings | PR Reviewer",
+  title: pageTitle("Settings"),
   description:
     "See which repositories the GitHub App may read, and change that on GitHub.",
 };

@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 
 import { DashboardShell } from "@/components/DashboardShell";
 import { fetchProfile } from "@/lib/profile";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Dashboard | PR Reviewer",
+  title: pageTitle("Dashboard"),
   description: "Signed-in review jobs, findings, and repository connections.",
 };
 

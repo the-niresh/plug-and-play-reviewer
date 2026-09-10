@@ -1,7 +1,8 @@
 import { ConnectDoneCountdown } from "@/components/ConnectDoneCountdown";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Signed in | PR Reviewer",
+  title: pageTitle("Signed in"),
   description: "GitHub sign-in finished. Go back to the terminal to start a review.",
 };
 

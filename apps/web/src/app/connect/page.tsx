@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { GithubMark } from "@/components/github-mark";
+import { pageTitle } from "@/lib/site";
 
 // GitHub cannot show a repository to an App that is not installed on it, and the
 // install/permission flow is the same GitHub-hosted step either way, so this page has
@@ -14,7 +15,7 @@ const APP_SLUG = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG ?? "";
 const INSTALL_URL = APP_SLUG ? `https://github.com/apps/${APP_SLUG}/installations/new` : "";
 
 export const metadata = {
-  title: "Choose repositories | PR Reviewer",
+  title: pageTitle("Choose repositories"),
   description: "Pick the repositories this GitHub App is allowed to read.",
 };
 

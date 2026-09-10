@@ -4,9 +4,10 @@ import { GithubMark } from "@/components/github-mark";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { fetchProfile } from "@/lib/profile";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Profile | PR Reviewer",
+  title: pageTitle("Profile"),
   description: "The GitHub account signed in to this control plane.",
 };
 

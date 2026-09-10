@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Atkinson_Hyperlegible, IBM_Plex_Mono, Newsreader } from "next/font/google";
 
 import "./globals.css";
+import { AnalyticsGate } from "@/components/AnalyticsGate";
 import { ClientRuntime } from "@/components/ClientRuntime";
-import { siteOrigin } from "@/lib/site";
+import { CookieNotice } from "@/components/CookieNotice";
+import { PRODUCT_NAME, pageTitle, siteOrigin } from "@/lib/site";
 
 const landingSans = Atkinson_Hyperlegible({
   subsets: ["latin"],
@@ -31,12 +31,12 @@ const landingMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
-  title: "PR Reviewer",
+  title: pageTitle(),
   description:
     "The PR reviewer that runs on your machine. Source, diffs, and model keys never leave it.",
   openGraph: {
     type: "website",
-    siteName: "PR Reviewer",
+    siteName: PRODUCT_NAME,
   },
   twitter: {
     card: "summary_large_image",
@@ -52,8 +52,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ClientRuntime />
         {children}
-        <Analytics />
-        <SpeedInsights />
+        <CookieNotice />
+        <AnalyticsGate />
       </body>
     </html>
   );

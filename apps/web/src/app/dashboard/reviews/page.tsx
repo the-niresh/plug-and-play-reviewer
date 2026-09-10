@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { PullRequestLink } from "@/components/PullRequestLink";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { fetchReviews, severityTone, worstSeverity } from "@/lib/reviews";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Reviews | PR Reviewer",
+  title: pageTitle("Reviews"),
   description:
     "Every review job the runner has finished for your connected repositories.",
 };

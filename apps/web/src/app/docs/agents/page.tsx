@@ -1,7 +1,8 @@
 import { SiteNav } from "@/components/SiteNav";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Agent surfaces | PR Reviewer",
+  title: pageTitle("Agent surfaces"),
   description: "MCP, JSON CLI, ACP, and A2A all start the same review.",
 };
 

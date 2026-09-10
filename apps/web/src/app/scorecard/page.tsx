@@ -2,9 +2,10 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { Badge } from "@/components/ui/badge";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Scorecard | PR Reviewer",
+  title: pageTitle("Scorecard"),
   description:
     "Measured quality, or a real refusal. This page does not invent a baseline.",
 };

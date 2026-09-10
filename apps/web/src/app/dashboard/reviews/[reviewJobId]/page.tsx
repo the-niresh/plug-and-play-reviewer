@@ -7,9 +7,10 @@ import { FindingCard } from "@/components/FindingCard";
 import { LoadError, SignInPrompt } from "@/components/DashboardState";
 import { ReviewBehaviorPanels } from "@/components/ReviewBehaviorPanels";
 import { fetchReview } from "@/lib/reviews";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Review | PR Reviewer",
+  title: pageTitle("Review"),
   description: "Findings, cost, and behavior for one review job.",
 };
 

@@ -16,9 +16,10 @@ import {
   type RunnerStatus,
   type SeverityLevel,
 } from "@/lib/reviews";
+import { pageTitle } from "@/lib/site";
 
 export const metadata = {
-  title: "Dashboard | PR Reviewer",
+  title: pageTitle("Dashboard"),
   description:
     "Recent reviews and severity for repositories this GitHub App can see.",
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PRODUCT_NAME } from "@/lib/site";
 
 /** Client child for the root layout.
  *
@@ -11,7 +12,7 @@ import Link from "next/link";
 export function ClientRuntime() {
   return (
     <Link href="/" className="sr-only">
-      PR Reviewer
+      {PRODUCT_NAME}
     </Link>
   );
 }
