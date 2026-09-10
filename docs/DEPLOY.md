@@ -159,4 +159,5 @@ Until those three match, OAuth and webhooks will not reach this instance.
   the environment and defaults to `8000`.
 - Migrations missing: `/ready` may pass (`select 1`) while later routes
   fail. Check the deploy log for `Database migrations complete.` before the API
-  starts.
+  starts. The image runs `pr-reviewer-serve`, which does both; `pr-reviewer-api`
+  serves without migrating.

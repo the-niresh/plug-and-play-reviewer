@@ -3,6 +3,11 @@ services:
     build:
       context: .
       target: api
+    # Serve only. The image's own command is pr-reviewer-serve, which migrates first and
+    # is what a deploy should run. This compose file exercises process lifecycle against
+    # whatever database you point it at, including none, so it uses the serve-only entry
+    # point rather than migrating someone's database as a side effect of a health check.
+    command: ["/app/.venv/bin/pr-reviewer-api"]
     user: "65532:65532"
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}

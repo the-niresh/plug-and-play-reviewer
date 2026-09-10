@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 pr-reviewer-api = "pr_reviewer.web.app:main"
+pr-reviewer-serve = "pr_reviewer.control_plane.app:migrate_and_serve"
 pr-reviewer-db-migrate = "pr_reviewer.db.migrate:main"
 pr-reviewer-db-rebase-migration = "pr_reviewer.db.rebase_migration_checksum:main"
 pr-reviewer-worker = "pr_reviewer.worker.main:main"

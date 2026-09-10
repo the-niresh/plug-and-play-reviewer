@@ -56,6 +56,9 @@ def test_api_image_starts_and_serves_health_over_loopback() -> None:
         "--publish",
         "127.0.0.1::8000",
         IMAGE,
+        # Serve only. The image's own command migrates first and would need a database
+        # this test does not have; the migrate-first path is covered below.
+        "/app/.venv/bin/pr-reviewer-api",
     )
     assert started.returncode == 0, started.stderr + started.stdout
     try:
@@ -80,3 +83,25 @@ def test_api_image_starts_and_serves_health_over_loopback() -> None:
         )
     finally:
         _run("rm", "--force", container)
+
+
+def test_the_default_command_refuses_to_serve_without_a_database() -> None:
+    """The failure mode this guards against looks exactly like success.
+
+    /health does not touch a table, so a control plane started against an unmigrated or
+    unreachable database answers 200 and silently reviews nothing. The image's default
+    command migrates first, so it has to die here instead.
+    """
+    built = _run("build", "--target", "api", "--tag", IMAGE, ".", timeout=600)
+    assert built.returncode == 0, built.stderr + built.stdout
+
+    result = _run(
+        "run",
+        "--rm",
+        "--env",
+        "DATABASE_URL=postgresql://nobody@127.0.0.1:1/nothing",
+        IMAGE,
+        timeout=120,
+    )
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "Uvicorn running" not in result.stdout + result.stderr

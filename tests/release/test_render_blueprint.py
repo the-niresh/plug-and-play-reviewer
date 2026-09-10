@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 
 import yaml
@@ -25,14 +26,13 @@ REQUIRED_BOOT_ENV = (
 FORBIDDEN_RUNTIME_SECRET_ENV = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "MODEL_KEY")
 MIGRATE = "/app/.venv/bin/pr-reviewer-db-migrate"
 API = "/app/.venv/bin/pr-reviewer-api"
+SERVE = "/app/.venv/bin/pr-reviewer-serve"
 
 
 def test_render_blueprint_uses_one_web_process_with_boot_config_only() -> None:
     text = RENDER_BLUEPRINT.read_text(encoding="utf-8")
     assert text.count("- type: web") == 1
     assert "name: reviewer" in text
-    assert API in text
-    assert f"dockerCommand: /bin/sh -c \"{MIGRATE} && exec {API}\"" in text
     assert "NEXT_PUBLIC_CONTROL_PLANE_ORIGIN" not in text
     assert "Access-Control-Allow-Origin" not in text
     assert "cors" not in text.lower()
@@ -102,29 +102,42 @@ def test_deploy_guide_names_every_boot_env_and_the_health_paths() -> None:
     assert "pr-reviewer-db-migrate" in guide
 
 
-def test_render_blueprint_stays_on_the_free_plan_and_still_migrates() -> None:
+def test_render_blueprint_stays_on_the_free_plan_and_needs_no_deploy_step() -> None:
     """Two Render defaults quietly break this deploy, so both are pinned here.
 
     Omitting `plan` bills a 0.5c-512mb instance: Render's default for a new web
-    service. And the pre-deploy command is a paid feature, so on the free plan the
-    migration has to ride along with the start command. Without it the service comes
-    up healthy against an empty schema, which looks like success and reviews nothing.
+    service. And the pre-deploy command is a paid feature, so on the free plan a
+    blueprint that relies on it skips the migration and comes up healthy against an
+    empty schema, which looks like success and reviews nothing. The image migrates
+    itself instead, so neither field belongs here.
     """
     payload = yaml.safe_load(RENDER_BLUEPRINT.read_text(encoding="utf-8"))
     service = payload["services"][0]
     assert service["plan"] == "free"
     assert "preDeployCommand" not in service
-    assert service["dockerCommand"] == f'/bin/sh -c "{MIGRATE} && exec {API}"'
+    assert "dockerCommand" not in service
 
 
-def test_the_last_dockerfile_stage_is_the_one_render_deploys() -> None:
+def test_the_last_dockerfile_stage_migrates_before_it_serves() -> None:
     """Render builds a Dockerfile's final stage and cannot be told a target.
 
-    It also overrides CMD, not ENTRYPOINT. If the api stage stopped being last, or went
-    back to an ENTRYPOINT, a Render deploy would build the bun UI image or silently drop
-    the migration from the start command.
+    If the api stage stopped being last, a Render deploy would build the bun UI image.
+    If its command went back to pr-reviewer-api, the deploy would skip the migration
+    and still report healthy, because /health does not touch a table.
     """
     lines = (REPO / "Dockerfile").read_text(encoding="utf-8").splitlines()
     stages = [line.split(" AS ")[-1].strip() for line in lines if line.startswith("FROM ")]
     assert stages[-1] == "api"
-    assert f'CMD ["{API}"]' in "\n".join(lines)
+    assert f'CMD ["{SERVE}"]' in "\n".join(lines)
+
+
+def test_the_serve_entry_point_exists_and_runs_the_migration_first() -> None:
+    """The whole free-plan deploy rests on this one console script."""
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    assert (
+        'pr-reviewer-serve = "pr_reviewer.control_plane.app:migrate_and_serve"' in pyproject
+    )
+
+    module = importlib.import_module("pr_reviewer.control_plane.app")
+
+    assert callable(module.migrate_and_serve)

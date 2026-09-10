@@ -28,6 +28,7 @@ from pr_reviewer.control_plane.review_comment_feedback import (
 )
 from pr_reviewer.control_plane.review_projection import router as reviews_router
 from pr_reviewer.control_plane.runner_jobs import router as runner_jobs_router
+from pr_reviewer.db.migrate import main as migrate_main
 from pr_reviewer.github import verify_github_signature
 from pr_reviewer.github.delivery import delivery_from_webhook
 from pr_reviewer.github.lifecycle import handle_pull_request_event
@@ -126,6 +127,22 @@ async def github_webhook(request: Request) -> JSONResponse:
 def main() -> None:
     port = int(os.environ.get("PORT", "8000"))
     uvicorn.run("pr_reviewer.control_plane.app:app", host="0.0.0.0", port=port, reload=False)
+
+
+def migrate_and_serve() -> None:
+    """Apply migrations, then serve. This is what a container should run.
+
+    A control plane started against an unmigrated database answers /health with 200
+    and fails on every route that touches a table, so it looks deployed and reviews
+    nothing. Splitting the two into a separate pre-deploy step only works where the
+    host offers one: Render charges for that step, so on its free plan the migration
+    has to happen here or not at all.
+
+    Safe with more than one instance. migrate() holds a Postgres advisory lock, so a
+    second container waits for the first and then finds nothing left to apply.
+    """
+    migrate_main()
+    main()
 
 
 if __name__ == "__main__":

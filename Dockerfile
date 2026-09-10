@@ -42,13 +42,13 @@ ENTRYPOINT ["bun", "run", "start", "--", "--hostname", "0.0.0.0", "--port", "300
 # Dockerfile's final stage and its blueprint spec has no field for a build target, so
 # whatever ends up last here is what a Render deploy runs.
 #
-# CMD, not ENTRYPOINT, for the same reason: Render's Docker Command overrides CMD only.
-# With an ENTRYPOINT it would append the command as arguments instead, the API would
-# ignore them, and the service would come up healthy having skipped its migration.
+# The command is pr-reviewer-serve, which migrates and then serves, so no deploy target
+# has to remember a separate migration step. pr-reviewer-api still exists for anyone who
+# wants serve-only. CMD rather than ENTRYPOINT so a host can override it at all.
 FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea AS api
 COPY --from=python-deps /app /app
 WORKDIR /app
 ENV PATH=/app/.venv/bin:$PATH
 USER 65532:65532
 EXPOSE 8000
-CMD ["/app/.venv/bin/pr-reviewer-api"]
+CMD ["/app/.venv/bin/pr-reviewer-serve"]

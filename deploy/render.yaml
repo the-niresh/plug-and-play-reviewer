@@ -16,12 +16,11 @@ services:
     plan: free
     dockerContext: .
     dockerfilePath: ./Dockerfile
-    # Migrate, then serve, in one command on purpose. Render's pre-deploy command is a
-    # paid feature, so on the free plan the migration has to be part of the start
-    # command or it never runs and the service comes up healthy against an empty schema.
-    # `exec` hands PID 1 to the API so Render's shutdown signal still reaches it. The
-    # migration is idempotent, so a free instance waking from a spin-down just re-checks.
-    dockerCommand: /bin/sh -c "/app/.venv/bin/pr-reviewer-db-migrate && exec /app/.venv/bin/pr-reviewer-api"
+    # No dockerCommand and no preDeployCommand on purpose. The image runs
+    # pr-reviewer-serve, which migrates and then serves in one process. Render's
+    # separate pre-deploy step is a paid feature, so on the free plan a deploy that
+    # relies on it silently skips the migration and comes up healthy against an empty
+    # schema. Putting the migration in the image means no host has to remember it.
     healthCheckPath: /health
     autoDeploy: true
     envVars:

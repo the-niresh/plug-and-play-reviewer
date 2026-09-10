@@ -106,15 +106,17 @@ from the table above. For the first pass you can set
 
 ### Step 3. Deploy
 
-Deploy the Blueprint. Render runs one command, which migrates and then serves:
+Deploy the Blueprint. There is no start command and no pre-deploy command to set. The
+image runs `pr-reviewer-serve`, which applies migrations and then serves:
 
 ```
-/bin/sh -c "/app/.venv/bin/pr-reviewer-db-migrate && exec /app/.venv/bin/pr-reviewer-api"
+Database migrations complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
-The migration is part of the start command on purpose. Render's separate pre-deploy
-command is a paid feature, and on the free plan a service with no migration step comes
-up healthy against an empty schema. Health check path: `/health`.
+The migration lives in the image on purpose. Render's separate pre-deploy step is a paid
+feature, so a free-plan service that relied on it would skip the migration and come up
+healthy against an empty schema. Health check path: `/health`.
 
 The blueprint also pins `plan: free`. Leave that out and Render bills you for its
 default instance size.
