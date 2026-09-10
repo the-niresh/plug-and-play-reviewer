@@ -1,3 +1,8 @@
+databases:
+  - name: reviewer-db
+    plan: free
+    postgresMajorVersion: "16"
+
 services:
   - type: web
     name: reviewer
@@ -9,17 +14,36 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
+      # The Postgres connection string. Render provisions and fills this in from
+      # the reviewer-db database above; you do not need to set it by hand.
+      # Without it the service cannot start.
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: reviewer-db
+          property: connectionString
+      # The GitHub App's numeric id. Find it on the App's settings page.
+      # Without it every request to the GitHub API is rejected.
       - key: GITHUB_APP_ID
         sync: false
+      # The GitHub App's private key (PEM). Generate it on the App's settings
+      # page and paste the full text, including the BEGIN and END lines.
+      # Without it the service cannot authenticate as the GitHub App.
       - key: GITHUB_APP_PRIVATE_KEY
         sync: false
+      # The GitHub App's OAuth client id, from the App's settings page.
+      # Without it users cannot sign in with GitHub.
       - key: GITHUB_OAUTH_CLIENT_ID
         sync: false
+      # The GitHub App's OAuth client secret, from the same settings page.
+      # Without it users cannot sign in with GitHub.
       - key: GITHUB_OAUTH_CLIENT_SECRET
         sync: false
+      # The GitHub App's webhook secret. Must match the value in the App settings.
+      # Without it every webhook is rejected and no review is ever queued.
       - key: GITHUB_WEBHOOK_SECRET
         sync: false
+      # The public https origin this service is reachable at, no trailing slash.
+      # Set it once you know the deployed hostname (or your custom domain).
+      # Without it, GitHub OAuth callback and App manifest URLs are wrong.
       - key: PR_REVIEWER_HOSTED_ORIGIN
         sync: false

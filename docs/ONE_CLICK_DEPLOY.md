@@ -14,10 +14,16 @@ Neither file starts the runner. Do not add a runner service to these platforms.
 The live instance today is `https://reviewer.niresh.tech`. The product domain
 will be `plugandplayreviewer.online`, but it is not pointed yet.
 
+See [CONFIGURATION.md](CONFIGURATION.md) for the full list of control-plane
+variables and what each one does.
+
 ## What you need before you start
 
 1. A Render account or a Railway account.
-2. A Neon Postgres database. Copy the connection string.
+2. A Postgres database. On Render, `deploy/render.yaml` provisions one for you
+   (`reviewer-db`) and wires `DATABASE_URL` automatically, so you can skip this
+   step there. On Railway, bring your own Postgres (for example Neon) and copy
+   the connection string.
 3. A GitHub App with:
    - App id (`GITHUB_APP_ID`)
    - PEM private key (`GITHUB_APP_PRIVATE_KEY`)
@@ -34,7 +40,7 @@ the names only. Values come from your accounts.
 
 | Name | Where to get the value |
 |---|---|
-| `DATABASE_URL` | Neon dashboard. Use the Postgres connection string. Add `sslmode=verify-full` if it is not already there. |
+| `DATABASE_URL` | On Render, filled in automatically from the `reviewer-db` database in `deploy/render.yaml`. You do not need to set it. On Railway, use your own Postgres connection string and add `sslmode=verify-full` if it is not already there. |
 | `GITHUB_APP_ID` | GitHub App settings page. Numeric id. |
 | `GITHUB_APP_PRIVATE_KEY` | GitHub App settings. Generate or download the PEM. Paste the full text including `BEGIN` and `END` lines. |
 | `GITHUB_OAUTH_CLIENT_ID` | GitHub App settings, OAuth credentials section. |
@@ -58,10 +64,11 @@ service. Model keys belong on the runner only.
 
 ### Step 2. Fill environment variables
 
-In the Blueprint or service **Environment** tab, add every variable from the
-table above. For the first pass you can set `PR_REVIEWER_HOSTED_ORIGIN` to a
-placeholder such as `https://reviewer.onrender.com` until Render assigns the
-real hostname.
+Render already provisions `reviewer-db` and wires `DATABASE_URL` for you. In
+the Blueprint or service **Environment** tab, add the remaining six variables
+from the table above. For the first pass you can set
+`PR_REVIEWER_HOSTED_ORIGIN` to a placeholder such as
+`https://reviewer.onrender.com` until Render assigns the real hostname.
 
 <!-- SCREENSHOT: Render environment variable form with DATABASE_URL and GitHub App secrets filled (values blurred) -->
 

@@ -147,6 +147,7 @@ See [AGENT_CONTRACT.md](AGENT_CONTRACT.md) for JSON shapes and error codes.
 ## Related docs
 
 - [INSTALL.md](INSTALL.md) - install, setup, doctor, uninstall
+- [CONFIGURATION.md](CONFIGURATION.md) - every setting, control plane and runner
 - [ONE_CLICK_DEPLOY.md](ONE_CLICK_DEPLOY.md) - deploy your own hosted control plane
 - [CHANNELS.md](CHANNELS.md) - Slack, Telegram, Discord, and email notifications
 - [MCP.md](MCP.md) - drive reviews from another agent over stdio

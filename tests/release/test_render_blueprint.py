@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import yaml
 from repo_paths import REPO_ROOT
 
 REPO = REPO_ROOT
@@ -41,6 +42,41 @@ def test_render_blueprint_uses_one_web_process_with_boot_config_only() -> None:
     assert "disk:" not in text
     for key in FORBIDDEN_RUNTIME_SECRET_ENV:
         assert f"key: {key}" not in text
+
+
+def test_render_blueprint_provisions_and_wires_its_own_database() -> None:
+    """One-click means one-click: the user should not have to find and paste a
+    Postgres URL by hand. Render can provision Postgres with pgvector, and
+    db/migrations/0001_initial.sql already runs `create extension if not
+    exists vector`, so a Render-managed database works here.
+    """
+    payload = yaml.safe_load(RENDER_BLUEPRINT.read_text(encoding="utf-8"))
+    databases = payload["databases"]
+    assert any(db["name"] == "reviewer-db" for db in databases)
+
+    env_vars = payload["services"][0]["envVars"]
+    database_url_entry = next(entry for entry in env_vars if entry["key"] == "DATABASE_URL")
+    assert database_url_entry["fromDatabase"]["name"] == "reviewer-db"
+    assert database_url_entry["fromDatabase"]["property"] == "connectionString"
+    assert "sync" not in database_url_entry
+
+    # The other six control-plane variables are still user-supplied.
+    manual_keys = {key for key in REQUIRED_BOOT_ENV if key != "DATABASE_URL"}
+    for entry in env_vars:
+        if entry["key"] in manual_keys:
+            assert entry.get("sync") is False
+
+
+def test_no_deploy_file_ever_gets_a_model_key_variable() -> None:
+    """Model keys belong on the runner, never the control plane. This test
+    fails on sight if someone later adds OPENAI_API_KEY, ANTHROPIC_API_KEY, or
+    model_key to either deploy file, in any casing or nesting.
+    """
+    render_text = RENDER_BLUEPRINT.read_text(encoding="utf-8").lower()
+    railway_text = RAILWAY_TEMPLATE.read_text(encoding="utf-8").lower()
+    for forbidden in FORBIDDEN_RUNTIME_SECRET_ENV:
+        assert forbidden.lower() not in render_text
+        assert forbidden.lower() not in railway_text
 
 
 def test_railway_template_matches_the_railway_schema_and_migrates_on_deploy() -> None:
