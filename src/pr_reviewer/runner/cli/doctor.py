@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Callable, Sequence
-from typing import cast
+from typing import TextIO, cast
 
 from pr_reviewer.containers.docker import DockerRuntime
 from pr_reviewer.containers.runtime import ContainerProbe, ContainerRuntime
@@ -95,34 +95,52 @@ def run(
     return 0
 
 
-def _print_probe_report(probe: ContainerProbe) -> None:
-    print("Docker isolation checks:")
+def _print_probe_report(probe: ContainerProbe, *, stdout: TextIO | None = None) -> None:
+    from pr_reviewer.runner.cli.style import error, heading, ok, warn
+
+    out = stdout if stdout is not None else sys.stdout
+    print(heading("Docker isolation checks:", stream=out), file=out)
     for field_name, label in _PROBE_LABELS:
         passed = getattr(probe, field_name)
-        mark = "OK" if passed else "FAIL"
-        print(f"  [{mark}] {label}")
+        mark = ok("[OK]", stream=out) if passed else error("[FAIL]", stream=out)
+        print(f"  {mark} {label}", file=out)
     if probe.failures:
-        print("Reasons:")
+        print(heading("Reasons:", stream=out), file=out)
         for reason in probe.failures:
-            print(f"  - {reason}")
+            print(f"  - {warn(reason, stream=out)}", file=out)
 
 
-def _print_mode_decision(decision: ModeDecision) -> None:
-    print()
+def _print_mode_decision(decision: ModeDecision, *, stdout: TextIO | None = None) -> None:
+    from pr_reviewer.runner.cli.style import heading, warn
+
+    out = stdout if stdout is not None else sys.stdout
+    print(file=out)
     if decision.granted_mode == "full":
-        print("Full mode is available: every required Docker isolation check passed.")
+        print(
+            heading(
+                "Full mode is available: every required Docker isolation check passed.",
+                stream=out,
+            ),
+            file=out,
+        )
         return
 
     if decision.downgraded:
-        print(f"Requested {decision.requested_mode} mode, but it is not available yet:")
+        print(
+            heading(
+                f"Requested {decision.requested_mode} mode, but it is not available yet:",
+                stream=out,
+            ),
+            file=out,
+        )
         for reason in decision.probe_failures:
-            print(f"  - {reason}")
-        print()
+            print(f"  - {warn(reason, stream=out)}", file=out)
+        print(file=out)
 
-    print("Analysis-only mode disables:")
+    print(heading("Analysis-only mode disables:", stream=out), file=out)
     for feature in decision.disabled_features:
-        print(f"  - {feature}")
-    print()
+        print(f"  - {feature}", file=out)
+    print(file=out)
 
 
 def _prompt_confirm() -> bool:

@@ -151,14 +151,18 @@ def _emit(
 
 
 def _print_human_summary(payload: JSONCLIResult, *, out: TextIO, err: TextIO) -> None:
+    from pr_reviewer.runner.cli.style import error as style_error
+    from pr_reviewer.runner.cli.style import warn
+
     if payload.status == "refused":
         refusal = payload.refusal or {}
-        print(f"Review refused: {refusal.get('message', 'unknown reason')}", file=err)
+        message = refusal.get("message", "unknown reason")
+        print(f"Review refused: {warn(str(message), stream=err)}", file=err)
         return
     if payload.status == "error":
-        error = payload.error or {}
-        message = error.get("message", "unknown error")
-        print(f"Review failed: {message}", file=err)
+        error_payload = payload.error or {}
+        message = error_payload.get("message", "unknown error")
+        print(f"Review failed: {style_error(str(message), stream=err)}", file=err)
         return
     result = payload.result
     if not isinstance(result, dict):
@@ -167,23 +171,48 @@ def _print_human_summary(payload: JSONCLIResult, *, out: TextIO, err: TextIO) ->
     _print_review_result(result, out=out)
 
 
+def _severity_label(severity: str | None, *, stream: TextIO) -> str:
+    from pr_reviewer.runner.cli.style import dim, error, warn
+
+    text = f"[{severity}]"
+    normalized = (severity or "").lower()
+    if normalized == "high":
+        return error(text, stream=stream)
+    if normalized == "medium":
+        return warn(text, stream=stream)
+    return dim(text, stream=stream)
+
+
 def _print_review_result(result: dict[str, Any], *, out: TextIO) -> None:
+    from pr_reviewer.runner.cli.style import heading, ok, path
+
+    review_id = result.get("review_id")
+    owner = result.get("owner")
+    repository = result.get("repository")
+    pull_request = result.get("pull_request")
+    head_sha = result.get("head_sha")
+    status = result.get("status")
     print(
-        f"Review {result.get('review_id')} for "
-        f"{result.get('owner')}/{result.get('repository')}#{result.get('pull_request')} "
-        f"(head {result.get('head_sha')}): status={result.get('status')}",
+        heading(
+            f"Review {review_id} for {owner}/{repository}#{pull_request} "
+            f"(head {head_sha}): status={status}",
+            stream=out,
+        ),
         file=out,
     )
     findings = result.get("findings") or []
     if not findings:
-        print("No findings.", file=out)
+        print(ok("No findings.", stream=out), file=out)
         return
     print(f"{len(findings)} finding(s):", file=out)
     for finding in findings:
         label = "verified" if finding.get("verified") else "asserted"
+        file_ref = path(
+            f"{finding.get('file_path')}:{finding.get('line_start')}-{finding.get('line_end')}",
+            stream=out,
+        )
+        severity = _severity_label(str(finding.get("severity")), stream=out)
         print(
-            f"  [{finding.get('severity')}] {finding.get('title')} "
-            f"({finding.get('file_path')}:{finding.get('line_start')}-{finding.get('line_end')}) "
-            f"[{label}]",
+            f"  {severity} {finding.get('title')} ({file_ref}) [{label}]",
             file=out,
         )

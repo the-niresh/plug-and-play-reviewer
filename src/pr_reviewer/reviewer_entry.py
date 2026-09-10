@@ -14,8 +14,10 @@ inside each branch is the point, not an accident of style.
 
 from __future__ import annotations
 
+import re
 import sys
 from collections.abc import Sequence
+from typing import TextIO
 
 _USAGE = (
     "usage: reviewer <setup|login|logout|doctor|trace|start|stop|status|open|service|update"
@@ -71,6 +73,40 @@ reviewer review exit codes:
 Use `reviewer <command> --help` for arguments and per-command output details.
 """
 
+_COMMAND_LINE = re.compile(r"^(?P<prefix>  )(reviewer(?:\s+\S+)*)(?P<gap>\s{2,})(?P<desc>.*)$")
+
+
+def print_help(stream: TextIO | None = None) -> None:
+    from pr_reviewer.runner.cli.style import color_enabled, dim, heading
+
+    out = stream if stream is not None else sys.stdout
+    if not color_enabled(out):
+        out.write(_HELP)
+        if not _HELP.endswith("\n"):
+            out.write("\n")
+        out.flush()
+        return
+
+    for raw_line in _HELP.splitlines():
+        if raw_line.startswith("usage:"):
+            out.write(heading("usage:", stream=out) + raw_line[len("usage:") :] + "\n")
+            continue
+        if raw_line.endswith(":") and not raw_line.startswith("  "):
+            out.write(heading(raw_line, stream=out) + "\n")
+            continue
+        match = _COMMAND_LINE.match(raw_line)
+        if match is not None:
+            line = (
+                f"{match.group('prefix')}"
+                f"{heading(match.group(2), stream=out)}"
+                f"{match.group('gap')}"
+                f"{dim(match.group('desc'), stream=out)}"
+            )
+            out.write(line + "\n")
+            continue
+        out.write(raw_line + "\n")
+    out.flush()
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     # config.get_settings() loads .env, but the TUI connect path reads os.environ
@@ -84,7 +120,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] in {"-h", "--help"}:
-        print(_HELP)
+        print_help()
         return 0
     if not args:
         if sys.stdin.isatty():

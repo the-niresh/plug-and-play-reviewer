@@ -121,11 +121,15 @@ def resolve_setup_paths(config_dir: Path | None = None) -> SetupPaths:
     return SetupPaths(config_dir=root, secrets_dir=root, data_dir=data_dir)
 
 
-def mask_secret(value: str) -> str:
+def mask_secret(value: str, *, stdout: TextIO | None = None) -> str:
+    from pr_reviewer.runner.cli.style import ok
+
+    out = stdout if stdout is not None else sys.stdout
+    tick = ok("✓", stream=out)
     cleaned = value.strip()
     if len(cleaned) <= 8:
-        return "******** ✓"
-    return f"{cleaned[:8]}... ✓"
+        return f"******** {tick}"
+    return f"{cleaned[:8]}... {tick}"
 
 
 def _is_tty(stream: IO[str]) -> bool:
@@ -154,20 +158,33 @@ def radio_select(
     # them: it reprints the list on every keypress and rewinds with \033[F by exactly
     # len(display) lines. Drawing the rows here too left a frozen duplicate above the live
     # list, because the rewind only ever erased the loop's own copy.
-    output_stream.write(f"\n{title}\n")
-    output_stream.write(f"{RADIO_HEADER}\n")
+    from pr_reviewer.runner.cli.style import dim, heading
+
+    output_stream.write(f"\n{heading(title, stream=output_stream)}\n")
+    output_stream.write(f"{dim(RADIO_HEADER, stream=output_stream)}\n")
     output_stream.flush()
 
+    from pr_reviewer.runner.cli.style import accent
+
+    def _write_option_rows() -> None:
+        for index, label in enumerate(display):
+            marker = accent(">", stream=output_stream) if index == active else " "
+            suffix = (
+                accent("  ← currently active", stream=output_stream)
+                if options[index] == current
+                else ""
+            )
+            output_stream.write(f" {marker} {label}{suffix}\n")
+
     if not _is_tty(input_stream):
+        _write_option_rows()
+        output_stream.flush()
         if current is not None and current in options:
             return current
         return options[0]
 
     while True:
-        for index, label in enumerate(display):
-            marker = ">" if index == active else " "
-            suffix = "  ← currently active" if options[index] == current else ""
-            output_stream.write(f" {marker} {label}{suffix}\n")
+        _write_option_rows()
         output_stream.flush()
 
         fd = input_stream.fileno()
@@ -335,7 +352,10 @@ def run_setup_wizard(
 
 
 def _print_section_header(section: str, stdout: TextIO) -> None:
-    stdout.write(f"\n=== {SECTION_TITLES[section]} ===\n")
+    from pr_reviewer.runner.cli.style import heading
+
+    title = f"=== {SECTION_TITLES[section]} ==="
+    stdout.write(f"\n{heading(title, stream=stdout)}\n")
 
 
 def _run_location_section(paths: SetupPaths, *, stdout: TextIO) -> None:
@@ -523,7 +543,11 @@ def _configure_model_key(
 
         reader = getpass.getpass
     if existing and existing.strip():
-        action = prompt_secret_action(masked=mask_secret(existing), stdin=stdin, stdout=stdout)
+        action = prompt_secret_action(
+            masked=mask_secret(existing, stdout=stdout),
+            stdin=stdin,
+            stdout=stdout,
+        )
         if action == "keep":
             return
         if action == "clear":

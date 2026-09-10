@@ -239,7 +239,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if command == "status":
         status = local_service_status(host=parsed.host, port=parsed.port)
-        print("running" if status.running else "not running")
+        from pr_reviewer.runner.cli.style import error, ok
+
+        if status.running:
+            print(ok("running", stream=sys.stdout))
+        else:
+            print(error("not running", stream=sys.stdout))
         return 0 if status.running else 1
     if command == "open":
         return open_local_ui(url=url)

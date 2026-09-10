@@ -82,6 +82,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             confirm_delete=parsed.confirm_delete,
         )
     except UninstallError as exc:
-        print(str(exc), file=sys.stderr)
+        from pr_reviewer.runner.cli.style import warn
+
+        print(warn(str(exc), stream=sys.stderr), file=sys.stderr)
         return 1
     return 0

@@ -49,8 +49,24 @@ def run(args: Sequence[str]) -> int:
         print(json.dumps(report.model_dump(mode="json"), indent=2))
         return 0
 
-    print(render_feedback_improvement_report(report))
+    _print_feedback_report(render_feedback_improvement_report(report))
     return 0
+
+
+def _print_feedback_report(text: str) -> None:
+    from pr_reviewer.runner.cli.style import heading, ok, warn
+
+    for line in text.splitlines():
+        if line.startswith("# ") or line.startswith("## "):
+            print(heading(line, stream=sys.stdout))
+        elif line.startswith("Duplicates skipped:"):
+            count = line.split(":", 1)[1].strip()
+            print(f"Duplicates skipped: {warn(count, stream=sys.stdout)}")
+        elif line.startswith("Positive signals:"):
+            count = line.split(":", 1)[1].strip()
+            print(f"Positive signals: {ok(count, stream=sys.stdout)}")
+        else:
+            print(line)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
