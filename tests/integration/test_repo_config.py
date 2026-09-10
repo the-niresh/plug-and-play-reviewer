@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from pr_reviewer.local_store.repo_config import (
     repository_prompt_name,
     validate_repo_model_choice,
 )
+from pr_reviewer.models.catalogue import default_model_for
 from pr_reviewer.security.instruction_sources import ReviewPolicy, default_review_policy
 
 
@@ -83,13 +85,13 @@ def test_model_choice_survives_reload(tmp_path: Path) -> None:
     first = RepoConfigStore(path)
     first.set_model_choice(
         42,
-        RepoModelChoice(provider_id="openai", model_id="gpt-4o"),
+        RepoModelChoice(provider_id="openai", model_id="gpt-4.1"),
     )
 
     second = RepoConfigStore(path)
     assert second.get_model_choice(42) == RepoModelChoice(
         provider_id="openai",
-        model_id="gpt-4o",
+        model_id="gpt-4.1",
     )
 
 
@@ -108,7 +110,7 @@ def test_setting_model_choice_preserves_policy(tmp_path: Path) -> None:
     store.set(11, ReviewPolicy(specialist_mode=True))
     store.set_model_choice(
         11,
-        RepoModelChoice(provider_id="anthropic", model_id="claude-3-5-sonnet-latest"),
+        RepoModelChoice(provider_id="anthropic", model_id="claude-sonnet-4-20250514"),
     )
 
     assert store.get(11).specialist_mode is True
@@ -161,3 +163,37 @@ def test_repository_prompt_versions_survive_reload(tmp_path: Path) -> None:
     assert active is not None
     assert active.content == "Watch database migrations"
     assert active.version == "1"
+
+
+def test_stored_choice_for_a_retired_model_degrades_instead_of_raising(tmp_path: Path) -> None:
+    """A model dropped from the catalogue must not brick an existing repo config.
+
+    The catalogue is curated and capped, so refreshing it retires model ids that people
+    already have on disk (gpt-4o and o3-mini were retired on 2026-09-10). Raising on read
+    means every future catalogue edit breaks whoever had the removed model selected, and
+    they cannot even open settings to change it. Writing an unknown model is still refused;
+    only reading one already stored degrades.
+    """
+    store = RepoConfigStore(tmp_path / "repo-config.json")
+    store.set_model_choice(
+        7,
+        RepoModelChoice(provider_id="openai", model_id="gpt-4o-mini"),
+    )
+    # Simulate the model being retired from the catalogue after it was stored.
+    raw = json.loads((tmp_path / "repo-config.json").read_text(encoding="utf-8"))
+    raw["repositories"]["7"]["model_id"] = "gpt-4o-retired-yesterday"
+    (tmp_path / "repo-config.json").write_text(json.dumps(raw), encoding="utf-8")
+
+    choice = store.get_model_choice(7)
+
+    assert choice.provider_id == "openai"
+    assert choice.model_id == default_model_for("openai")
+
+
+def test_setting_an_unknown_model_is_still_refused(tmp_path: Path) -> None:
+    store = RepoConfigStore(tmp_path / "repo-config.json")
+    with pytest.raises(ValueError, match="unknown provider/model pair"):
+        store.set_model_choice(
+            7,
+            RepoModelChoice(provider_id="openai", model_id="not-a-real-model"),
+        )

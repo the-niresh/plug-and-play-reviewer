@@ -186,6 +186,10 @@ export default function HomePage() {
               </Link>
               .
             </p>
+            <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
+              An open source PR reviewer built for private AI code review.
+              It is AI code review self hosted on a laptop or a server you run.
+            </p>
             <div className="mt-10 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
               <a
                 href={VERCEL_DEPLOY_URL}
@@ -379,13 +383,13 @@ export default function HomePage() {
             </p>
           </article>
           <article className="landing-card p-6">
-            <p className="landing-kicker">Pricing shape</p>
+            <p className="landing-kicker">Access shape</p>
             <h2 className="landing-display mt-2 text-2xl font-semibold tracking-tight">
               What stays free and what is for teams
             </h2>
             <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-              A single person running a local reviewer can stay on a simple path. The free
-              tier allows one GitHub user and one repository per installation.
+              A single person running a local reviewer can stay on a simple path.
+              The free tier allows one GitHub user and one repository per installation.
             </p>
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
               Team controls, shared prompts, and extra repositories are the paid path. There
@@ -406,6 +410,8 @@ export default function HomePage() {
             Every finding is scored by a second model call and anything ungrounded is
             dropped before you see it. The scorecard shows the measured result on a
             human-judged holdout, with the model and the sample it was run on.
+            That holdout is seven human-judged cases from the Zod repository, so it is
+            evidence, not a published baseline.
           </p>
           <Link
             href="/scorecard"
@@ -440,8 +446,8 @@ export default function HomePage() {
               ))}
             </ol>
             <p className="text-muted-foreground mt-5 max-w-prose text-sm leading-relaxed">
-              One-click Render still needs your own secrets and database. Railway starts
-              from a repo import until a public template id exists.
+              One-click Render still needs your own secrets and database.
+              Railway starts from a repo import until a public template id exists.
             </p>
             <Link
               href="/docs"

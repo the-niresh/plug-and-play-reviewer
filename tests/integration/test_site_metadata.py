@@ -14,7 +14,9 @@ REPO = REPO_ROOT
 APP = REPO / "apps" / "web" / "src" / "app"
 WEB_SRC = REPO / "apps" / "web" / "src"
 
-TITLE_RE = re.compile(r"\btitle:\s*[\"']([^\"']+)[\"']")
+TITLE_RE = re.compile(
+    r"\btitle:\s*(?:[\"']([^\"']+)[\"']|pageTitle\()"
+)
 DESCRIPTION_RE = re.compile(r"\bdescription:\s*[\"']([^\"']+)[\"']")
 
 
@@ -24,7 +26,9 @@ def test_root_layout_has_metadata_base_and_share_cards() -> None:
     assert "openGraph" in source
     assert "twitter" in source
     assert "summary_large_image" in source
-    assert "PR Reviewer" in source
+    # The name is centralised in lib/site.ts. Asserting the literal here would
+    # re-hardcode what that refactor removed, and would go stale on every rename.
+    assert "PRODUCT_NAME" in source
 
 
 def test_sitemap_lists_public_routes_and_hides_private_ones() -> None:
@@ -81,5 +85,5 @@ def test_every_page_has_its_own_title_and_description() -> None:
 
 def test_site_nav_uses_the_product_name() -> None:
     nav = (WEB_SRC / "components" / "SiteNav.tsx").read_text(encoding="utf-8")
-    assert "PR Reviewer" in nav
+    assert "PRODUCT_NAME" in nav
     assert "pr-reviewer" not in nav

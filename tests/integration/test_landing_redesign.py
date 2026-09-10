@@ -48,9 +48,12 @@ REQUIRED_FLOW_STEPS = (
     "review comment",
 )
 
+# "CodeRabbit alternative" was removed on 2026-09-10. The owner chose to frame the landing
+# page on mechanism alone, with no competitor named, and a comparison claim is not one we
+# have measured: running both tools on the same PRs has not been done. Restore this phrase
+# only alongside that head-to-head, published including the cases we lose.
 REQUIRED_SEARCH_PHRASES = (
     "AI code review self hosted",
-    "CodeRabbit alternative",
     "open source PR reviewer",
     "private AI code review",
 )

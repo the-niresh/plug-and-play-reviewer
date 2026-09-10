@@ -50,11 +50,26 @@ def test_next_config_proxies_api_routes_to_the_control_plane() -> None:
 
 
 def test_root_layout_installs_vercel_analytics_and_speed_insights() -> None:
-    text = _read("apps/web/src/app/layout.tsx")
-    assert 'from "@vercel/analytics/next"' in text
-    assert 'from "@vercel/speed-insights/next"' in text
-    assert "<Analytics />" in text
-    assert "<SpeedInsights />" in text
+    """Analytics must load only after the visitor accepts, never on first paint.
+
+    This used to assert the layout mounted <Analytics /> directly. That is exactly the
+    behaviour the cookie notice exists to prevent: the page was collecting before it ever
+    asked. The requirement is unchanged in spirit (observability ships) but the mount now
+    belongs to AnalyticsGate, which renders nothing until stored consent says accepted.
+    """
+    layout = _read("apps/web/src/app/layout.tsx")
+    assert "<AnalyticsGate />" in layout
+    assert "<CookieNotice />" in layout
+    # A direct mount here would bypass the gate entirely.
+    assert "<Analytics />" not in layout
+    assert "<SpeedInsights />" not in layout
+
+    gate = _read("apps/web/src/components/AnalyticsGate.tsx")
+    assert 'from "@vercel/analytics/next"' in gate
+    assert 'from "@vercel/speed-insights/next"' in gate
+    assert "<Analytics />" in gate
+    assert "<SpeedInsights />" in gate
+    assert 'readConsent() === "accepted"' in gate
 
 
 def test_web_package_declares_vercel_observability_packages() -> None:

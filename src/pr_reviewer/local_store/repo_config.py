@@ -54,6 +54,28 @@ def validate_repo_model_choice(choice: RepoModelChoice) -> RepoModelChoice:
     return choice
 
 
+def _stored_model_choice(*, provider_id: str, model_id: str) -> RepoModelChoice:
+    """Read a stored choice, degrading instead of raising when the catalogue moved on.
+
+    Writes still go through validate_repo_model_choice, so an unknown model can never be
+    *set*. But the catalogue is curated and capped at MAX_MODELS_PER_PROVIDER, so
+    refreshing it retires ids that are already on someone's disk (gpt-4o and o3-mini were
+    retired 2026-09-10). Raising here would brick that repo's config on read, and the
+    settings screen that would let them pick a new model is itself a reader, so they could
+    not fix it from the UI either. Falling back to the provider's current default keeps
+    them working; falling back to the global default covers a provider that is gone too.
+    """
+    if is_known_provider_model(provider_id, model_id):
+        return RepoModelChoice(provider_id=provider_id, model_id=model_id)
+    try:
+        return RepoModelChoice(
+            provider_id=provider_id,
+            model_id=default_model_for(provider_id),
+        )
+    except KeyError:
+        return default_repo_model_choice()
+
+
 class RepoConfigStore:
     """JSON-backed store for per-repository ReviewPolicy and model choice values."""
 
@@ -75,11 +97,9 @@ class RepoConfigStore:
         entry = self._repo_entry(github_repository_id)
         _policy_data, choice_data = _split_repo_entry(entry)
         if "provider_id" in choice_data and "model_id" in choice_data:
-            return validate_repo_model_choice(
-                RepoModelChoice(
-                    provider_id=str(choice_data["provider_id"]),
-                    model_id=str(choice_data["model_id"]),
-                )
+            return _stored_model_choice(
+                provider_id=str(choice_data["provider_id"]),
+                model_id=str(choice_data["model_id"]),
             )
         return default_repo_model_choice()
 

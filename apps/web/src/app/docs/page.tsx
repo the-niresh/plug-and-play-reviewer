@@ -38,7 +38,7 @@ const SECTIONS = [
     commands: [
       `reviewer setup --hosted-origin https://${siteHost()}`,
       "reviewer doctor",
-      "reviewer start --host 127.0.0.1",
+      "reviewer start",
     ],
     docHref: `${REPO_DOCS}/SELF_HOSTING.md`,
     docLabel: "Self hosting walkthrough",
