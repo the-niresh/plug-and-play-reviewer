@@ -48,7 +48,9 @@ def test_web_app_is_self_sufficient_for_vercel_defaults() -> None:
 def test_vercel_ignores_backend_and_local_build_noise() -> None:
     text = _read(".vercelignore")
     for needle in (
-        "src/",
+        # Anchored: bare "src/" is unanchored and also matches apps/web/src, which
+        # deleted the entire Next.js app on Vercel and produced a /404-only build.
+        "/src/",
         ".venv/",
         "apps/web/.next",
         "apps/web/.next-dev",

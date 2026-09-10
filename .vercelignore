@@ -15,10 +15,13 @@ apps/web/coverage
 apps/web/playwright-report
 apps/web/test-results
 apps/web/tsconfig.tsbuildinfo
-src/
-datasets/
-data/
-secrets/
+# Anchored with a leading slash on purpose: bare `src/` is unanchored and also
+# matched apps/web/src, which deleted the whole Next.js app and built an empty
+# project with only a /404 route.
+/src/
+/datasets/
+/data/
+/secrets/
 .env
 .env.*
 *.log
