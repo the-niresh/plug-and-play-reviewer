@@ -22,6 +22,7 @@ from pr_reviewer.control_plane.oauth_api import router as oauth_router
 from pr_reviewer.control_plane.ops import router as ops_router
 from pr_reviewer.control_plane.pairing_api import router as pairing_router
 from pr_reviewer.control_plane.profile_api import router as profile_router
+from pr_reviewer.control_plane.rate_limit import check_hosted_rate_limit
 from pr_reviewer.control_plane.review_comment_feedback import (
     handle_pull_request_review_comment,
 )
@@ -37,6 +38,16 @@ MAX_WEBHOOK_BODY_BYTES = 1024 * 1024
 bootstrap_manifest_credentials_into_environment()
 
 app = FastAPI(title="PR Reviewer")
+
+
+@app.middleware("http")
+async def enforce_hosted_rate_limit(request: Request, call_next: Any) -> Any:
+    denied = check_hosted_rate_limit(request)
+    if denied is not None:
+        return denied
+    return await call_next(request)
+
+
 app.include_router(ops_router)
 app.include_router(pairing_router)
 app.include_router(oauth_router)

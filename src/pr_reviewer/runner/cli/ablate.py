@@ -76,7 +76,7 @@ def main(
 
     provider_choice = resolve_model_provider()
     if provider_choice is None:
-        print("No model provider configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.", file=err)
+        print("No model provider configured. Run reviewer setup, then retry.", file=err)
         return 2
     provider_name, model = provider_choice
     from pr_reviewer.models.catalogue import default_model_for
