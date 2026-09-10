@@ -88,6 +88,6 @@ def test_pairing_completes_unattended(tmp_path: Path) -> None:
                 description="the post-sign-in countdown to start",
             )
             await pilot.pause(5.2)
-            assert app.query_one("#model-access-screen") is not None
+            assert app.query_one("#setup-required-message") is not None
 
     asyncio.run(exercise())

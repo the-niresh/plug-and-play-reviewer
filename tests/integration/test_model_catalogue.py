@@ -16,7 +16,19 @@ from pr_reviewer.models.catalogue import (
 
 def test_catalogue_lists_only_well_known_providers() -> None:
     provider_ids = {provider.provider_id for provider in CATALOGUE}
-    assert provider_ids == {"openai", "anthropic"}
+    assert provider_ids == {
+        "openai",
+        "anthropic",
+        "moonshot",
+        "qwen",
+        "openrouter",
+        "groq",
+        "xai",
+        "deepseek",
+        "github-copilot",
+        "ollama",
+        "opencode",
+    }
 
 
 def test_each_provider_lists_at_most_five_models() -> None:
@@ -28,12 +40,12 @@ def test_models_for_returns_provider_models() -> None:
     openai_models = {entry.model_id for entry in models_for("openai")}
     assert "gpt-4o-mini" in openai_models
     anthropic_models = {entry.model_id for entry in models_for("anthropic")}
-    assert "claude-3-5-haiku-latest" in anthropic_models
+    assert "claude-haiku-4-20250414" in anthropic_models
 
 
 def test_unknown_provider_raises_key_error() -> None:
     with pytest.raises(KeyError, match="unknown provider"):
-        models_for("ollama")
+        models_for("not-a-provider")
 
 
 def test_is_known_provider_model() -> None:
@@ -44,4 +56,4 @@ def test_is_known_provider_model() -> None:
 
 def test_default_model_is_the_first_listed_model() -> None:
     assert default_model_for("openai") == "gpt-4o-mini"
-    assert default_model_for("anthropic") == "claude-3-5-haiku-latest"
+    assert default_model_for("anthropic") == "claude-haiku-4-20250414"

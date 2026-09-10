@@ -16,7 +16,7 @@ from pr_reviewer.runner.secrets import FileSecretStore
 from pr_reviewer.tui.auth_state import MODEL_KEY_SECRET, has_model_key
 from pr_reviewer.tui.screens.byok import ByokPanel, ModelKeyChecker
 from pr_reviewer.tui.screens.connect import can_start_review
-from pr_reviewer.tui.screens.model_access import ModelAccessPanel, ModelKeyStored
+from pr_reviewer.tui.screens.model_access import ModelKeyStored
 
 API_KEY = "sk-byok-test-must-not-appear-on-screen"
 
@@ -129,7 +129,7 @@ def test_byok_panel_stores_valid_key_without_echoing_it() -> None:
     asyncio.run(exercise())
 
 
-def test_connected_app_without_model_key_shows_byok_screen(tmp_path: Path) -> None:
+def test_connected_app_without_model_key_shows_setup_message(tmp_path: Path) -> None:
     async def exercise() -> None:
         from pr_reviewer.tui.app import ReviewerApp
         from pr_reviewer.tui.installation_snapshot import InstallationSnapshot
@@ -144,7 +144,8 @@ def test_connected_app_without_model_key_shows_byok_screen(tmp_path: Path) -> No
         )
         app = ReviewerApp(secrets=secrets, installation_snapshot=snapshot)
         async with app.run_test():
-            assert app.query_one("#model-access-screen", ModelAccessPanel) is not None
+            message = app.query_one("#setup-required-message")
+            assert "reviewer setup" in str(message.render()).lower()
 
     asyncio.run(exercise())
 

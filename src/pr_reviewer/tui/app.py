@@ -46,7 +46,6 @@ from pr_reviewer.tui.pairing_wait import LocalPairingStatusClient
 from pr_reviewer.tui.review_dashboard import ReviewDashboardPanel, dashboard_repositories_from_log
 from pr_reviewer.tui.screens.confirm import ConfirmScreen
 from pr_reviewer.tui.screens.connect import ConnectPanel, PairingExchangeable, can_start_review
-from pr_reviewer.tui.screens.model_access import ModelAccessPanel, ModelKeyStored
 from pr_reviewer.tui.screens.profile import ProfilePanel
 from pr_reviewer.tui.screens.prompts import AgentPromptsPanel
 from pr_reviewer.tui.screens.repositories import PullRequestSelected, RepositoriesPanel
@@ -236,7 +235,7 @@ class ReviewerApp(App[None]):
         if not self.github_connected:
             return
         if not self.model_key_configured:
-            self._mount_model_access_panel()
+            self._mount_setup_required_message()
             return
         self._begin_connected_startup()
 
@@ -314,13 +313,8 @@ class ReviewerApp(App[None]):
         self.query_one("#connect-screen").remove()
         layout.mount(Container(id="section-content"))
         if not self.model_key_configured:
-            self._mount_model_access_panel()
+            self._mount_setup_required_message()
             return
-        self._begin_connected_startup()
-
-    async def on_model_key_stored(self, _message: ModelKeyStored) -> None:
-        pane = self.query_one("#section-content", Container)
-        await self._replace_pane_children(pane)
         self._begin_connected_startup()
 
     async def on_pull_request_selected(self, message: PullRequestSelected) -> None:
@@ -342,7 +336,10 @@ class ReviewerApp(App[None]):
             if not self.github_connected:
                 self.notify("Connect GitHub before starting a review.", severity="warning")
             else:
-                self.notify("Add a model key before starting a review.", severity="warning")
+                self.notify(
+                    "Run reviewer setup to store your LLM provider API key.",
+                    severity="warning",
+                )
             return
         if not self.github_connected or not self.model_key_configured:
             return
@@ -359,9 +356,12 @@ class ReviewerApp(App[None]):
             return
         await self._show_section(message.section_id, snapshot)
 
-    def _mount_model_access_panel(self) -> None:
+    def _mount_setup_required_message(self) -> None:
         self.query_one("#section-content", Container).mount(
-            ModelAccessPanel(secrets=self._secrets, id="model-access-screen")
+            Static(
+                "Run reviewer setup to store your LLM provider API key.",
+                id="setup-required-message",
+            )
         )
 
     def _mount_default_section(self) -> None:

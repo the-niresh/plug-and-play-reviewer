@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import argparse
-import getpass
 import sys
 from collections.abc import Callable, Sequence
+from pathlib import Path
+from typing import TextIO
 
 from pr_reviewer.runner.secrets import SecretStore
 
@@ -20,10 +20,13 @@ _SECRET_FLAGS = (
 
 def run_setup(
     *,
-    hosted_origin: str,
+    hosted_origin: str = "",
     secrets: SecretStore,
     read_secret: Callable[[str], str] | None = None,
     argv: Sequence[str] | None = None,
+    stdin: TextIO | None = None,
+    stdout: TextIO | None = None,
+    config_dir: Path | None = None,
 ) -> int:
     del hosted_origin
     args = list(sys.argv[1:] if argv is None else argv)
@@ -32,34 +35,21 @@ def run_setup(
     for flag in _SECRET_FLAGS:
         if flag in args:
             raise SystemExit(f"refusing secret flag {flag}")
-    parser = argparse.ArgumentParser(
-        prog="reviewer setup",
-        description="Store the local model key for the runner.",
-        epilog=(
-            "Output: prompts for the model key with hidden input. No JSON mode.\n\n"
-            "exit codes:\n"
-            "  0  key stored\n"
-            "  1  setup failed or refused an unsafe argument\n"
-        ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+
+    from pr_reviewer.runner.cli.setup_wizard import run_setup_wizard
+
+    return run_setup_wizard(
+        secrets=secrets,
+        argv=args,
+        read_secret=read_secret,
+        stdin=stdin,
+        stdout=stdout,
+        config_dir=config_dir,
     )
-    parser.add_argument(
-        "--hosted-origin",
-        required=True,
-        help="Hosted control plane origin. Must start with https://.",
-    )
-    parsed = parser.parse_args(args)
-    if not str(parsed.hosted_origin).startswith("https://"):
-        raise SystemExit("hosted origin must be https")
-    reader = read_secret if read_secret is not None else (lambda prompt: getpass.getpass(prompt))
-    key = reader("Model API key")
-    secrets.set("model_key", key)
-    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     return run_setup(
-        hosted_origin="",
         secrets=_default_secrets(),
         argv=list(sys.argv[1:] if argv is None else argv),
     )
