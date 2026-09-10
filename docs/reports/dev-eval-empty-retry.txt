@@ -1,0 +1,85 @@
+6-dev empty-retry sanity after 28ce5b3 (evidence only, not a baseline, not a scorecard)
+
+STOP
+  false_findings_per_pr 0.833 is above the 0.75 cap.
+  precision_per_finding 0.375 is worse than the 3-pass mini mean 0.417.
+  No further path. Do not invent another option.
+
+SPEND
+  exact_total_cost_usd: 0.010857
+  goal cap: 0.08
+  remaining_budget_usd: 0.069143
+  RoleModels.generate still gpt-4o-mini
+  gpt-4.1 used only as empty-retry, not as default generate
+
+COMPARED WITH 3-pass mini mean (docs/reports/dev-eval-3pass-gpt-4o-mini.txt)
+  cost                  0.007733 / 3 passes -> 0.010857 this pass
+  precision_per_finding 0.417 -> 0.375
+  recall_per_finding    0.278 -> 0.500
+  false findings/PR     0.500 -> 0.833
+  extra hit: flask-py-001
+
+REMAINING MISSES
+  flask-py-006: wrong concern (maintainability / import relocation)
+  flask-py-020: wrong concern (correctness / key-selection-order, plus extra)
+  zod-ts-005: wrong file (deno/lib/types.ts, correctness / regex-issue)
+
+HITS
+  flask-py-001, flask-py-013, zod-ts-010
+
+cases: flask-py-001, flask-py-006, flask-py-013, flask-py-020, zod-ts-005, zod-ts-010
+model: gpt-4o-mini with gpt-4.1 retry only when mini accepts zero findings
+repeats: 1
+retrieval: off
+cost_usd: 0.010857
+precision_per_finding: 0.375
+recall_per_finding: 0.500
+false_findings_per_pr: 0.833
+precision_per_case: 0.333
+recall_per_case: 0.500
+
+
+CASE flask-py-001
+  label: src/flask/blueprints.py:453-455 correctness / nested blueprint does not inherit subdomain
+  cost_usd: 0.005094 latency_ms: 5399
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/blueprints.py:453-467 correctness / blueprint-subdomain-inheritance / Subdomain inheritance for nested blueprints changes logic
+
+CASE flask-py-006
+  label: src/flask/__init__.py:79-79 correctness / wrong name in getattr branch
+  cost_usd: 0.000277 latency_ms: 2465
+  accepted: 1 matched: 0 unmatched_expected: 1 unmatched_actual: 1
+  causes: wrong concern, false findings=1
+  finding 1: src/flask/__init__.py:76-82 maintainability / code organization / Import statement relocation
+
+CASE flask-py-013
+  label: src/flask/cli.py:861-861 correctness / no-arg super in a list comprehension
+  cost_usd: 0.003517 latency_ms: 3771
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/cli.py:858-866 correctness / super-usage / Use of super() inside list comprehension
+
+CASE flask-py-020
+  label: src/flask/sessions.py:321-321 security / signing key order puts oldest fallback first
+  cost_usd: 0.000556 latency_ms: 4045
+  accepted: 2 matched: 0 unmatched_expected: 1 unmatched_actual: 2
+  causes: wrong concern, false findings=2
+  finding 1: src/flask/sessions.py:318-329 correctness / key-selection-order / Potential incorrect key usage
+  finding 2: src/flask/sessions.py:318-329 maintainability / type-hinting / Type hint could lead to confusion
+
+CASE zod-ts-005
+  label: src/types.ts:595-596 security / unescaped hyphen makes a character range
+  cost_usd: 0.000922 latency_ms: 2649
+  accepted: 1 matched: 0 unmatched_expected: 1 unmatched_actual: 1
+  causes: wrong file, false findings=1
+  finding 1: deno/lib/types.ts:592-602 correctness / regex-issue / Potential Regex Misconfiguration
+
+CASE zod-ts-010
+  label: packages/zod/src/v4/core/checks.ts:54-54 correctness / LessThan check typed with the TooSmall issue
+  cost_usd: 0.000491 latency_ms: 4018
+  accepted: 2 matched: 1 unmatched_expected: 0 unmatched_actual: 1
+  causes: false findings=1
+  finding 1: packages/zod/src/v4/core/checks.ts:51-57 correctness / type-change / Type change in error reporting
+  finding 2: play.ts:1-4 maintainability / removed-import / Unused import removal
+

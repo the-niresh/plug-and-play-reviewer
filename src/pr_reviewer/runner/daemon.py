@@ -85,7 +85,7 @@ class RunnerDaemon:
         secret_store: SecretStore | None = None,
         review: ReviewExecutor | None = None,
         revocation: RevocationGate | None = None,
-        poll_interval_seconds: float = 1.0,
+        poll_interval_seconds: float = 10.0,
     ) -> None:
         self._runner_client = runner_client
         self._local_store = local_store

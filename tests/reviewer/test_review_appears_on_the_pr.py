@@ -157,6 +157,10 @@ def test_redelivered_webhook_does_not_post_a_second_comment(
         files=[PullRequestFile(path="app.py", status="modified", patch=PATCH, previous_path=None)],
     )
 
+    # Drive the claim loop fast. The production interval is 10s so a single runner does
+    # not hammer the control plane; this test asserts behaviour, not pacing, and would
+    # otherwise just wait out its own deadline.
+    monkeypatch.setattr(service, "_RUNNER_POLL_INTERVAL_SECONDS", 0.01)
     monkeypatch.setattr(service, "default_config_dir", lambda: tmp_path)
     monkeypatch.setattr(service, "get_secret_store", lambda **_kwargs: secrets)
     monkeypatch.setattr(

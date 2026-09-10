@@ -1,0 +1,152 @@
+{
+  "flask-py-001": {
+    "cost_usd": 0.0001959,
+    "latency_ms": 2027,
+    "accepted": [],
+    "suppressed": [],
+    "causes": [
+      "no finding"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 0
+  },
+  "flask-py-006": {
+    "cost_usd": 0.0002745,
+    "latency_ms": 2601,
+    "accepted": [
+      {
+        "concern": "maintainability",
+        "severity": "low",
+        "category": "import-replacement",
+        "file_path": "src/flask/__init__.py",
+        "line_start": 76,
+        "line_end": 82,
+        "title": "Importing Markup from markupsafe instead of flask",
+        "rationale": "Deprecated import for Markup may lead to future compatibility issues if it's removed from Flask.",
+        "evidence": [
+          "79|     if name == \"Markup\":",
+          "81|         from markupsafe import Markup"
+        ],
+        "confidence": 0.75
+      }
+    ],
+    "suppressed": [],
+    "causes": [
+      "wrong concern",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1
+  },
+  "flask-py-013": {
+    "cost_usd": 0.0003993,
+    "latency_ms": 3127,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "super-call-issue",
+        "file_path": "src/flask/cli.py",
+        "line_start": 858,
+        "line_end": 866,
+        "title": "Improper super call in list comprehension",
+        "rationale": "The change avoids potential issues with calling super() without arguments in Python versions prior to 3.12 within a list comprehension context.",
+        "evidence": [
+          "861|         # can't call no-arg super() inside list comprehension until Python 3.12",
+          "862|         super_convert = super().convert"
+        ],
+        "confidence": 0.9
+      }
+    ],
+    "suppressed": [],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0
+  },
+  "flask-py-020": {
+    "cost_usd": 0.0001866,
+    "latency_ms": 788,
+    "accepted": [],
+    "suppressed": [],
+    "causes": [
+      "no finding"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 0
+  },
+  "zod-ts-005": {
+    "cost_usd": 0.00092475,
+    "latency_ms": 3217,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "regex-validation",
+        "file_path": "deno/lib/types.ts",
+        "line_start": 592,
+        "line_end": 602,
+        "title": "Inconsistent regex for email validation",
+        "rationale": "The email regex pattern may lead to incorrect validation results since it allows characters that might not be appropriate for emails, and there is an inconsistency when matching allowed characters, particularly the hyphen.",
+        "evidence": [
+          "596|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+        ],
+        "confidence": 0.9
+      }
+    ],
+    "suppressed": [],
+    "causes": [
+      "wrong file",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1
+  },
+  "zod-ts-010": {
+    "cost_usd": 0.00046725,
+    "latency_ms": 3633,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "type mismatch",
+        "file_path": "packages/zod/src/v4/core/checks.ts",
+        "line_start": 51,
+        "line_end": 57,
+        "title": "Incorrect type in interface",
+        "rationale": "Changing the type from $ZodIssueTooSmall to $ZodIssueTooBig may introduce logic errors or unexpected behavior in how checks for 'less than' conditions are handled.",
+        "evidence": [
+          "54|   issc: errors.$ZodIssueTooBig<T>;"
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "maintainability",
+        "severity": "medium",
+        "category": "unused imports",
+        "file_path": "play.ts",
+        "line_start": 1,
+        "line_end": 4,
+        "title": "Removed unused import",
+        "rationale": "The type 'ZodArray' and 'ZodDiscriminatedUnion' are imported but not used, which can lead to confusion and bloat in code.",
+        "evidence": [
+          "2| import type { ZodArray, ZodDiscriminatedUnion } from \"zod/v4\";"
+        ],
+        "confidence": 0.7
+      }
+    ],
+    "suppressed": [],
+    "causes": [
+      "false findings=1"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 1
+  }
+}

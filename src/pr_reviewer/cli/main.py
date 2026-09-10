@@ -38,14 +38,20 @@ def run_setup(
 
     from pr_reviewer.runner.cli.setup_wizard import run_setup_wizard
 
-    return run_setup_wizard(
-        secrets=secrets,
-        argv=args,
-        read_secret=read_secret,
-        stdin=stdin,
-        stdout=stdout,
-        config_dir=config_dir,
-    )
+    try:
+        return run_setup_wizard(
+            secrets=secrets,
+            argv=args,
+            read_secret=read_secret,
+            stdin=stdin,
+            stdout=stdout,
+            config_dir=config_dir,
+        )
+    except KeyboardInterrupt:
+        # Ctrl+C at a prompt used to print a full traceback at the user. 130 is the
+        # conventional shell exit code for SIGINT.
+        print("\nsetup cancelled", file=sys.stderr)
+        return 130
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -1,0 +1,206 @@
+{
+  "flask-py-001": {
+    "cost_usd": 0.008056,
+    "latency_ms": 4681,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "logic-error",
+        "file_path": "src/flask/blueprints.py",
+        "line_start": 453,
+        "line_end": 467,
+        "title": "Logic for subdomain inheritance in nested blueprints has changed",
+        "rationale": "Previous code did not handle subdomain inheritance for nested blueprints; the new logic attempts to inherit parent's subdomain if child has none. However, changed conditional logic may have subtle effects, e.g. precedence between blueprint, parent, and options values. Thorough review is required to confirm correct behavior in all nesting scenarios. However, explicit test coverage for these cases is now present and passes.",
+        "evidence": [
+          "458|             if bp_subdomain is None:",
+          "459|                 bp_subdomain = blueprint.subdomain",
+          "461|             if state.subdomain is not None and bp_subdomain is None:",
+          "462|                 bp_options[\"subdomain\"] = state.subdomain",
+          "463|             elif bp_subdomain is not None:",
+          "464|                 bp_options[\"subdomain\"] = bp_subdomain"
+        ],
+        "confidence": 0.8
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-006": {
+    "cost_usd": 0.005796,
+    "latency_ms": 4122,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "import-path-change",
+        "file_path": "src/flask/__init__.py",
+        "line_start": 76,
+        "line_end": 82,
+        "title": "Restore deprecated `from flask import Markup`",
+        "rationale": "The `__getattr__` override now explicitly handles `Markup` (with a warning). Previously, only `escape` was handled. This restores support for `from flask import Markup`, but may risk subtle issues if users rely on older import patterns or if any import-time state differs. Because Markup is directly imported from markupsafe, this should generally be safe, but tracking imports via dynamic `__getattr__` can sometimes have surprising side effects (e.g., missing docstrings, type information, or unexpected setattr behavior), especially in runtime introspection, testing, or user code leveraging specialized import logic.",
+        "evidence": [
+          "79|     if name == \"Markup\":",
+          "80|         import warnings",
+          "81|         from markupsafe import Markup"
+        ],
+        "confidence": 0.8
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-013": {
+    "cost_usd": 0.006234,
+    "latency_ms": 3207,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "super-usage",
+        "file_path": "src/flask/cli.py",
+        "line_start": 858,
+        "line_end": 866,
+        "title": "Fix use of super() inside list comprehension",
+        "rationale": "The previous code used super() without arguments inside a list comprehension, which caused errors in some Python versions due to how Python handles closures. The fix introduces a variable holding the bound super().convert method, which is then correctly available inside the list comprehension. This resolves a runtime error when using the `--extra-files` or `--exclude-patterns` CLI options.",
+        "evidence": [
+          "861|         # can't call no-arg super() inside list comprehension until Python 3.12",
+          "862|         super_convert = super().convert",
+          "863|         return [super_convert(item, param, ctx) for item in items]"
+        ],
+        "confidence": 1.0
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-020": {
+    "cost_usd": 0.009271999999999999,
+    "latency_ms": 4828,
+    "schema_rejected": 0,
+    "grounding_rejected": 1,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "incorrect key order",
+        "file_path": "src/flask/sessions.py",
+        "line_start": 318,
+        "line_end": 329,
+        "title": "Signing key selection order was incorrect; now fixed",
+        "rationale": "The changed lines correct the order of keys so that the current secret key is in the expected position for itsdangerous, ensuring that new sessions are signed with the current key, and old fallbacks are only used to verify existing sessions. The prior version placed the active key last, which could cause subtle bugs in signing/verifying behavior.",
+        "evidence": [
+          "322|         keys: list[str | bytes] = []",
+          "323|         if fallbacks := app.config[\"SECRET_KEY_FALLBACKS\"]:",
+          "324|             keys.extend(fallbacks)",
+          "326|         keys.append(app.secret_key)  # itsdangerous expects current key at top"
+        ],
+        "confidence": 0.95
+      }
+    ],
+    "causes": [
+      "wrong concern",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  },
+  "zod-ts-005": {
+    "cost_usd": 0.019404,
+    "latency_ms": 6595,
+    "schema_rejected": 0,
+    "grounding_rejected": 2,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "regex-behavior",
+        "file_path": "deno/lib/types.ts",
+        "line_start": 592,
+        "line_end": 602,
+        "title": "Inconsistent escaping of hyphen in character class",
+        "rationale": "The regex for email validation changed the placement/escaping of the hyphen '-' in a character class, which affects the set of matched characters. If a hyphen is not last or escaped inside a character class (e.g. [A-Z0-9_+-\\.]), it may create an unintended range, leading to incorrect validation results. It\u2019s critical in email validation to be precise about allowed characters.",
+        "evidence": [
+          "596|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;",
+          "598|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_+\\-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+        ],
+        "confidence": 0.95
+      },
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "regex-behavior",
+        "file_path": "src/types.ts",
+        "line_start": 592,
+        "line_end": 598,
+        "title": "Escaped hyphen in character class for email regex",
+        "rationale": "Previously the hyphen '-' in the character class was potentially unescaped, which could result in an unintended character range. The escape in the new regex ([A-Z0-9_'+\\-\\.]) clarifies the intent to include the literal hyphen. Still, the character class is inconsistent with the second part ([A-Z0-9_+-]) which does not escape the hyphen, which might result in unexpected behaviors depending on engine implementation.",
+        "evidence": [
+          "595|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+\\-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+        ],
+        "confidence": 0.9
+      }
+    ],
+    "causes": [
+      "wrong concern",
+      "false findings=2"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 2,
+    "needs_human_match": false
+  },
+  "zod-ts-010": {
+    "cost_usd": 0.005842,
+    "latency_ms": 3005,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "type-correctness",
+        "file_path": "packages/zod/src/v4/core/checks.ts",
+        "line_start": 51,
+        "line_end": 57,
+        "title": "Incorrect issue interface type for less-than check",
+        "rationale": "The changed line modifies the 'issc' field type in '$ZodCheckLessThanInternals' from 'errors.$ZodIssueTooSmall<T>' to 'errors.$ZodIssueTooBig<T>'. This is a correctness fix: the less-than check should be associated with a 'too big' error, not 'too small'.",
+        "evidence": [
+          "-   issc: errors.$ZodIssueTooSmall<T>;",
+          "+   issc: errors.$ZodIssueTooBig<T>;"
+        ],
+        "confidence": 1.0
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  }
+}

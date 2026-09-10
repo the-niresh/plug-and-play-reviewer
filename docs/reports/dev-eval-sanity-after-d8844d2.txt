@@ -1,0 +1,61 @@
+6-dev gpt-4o-mini sanity after d8844d2 (variance evidence, not a baseline, not a scorecard)
+
+COMPARED WITH earlier gpt-4o-mini (docs/reports/dev-eval-sanity.txt)
+  cost                  0.002551 -> 0.002247
+  precision_per_finding 0.600 -> 0.333
+  recall_per_finding    0.500 -> 0.167
+  false findings/PR     0.333 -> 0.333
+  d8844d2 did not fire: flask-py-020 said session signing, not signing key
+  recall drop is model silence on flask-py-006 and flask-py-013, not a code change
+
+cases: flask-py-001, flask-py-006, flask-py-013, flask-py-020, zod-ts-005, zod-ts-010
+model: gpt-4o-mini
+repeats: 1
+retrieval: off
+cost_usd: 0.002247
+precision_per_finding: 0.333
+recall_per_finding: 0.167
+false_findings_per_pr: 0.333
+precision_per_case: 0.167
+recall_per_case: 0.167
+
+
+CASE flask-py-001
+  label: src/flask/blueprints.py:453-455 correctness / nested blueprint does not inherit subdomain
+  cost_usd: 0.000196 latency_ms: 1140
+  accepted: 0 matched: 0 unmatched_expected: 1 unmatched_actual: 0
+  causes: no finding
+
+CASE flask-py-006
+  label: src/flask/__init__.py:79-79 correctness / wrong name in getattr branch
+  cost_usd: 0.000103 latency_ms: 726
+  accepted: 0 matched: 0 unmatched_expected: 1 unmatched_actual: 0
+  causes: no finding
+
+CASE flask-py-013
+  label: src/flask/cli.py:861-861 correctness / no-arg super in a list comprehension
+  cost_usd: 0.000149 latency_ms: 1058
+  accepted: 0 matched: 0 unmatched_expected: 1 unmatched_actual: 0
+  causes: no finding
+
+CASE flask-py-020
+  label: src/flask/sessions.py:321-321 security / signing key order puts oldest fallback first
+  cost_usd: 0.000462 latency_ms: 3676
+  accepted: 1 matched: 0 unmatched_expected: 1 unmatched_actual: 1
+  causes: wrong concern, false findings=1
+  finding 1: src/flask/sessions.py:318-329 correctness / key-ordering / Improper key ordering for session signing
+
+CASE zod-ts-005
+  label: src/types.ts:595-596 security / unescaped hyphen makes a character range
+  cost_usd: 0.000974 latency_ms: 3547
+  accepted: 1 matched: 0 unmatched_expected: 1 unmatched_actual: 1
+  causes: wrong concern, false findings=1
+  finding 1: src/types.ts:592-598 correctness / regex / Potential issue with hyphen escape in regex
+
+CASE zod-ts-010
+  label: packages/zod/src/v4/core/checks.ts:54-54 correctness / LessThan check typed with the TooSmall issue
+  cost_usd: 0.000364 latency_ms: 3177
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: packages/zod/src/v4/core/checks.ts:51-57 correctness / type mismatch / Type mismatch in issc property
+

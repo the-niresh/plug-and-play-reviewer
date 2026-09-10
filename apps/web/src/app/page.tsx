@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { GithubMark } from "@/components/github-mark";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { PRODUCT_NAME, pageTitle, siteHost } from "@/lib/site";
 import type { ReviewFinding } from "@/lib/reviews";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: pageTitle(),
   description:
     "Private AI code review. Hosted jobs, a local runner, and your own LLM provider API key.",
@@ -25,6 +26,9 @@ const RAILWAY_DEPLOY_URL =
   // Railway's repo-deploy form. Verified 2026-09-11: the /new/github.com/<owner>/<repo>
   // shape 404s, this one resolves.
   "https://railway.com/new/template?template=https://github.com/the-niresh/plug-and-play-reviewer";
+
+const SELF_HOST_DOC_URL =
+  "https://github.com/the-niresh/plug-and-play-reviewer/blob/main/docs/SELF_HOST_CONTROL_PLANE.md";
 
 const EXAMPLE_FINDING: ReviewFinding = {
   id: "example-finding",
@@ -190,7 +194,20 @@ export default function HomePage() {
               An open source PR reviewer built for private AI code review.
               It is AI code review self hosted on a laptop or a server you run.
             </p>
-            <div className="mt-10 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
+            <p className="text-muted-foreground mt-8 max-w-prose text-sm leading-relaxed">
+              Self-hosting the control plane needs a GitHub App before you click either
+              button below. Read{" "}
+              <a
+                href={SELF_HOST_DOC_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="landing-link"
+              >
+                Self-host the control plane
+              </a>{" "}
+              first.
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
               <a
                 href={SIGN_IN_URL}
                 className={cn(buttonVariants({ size: "lg" }), "w-fit gap-2")}
@@ -454,7 +471,7 @@ export default function HomePage() {
               the whole point.
             </p>
             <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
-              One-click Render still needs your own secrets and database.
+              Self-hosting the control plane still needs your own secrets and database.
               Railway starts from a repo import until a public template id exists.
             </p>
             <Link

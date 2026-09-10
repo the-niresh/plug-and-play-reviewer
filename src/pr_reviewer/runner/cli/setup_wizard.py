@@ -327,6 +327,7 @@ def run_setup_wizard(
             config = _run_github_section(
                 config,
                 quick=quick,
+                targeted=parsed.section == "github",
                 stdin=input_stream,
                 stdout=output_stream,
             )
@@ -469,11 +470,23 @@ def _run_github_section(
     config: SetupConfig,
     *,
     quick: bool,
+    targeted: bool,
     stdin: TextIO,
     stdout: TextIO,
 ) -> SetupConfig:
     _print_section_header("github", stdout)
     if quick and config.hosted_origin:
+        return config
+    if not targeted and config.hosted_origin:
+        # Almost nobody changes this. It is the hosted control plane the runner claims jobs
+        # from, and the default is the public one. Asking every user to type a URL they do
+        # not know is a dead end, so the full wizard only reports it. Someone self-hosting
+        # runs `reviewer setup github` and gets the prompt.
+        from pr_reviewer.runner.cli.style import dim
+
+        stdout.write(f"Control plane: {config.hosted_origin}\n")
+        stdout.write(dim("Run `reviewer setup github` to point at your own.\n", stream=stdout))
+        stdout.flush()
         return config
     origin = prompt_with_default(
         "Hosted control plane origin (https://)",

@@ -32,3 +32,5 @@ CODEX-START.md
 .cursor/
 GOALS.md
 .gstack/
+.vercel
+.env*

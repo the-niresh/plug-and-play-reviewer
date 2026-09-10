@@ -1,0 +1,54 @@
+6-dev live sanity (not a baseline, not a scorecard)
+cases: flask-py-001, flask-py-006, flask-py-013, flask-py-020, zod-ts-005, zod-ts-010
+model: gpt-4o-mini
+repeats: 1
+retrieval: off
+cost_usd: 0.002551
+precision_per_finding: 0.600
+recall_per_finding: 0.500
+false_findings_per_pr: 0.333
+precision_per_case: 0.333
+recall_per_case: 0.500
+
+
+CASE flask-py-001
+  label: src/flask/blueprints.py:453-455 correctness / nested blueprint does not inherit subdomain
+  cost_usd: 0.000196 latency_ms: 2281
+  accepted: 0 matched: 0 unmatched_expected: 1 unmatched_actual: 0
+  causes: no finding
+
+CASE flask-py-006
+  label: src/flask/__init__.py:79-79 correctness / wrong name in getattr branch
+  cost_usd: 0.000303 latency_ms: 3220
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/__init__.py:76-82 correctness / import-shadowing / Importing Markup after condition check can shadow previous imports
+
+CASE flask-py-013
+  label: src/flask/cli.py:861-861 correctness / no-arg super in a list comprehension
+  cost_usd: 0.000395 latency_ms: 3141
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/cli.py:858-866 correctness / super-call-replacement / Inconsistent super call in refactored code
+
+CASE flask-py-020
+  label: src/flask/sessions.py:321-321 security / signing key order puts oldest fallback first
+  cost_usd: 0.000187 latency_ms: 768
+  accepted: 0 matched: 0 unmatched_expected: 1 unmatched_actual: 0
+  causes: no finding
+
+CASE zod-ts-005
+  label: src/types.ts:595-596 security / unescaped hyphen makes a character range
+  cost_usd: 0.000985 latency_ms: 3717
+  accepted: 1 matched: 0 unmatched_expected: 1 unmatched_actual: 1
+  causes: wrong concern, false findings=1
+  finding 1: src/types.ts:592-598 correctness / regex-escape / Potential regex escape issue for hyphen
+
+CASE zod-ts-010
+  label: packages/zod/src/v4/core/checks.ts:54-54 correctness / LessThan check typed with the TooSmall issue
+  cost_usd: 0.000486 latency_ms: 4276
+  accepted: 2 matched: 1 unmatched_expected: 0 unmatched_actual: 1
+  causes: false findings=1
+  finding 1: packages/zod/src/v4/core/checks.ts:51-57 correctness / type-mismatch / Incorrect Type Reference for 'issc'
+  finding 2: play.ts:1-4 maintainability / code-duplication / Redundant import in play.ts
+

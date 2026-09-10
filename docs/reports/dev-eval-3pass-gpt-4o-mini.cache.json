@@ -1,0 +1,394 @@
+{
+  "passes": [
+    {
+      "flask-py-001": {
+        "cost_usd": 0.0001971,
+        "latency_ms": 1146,
+        "accepted": [],
+        "causes": [
+          "no finding"
+        ],
+        "hit": false
+      },
+      "flask-py-006": {
+        "cost_usd": 0.000291,
+        "latency_ms": 2518,
+        "accepted": [
+          {
+            "concern": "maintainability",
+            "severity": "low",
+            "category": "code organization",
+            "file_path": "src/flask/__init__.py",
+            "line_start": 76,
+            "line_end": 82,
+            "title": "Inconsistent conditional check for name",
+            "rationale": "The check for 'name' is not consistent with potential values, which could lead to confusion or errors in the code's logic as it evolves.",
+            "evidence": [
+              "79|     if name == \"Markup\":",
+              "81|         from markupsafe import Markup"
+            ],
+            "confidence": 0.7
+          }
+        ],
+        "causes": [
+          "wrong concern",
+          "false findings=1"
+        ],
+        "hit": false
+      },
+      "flask-py-013": {
+        "cost_usd": 0.00058665,
+        "latency_ms": 4333,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "medium",
+            "category": "super-call",
+            "file_path": "src/flask/cli.py",
+            "line_start": 858,
+            "line_end": 866,
+            "title": "Potential inconsistency with super() behavior",
+            "rationale": "The change switches from a direct super() call to an assigned super_convert, which could lead to different behaviors depending on context due to version discrepancies indicated by the comment.",
+            "evidence": [
+              "863|         return [super_convert(item, param, ctx) for item in items]"
+            ],
+            "confidence": 0.75
+          },
+          {
+            "concern": "maintainability",
+            "severity": "low",
+            "category": "code clarity",
+            "file_path": "src/flask/cli.py",
+            "line_start": 858,
+            "line_end": 866,
+            "title": "Comment could be misleading",
+            "rationale": "The comment about super() and Python 3.12 might confuse future maintainers about the context in which this code should be changed again.",
+            "evidence": [
+              "861|         # can't call no-arg super() inside list comprehension until Python 3.12"
+            ],
+            "confidence": 0.7
+          },
+          {
+            "concern": "docs",
+            "severity": "low",
+            "category": "change log",
+            "file_path": "CHANGES.rst",
+            "line_start": 4,
+            "line_end": 11,
+            "title": "Missing issue details in change log",
+            "rationale": "While the change log mentions a fix, there is no description provided for what the error entailed, which can confuse users looking for details about CLI options.",
+            "evidence": [
+              "7| -   Fix error with ``--extra-files`` and ``--exclude-patterns`` CLI options.",
+              "8|     :issue:`5391`"
+            ],
+            "confidence": 0.6
+          }
+        ],
+        "causes": [
+          "false findings=2"
+        ],
+        "hit": true
+      },
+      "flask-py-020": {
+        "cost_usd": 0.0005417999999999999,
+        "latency_ms": 4541,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "high",
+            "category": "session-key-selection",
+            "file_path": "src/flask/sessions.py",
+            "line_start": 318,
+            "line_end": 329,
+            "title": "Return None when no secret key is present",
+            "rationale": "If the app secret key is not set, the function returns None, which could lead to issues if not handled properly elsewhere in the code.",
+            "evidence": [
+              "319|             return None"
+            ],
+            "confidence": 0.9
+          },
+          {
+            "concern": "correctness",
+            "severity": "medium",
+            "category": "session-key-selection",
+            "file_path": "src/flask/sessions.py",
+            "line_start": 318,
+            "line_end": 329,
+            "title": "Potential issue with key selection order",
+            "rationale": "The change in key selection order could affect how sessions are validated, particularly if an incorrect secret key is prioritized during decryption.",
+            "evidence": [
+              "326|         keys.append(app.secret_key)  # itsdangerous expects current key at top"
+            ],
+            "confidence": 0.75
+          }
+        ],
+        "causes": [
+          "wrong concern",
+          "false findings=2"
+        ],
+        "hit": false
+      },
+      "zod-ts-005": {
+        "cost_usd": 0.0010002000000000001,
+        "latency_ms": 3386,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "high",
+            "category": "regex-bug",
+            "file_path": "src/types.ts",
+            "line_start": 592,
+            "line_end": 598,
+            "title": "Potential email regex flaw",
+            "rationale": "The regex does not properly account for hyphens due to the escape character changes, potentially allowing invalid email formats.",
+            "evidence": [
+              "595|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+\\-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+            ],
+            "confidence": 0.75
+          }
+        ],
+        "causes": [
+          "wrong concern",
+          "false findings=1"
+        ],
+        "hit": false
+      },
+      "zod-ts-010": {
+        "cost_usd": 0.00037425,
+        "latency_ms": 3055,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "high",
+            "category": "type mismatch",
+            "file_path": "packages/zod/src/v4/core/checks.ts",
+            "line_start": 51,
+            "line_end": 57,
+            "title": "Incorrect type definition for 'issc'",
+            "rationale": "The type definition for 'issc' was changed from errors.$ZodIssueTooSmall to errors.$ZodIssueTooBig, which may lead to improper error handling for values that are too small, as the type no longer corresponds to the intended constraints.",
+            "evidence": [
+              "54|   issc: errors.$ZodIssueTooBig<T>;"
+            ],
+            "confidence": 0.9
+          }
+        ],
+        "causes": [
+          "hit"
+        ],
+        "hit": true
+      }
+    },
+    {
+      "flask-py-001": {
+        "cost_usd": 0.0001959,
+        "latency_ms": 887,
+        "accepted": [],
+        "causes": [
+          "no finding"
+        ],
+        "hit": false
+      },
+      "flask-py-006": {
+        "cost_usd": 0.000102,
+        "latency_ms": 732,
+        "accepted": [],
+        "causes": [
+          "no finding"
+        ],
+        "hit": false
+      },
+      "flask-py-013": {
+        "cost_usd": 0.00014745,
+        "latency_ms": 763,
+        "accepted": [],
+        "causes": [
+          "no finding"
+        ],
+        "hit": false
+      },
+      "flask-py-020": {
+        "cost_usd": 0.0006306,
+        "latency_ms": 4139,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "medium",
+            "category": "key rotation logic",
+            "file_path": "src/flask/sessions.py",
+            "line_start": 318,
+            "line_end": 329,
+            "title": "Revised key handling in session management",
+            "rationale": "The changed logic may result in the application behaving incorrectly regarding key rotation and session management, as it modifies the order of keys processed.",
+            "evidence": [
+              "318|         if not app.secret_key:",
+              "319|             return None",
+              "320|",
+              "321|         keys: list[str | bytes] = []",
+              "323|         if fallbacks := app.config[\"SECRET_KEY_FALLBACKS\"]:",
+              "326|         keys.append(app.secret_key)  # itsdangerous expects current key at top"
+            ],
+            "confidence": 0.75
+          }
+        ],
+        "causes": [
+          "wrong concern",
+          "false findings=1"
+        ],
+        "hit": false
+      },
+      "zod-ts-005": {
+        "cost_usd": 0.00092325,
+        "latency_ms": 2818,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "high",
+            "category": "regex-issue",
+            "file_path": "src/types.ts",
+            "line_start": 592,
+            "line_end": 598,
+            "title": "Ambiguous handling of hyphen in email regex",
+            "rationale": "The regex does not properly handle hyphens at the end of the local part of the email address, which could lead to incorrect email validation.",
+            "evidence": [
+              "595|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+\\-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+            ],
+            "confidence": 0.75
+          }
+        ],
+        "causes": [
+          "wrong concern",
+          "false findings=1"
+        ],
+        "hit": false
+      },
+      "zod-ts-010": {
+        "cost_usd": 0.0003753,
+        "latency_ms": 3575,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "medium",
+            "category": "type-mismatch",
+            "file_path": "packages/zod/src/v4/core/checks.ts",
+            "line_start": 51,
+            "line_end": 57,
+            "title": "Incorrect type definition for 'issc'",
+            "rationale": "The type for 'issc' was changed from 'errors.$ZodIssueTooSmall<T>' to 'errors.$ZodIssueTooBig<T>', which could indicate that the error handling mechanism related to numeric comparisons is incorrect.",
+            "evidence": [
+              "54|   issc: errors.$ZodIssueTooBig<T>;"
+            ],
+            "confidence": 0.75
+          }
+        ],
+        "causes": [
+          "hit"
+        ],
+        "hit": true
+      }
+    },
+    {
+      "flask-py-001": {
+        "cost_usd": 0.0001959,
+        "latency_ms": 903,
+        "accepted": [],
+        "causes": [
+          "no finding"
+        ],
+        "hit": false
+      },
+      "flask-py-006": {
+        "cost_usd": 0.0001026,
+        "latency_ms": 839,
+        "accepted": [],
+        "causes": [
+          "no finding"
+        ],
+        "hit": false
+      },
+      "flask-py-013": {
+        "cost_usd": 0.00038835,
+        "latency_ms": 4796,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "high",
+            "category": "super-call",
+            "file_path": "src/flask/cli.py",
+            "line_start": 858,
+            "line_end": 866,
+            "title": "Use of super() in list comprehension may lead to errors",
+            "rationale": "The inability to call no-arg super() within a list comprehension until Python 3.12 may lead to errors if this code is executed in an earlier version.",
+            "evidence": [
+              "862|         super_convert = super().convert",
+              "863|         return [super_convert(item, param, ctx) for item in items]"
+            ],
+            "confidence": 0.9
+          }
+        ],
+        "causes": [
+          "hit"
+        ],
+        "hit": true
+      },
+      "flask-py-020": {
+        "cost_usd": 0.0001866,
+        "latency_ms": 787,
+        "accepted": [],
+        "causes": [
+          "no finding"
+        ],
+        "hit": false
+      },
+      "zod-ts-005": {
+        "cost_usd": 0.0010341,
+        "latency_ms": 6280,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "high",
+            "category": "regex",
+            "file_path": "src/types.ts",
+            "line_start": 592,
+            "line_end": 598,
+            "title": "Incorrect regex for email validation",
+            "rationale": "The updated regex may not correctly validate all valid email formats due to potential issues with character classes and location of escaped hyphens.",
+            "evidence": [
+              "595|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+\\-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+            ],
+            "confidence": 0.75
+          }
+        ],
+        "causes": [
+          "wrong concern",
+          "false findings=1"
+        ],
+        "hit": false
+      },
+      "zod-ts-010": {
+        "cost_usd": 0.00046005000000000004,
+        "latency_ms": 3916,
+        "accepted": [
+          {
+            "concern": "correctness",
+            "severity": "medium",
+            "category": "type mismatch",
+            "file_path": "packages/zod/src/v4/core/checks.ts",
+            "line_start": 51,
+            "line_end": 57,
+            "title": "Incorrect type for issc",
+            "rationale": "Changing the type of 'issc' in interface can lead to type errors where this interface is used, if the type expectation is not aligned with the rest of the code.",
+            "evidence": [
+              "54|   issc: errors.$ZodIssueTooBig<T>;"
+            ],
+            "confidence": 0.9
+          }
+        ],
+        "causes": [
+          "hit"
+        ],
+        "hit": true
+      }
+    }
+  ],
+  "total_cost_usd": 0.007733100000000001
+}

@@ -2,7 +2,7 @@
 
 This guide is for a first hosted instance. It covers Vercel for the Next.js UI,
 and Render or Railway for the hosted API. For Render and Railway steps with
-screenshot placeholders, see [ONE_CLICK_DEPLOY.md](ONE_CLICK_DEPLOY.md). It does
+screenshot placeholders, see [SELF_HOST_CONTROL_PLANE.md](SELF_HOST_CONTROL_PLANE.md). It does
 not put model keys or diffs
 on the hosted plane. Those stay on the runner. Finding titles and rationale
 may be stored so the dashboard can show them.

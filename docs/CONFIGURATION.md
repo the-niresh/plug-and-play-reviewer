@@ -21,7 +21,7 @@ seven fields, nothing else, so do not go looking for an eighth variable.
 
 | Variable | What it does | What you get if you set it | What breaks if you do not |
 |---|---|---|---|
-| `DATABASE_URL` | Postgres connection string for job metadata. | The service can read and write jobs, installations, and findings. | The service never starts; nothing works. On Render this is filled in for you by the `reviewer-db` database in `deploy/render.yaml`. On Railway you must add it yourself. |
+| `DATABASE_URL` | Postgres connection string for job metadata. | The service can read and write jobs, installations, and findings. | The service never starts; nothing works. Bring your own Neon database on both Render and Railway. A Render free database is deleted 30 days after creation. |
 | `GITHUB_APP_ID` | The numeric id of your GitHub App. | The service can identify itself to GitHub's API. | Every GitHub API call fails. |
 | `GITHUB_APP_PRIVATE_KEY` | The App's PEM private key, full text including the `BEGIN`/`END` lines. | The service can mint installation tokens to read PRs and post reviews. | The service cannot authenticate as the App; nothing GitHub-related works. |
 | `GITHUB_OAUTH_CLIENT_ID` | The App's OAuth client id. | Users can start the GitHub sign-in flow. | Sign-in fails immediately. |
@@ -107,12 +107,12 @@ That login is an interactive OAuth flow that needs a browser.
 The Render and Railway deploy image is `python:3.12-slim` with only the Python
 virtual environment installed: no Node, no CLI binaries, no browser, and no
 way to complete that login inside a container. So a subscription-backed
-provider cannot be selected through one-click deploy. There is no workaround
+provider cannot be selected through the hosted deploy. There is no workaround
 for this; it is a property of running headless in a container. This kind of
 provider is a runner capability, chosen in `reviewer setup`, on a machine
 where you have a real terminal and a browser to log in with.
 
 ## See also
 
-- [ONE_CLICK_DEPLOY.md](ONE_CLICK_DEPLOY.md) - deploying the control plane
+- [SELF_HOST_CONTROL_PLANE.md](SELF_HOST_CONTROL_PLANE.md) - deploying the control plane
 - [SELF_HOSTING.md](SELF_HOSTING.md) - installing and running the runner

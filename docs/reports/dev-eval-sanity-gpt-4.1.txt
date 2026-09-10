@@ -1,0 +1,70 @@
+6-dev gpt-4.1 comparison (evidence only, not a baseline, not a scorecard)
+
+DECISION
+  Keep gpt-4o-mini as the default generate model.
+  Do not switch default generation to gpt-4.1 based on this run.
+  gpt-4.1 may be useful later as an optional escalation path, not by default.
+
+COMPARED WITH gpt-4o-mini (docs/reports/dev-eval-sanity.txt)
+  cost                  0.002551 -> 0.054604 (21x)
+  precision_per_finding 0.600 -> 0.571
+  recall_per_finding    0.500 -> 0.667
+  false findings/PR     0.333 -> 0.500
+  extra hit: flask-py-001
+  hard misses stayed: flask-py-020 and zod-ts-005 (wrong concern)
+
+cases: flask-py-001, flask-py-006, flask-py-013, flask-py-020, zod-ts-005, zod-ts-010
+model: gpt-4.1
+repeats: 1
+retrieval: off
+cost_usd: 0.054604
+precision_per_finding: 0.571
+recall_per_finding: 0.667
+false_findings_per_pr: 0.500
+precision_per_case: 0.667
+recall_per_case: 0.667
+
+
+CASE flask-py-001
+  label: src/flask/blueprints.py:453-455 correctness / nested blueprint does not inherit subdomain
+  cost_usd: 0.008056 latency_ms: 4681
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/blueprints.py:453-467 correctness / logic-error / Logic for subdomain inheritance in nested blueprints has changed
+
+CASE flask-py-006
+  label: src/flask/__init__.py:79-79 correctness / wrong name in getattr branch
+  cost_usd: 0.005796 latency_ms: 4122
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/__init__.py:76-82 correctness / import-path-change / Restore deprecated `from flask import Markup`
+
+CASE flask-py-013
+  label: src/flask/cli.py:861-861 correctness / no-arg super in a list comprehension
+  cost_usd: 0.006234 latency_ms: 3207
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/cli.py:858-866 correctness / super-usage / Fix use of super() inside list comprehension
+
+CASE flask-py-020
+  label: src/flask/sessions.py:321-321 security / signing key order puts oldest fallback first
+  cost_usd: 0.009272 latency_ms: 4828
+  accepted: 1 matched: 0 unmatched_expected: 1 unmatched_actual: 1
+  causes: wrong concern, false findings=1
+  finding 1: src/flask/sessions.py:318-329 correctness / incorrect key order / Signing key selection order was incorrect; now fixed
+
+CASE zod-ts-005
+  label: src/types.ts:595-596 security / unescaped hyphen makes a character range
+  cost_usd: 0.019404 latency_ms: 6595
+  accepted: 2 matched: 0 unmatched_expected: 1 unmatched_actual: 2
+  causes: wrong concern, false findings=2
+  finding 1: deno/lib/types.ts:592-602 correctness / regex-behavior / Inconsistent escaping of hyphen in character class
+  finding 2: src/types.ts:592-598 correctness / regex-behavior / Escaped hyphen in character class for email regex
+
+CASE zod-ts-010
+  label: packages/zod/src/v4/core/checks.ts:54-54 correctness / LessThan check typed with the TooSmall issue
+  cost_usd: 0.005842 latency_ms: 3005
+  accepted: 1 matched: 1 unmatched_expected: 0 unmatched_actual: 0
+  causes: hit
+  finding 1: packages/zod/src/v4/core/checks.ts:51-57 correctness / type-correctness / Incorrect issue interface type for less-than check
+

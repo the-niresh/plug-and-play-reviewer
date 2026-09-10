@@ -1,0 +1,256 @@
+{
+  "zod-ts-013": {
+    "ok": true,
+    "cost_usd": 0.0008205,
+    "latency_ms": 6890,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "duplicate_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "inclusive-comparison",
+        "file_path": "packages/zod/src/v4/classic/tests/file.test.ts",
+        "line_start": 43,
+        "line_end": 43,
+        "title": "Incorrect file size minimum message",
+        "rationale": "The test checks for a minimum file size, using >=5 bytes instead of >5 bytes. This may lead to incorrect validation results.",
+        "evidence": [
+          "43|         \"message\": \"Too small: expected file to have >=5 bytes\""
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "inclusive-comparison",
+        "file_path": "packages/zod/src/v4/classic/tests/file.test.ts",
+        "line_start": 44,
+        "line_end": 44,
+        "title": "Incorrect file size minimum message",
+        "rationale": "The change to have inclusive in the minimum validation for file sizes could allow invalid files, affecting correctness.",
+        "evidence": [
+          "44|         \"message\": \"Too small: expected file to have >=5 bytes\""
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "inclusive-comparison",
+        "file_path": "packages/zod/src/v4/classic/tests/set.test.ts",
+        "line_start": 159,
+        "line_end": 159,
+        "title": "Incorrect set size minimum message",
+        "rationale": "The test checks for a minimum set size, using >=4 items instead of >4 items. This could lead to incorrect validation results.",
+        "evidence": [
+          "159|         \"message\": \"Too small: expected set to have >=4 items\""
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "inclusive-comparison",
+        "file_path": "packages/zod/src/v4/classic/tests/set.test.ts",
+        "line_start": 175,
+        "line_end": 175,
+        "title": "Incorrect set size maximum message",
+        "rationale": "The change to have inclusive in the maximum validation for set sizes could allow invalid sets, affecting correctness.",
+        "evidence": [
+          "175|         \"message\": \"Too big: expected set to have <=5 items\""
+        ],
+        "confidence": 0.9
+      }
+    ],
+    "dropped": []
+  },
+  "zod-ts-014": {
+    "ok": true,
+    "cost_usd": 0.00046064999999999995,
+    "latency_ms": 3862,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "duplicate_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "shallow-cloning",
+        "file_path": "packages/zod/src/v4/core/util.ts",
+        "line_start": 396,
+        "line_end": 399,
+        "title": "Potential issue with cloning non-array objects",
+        "rationale": "The function now fails to clone non-plain objects correctly if they are arrays, which may lead to unintended mutations of the original array.",
+        "evidence": [
+          "397|   if (isPlainObject(o)) return { ...o };",
+          "398|   if (Array.isArray(o)) return [...o];",
+          "399|   return o;"
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "array-equality",
+        "file_path": "packages/zod/src/v4/classic/tests/default.test.ts",
+        "line_start": 331,
+        "line_end": 331,
+        "title": "Incorrect expectation for array clones",
+        "rationale": "The test expectation that two results are not the same instance might be misleading, since they are expected to be equal values, but they shouldn't be the same object reference. This can create confusion in understanding the test results.",
+        "evidence": [
+          "331|   expect(result1).not.toBe(result2);"
+        ],
+        "confidence": 0.85
+      }
+    ],
+    "dropped": []
+  },
+  "zod-ts-017": {
+    "ok": true,
+    "cost_usd": 0.0001461,
+    "latency_ms": 881,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "duplicate_rejected": 0,
+    "accepted": [],
+    "dropped": []
+  },
+  "zod-ts-018": {
+    "ok": true,
+    "cost_usd": 0.0004191,
+    "latency_ms": 3140,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "duplicate_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "logical-error",
+        "file_path": "packages/zod/src/v4/core/schemas.ts",
+        "line_start": 2354,
+        "line_end": 2356,
+        "title": "Potential fall-through in discriminator logic",
+        "rationale": "Union fallback could lead to unintended matching, which may not align with expected behavior.",
+        "evidence": [
+          "2354|       if (def.unionFallback || ctx.direction === \"backward\") {",
+          "2355|         return _super(payload, ctx);"
+        ],
+        "confidence": 0.75
+      }
+    ],
+    "dropped": []
+  },
+  "zod-ts-020": {
+    "ok": true,
+    "cost_usd": 0.001266,
+    "latency_ms": 4475,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "duplicate_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "prototype pollution",
+        "file_path": "packages/zod/src/v4/core/errors.ts",
+        "line_start": 268,
+        "line_end": 269,
+        "title": "Potential prototype pollution vulnerability with '__proto__' manipulation",
+        "rationale": "Using '__proto__' could inadvertently modify the prototype of an object, which can affect all instances inheriting from that prototype, leading to potentially undesirable behavior or security issues.",
+        "evidence": [
+          "268|     if (key === '__proto__') {",
+          "269|       Object.defineProperty(obj, key, { value: make(), writable: true, enumerable: true, configurable: true });"
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "prototype pollution",
+        "file_path": "packages/zod/src/v3/ZodError.ts",
+        "line_start": 245,
+        "line_end": 246,
+        "title": "Potential prototype pollution vulnerability with '__proto__' manipulation",
+        "rationale": "Similar to previous finding, manipulating '__proto__' could lead to unintended prototype changes, which can result in security vulnerabilities or logic errors in the application.",
+        "evidence": [
+          "245|               if (el === '__proto__') {",
+          "246|                 Object.defineProperty(curr, el, {",
+          "247|                   value: { _errors: [] },",
+          "248|                   writable: true,",
+          "249|                   enumerable: true,",
+          "250|                   configurable: true,",
+          "251|                 });"
+        ],
+        "confidence": 0.9
+      }
+    ],
+    "dropped": []
+  },
+  "zod-ts-021": {
+    "ok": true,
+    "cost_usd": 0.0006579,
+    "latency_ms": 3424,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "duplicate_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "regex-limits",
+        "file_path": "packages/zod/src/v4/core/regexes.ts",
+        "line_start": 89,
+        "line_end": 89,
+        "title": "Domain regex may incorrectly match TLDs",
+        "rationale": "The regex allows TLDs longer than the 63-character limit, potentially leading to acceptance of invalid domain names.",
+        "evidence": [
+          "89| export const domain: RegExp = /^(?=.{1,253}$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,63}$/;"
+        ],
+        "confidence": 0.95
+      }
+    ],
+    "dropped": []
+  },
+  "zod-ts-012": {
+    "ok": true,
+    "cost_usd": 0.0014277,
+    "latency_ms": 4115,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "duplicate_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "inconsistent behavior in mergeDefs",
+        "file_path": "packages/zod/src/v4/core/util.ts",
+        "line_start": 605,
+        "line_end": 605,
+        "title": "Potential merging behavior change",
+        "rationale": "The change in how mergeDefs is used could lead to inconsistent behavior in property definitions when merging schemas.",
+        "evidence": [
+          "605|   const def = mergeDefs(schema._zod.def, {"
+        ],
+        "confidence": 0.75
+      },
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "inconsistent handling of optional properties",
+        "file_path": "packages/zod/src/v4/core/util.ts",
+        "line_start": 689,
+        "line_end": 689,
+        "title": "Unrecognized key error may mislead users",
+        "rationale": "The checks for unrecognized keys might confuse users if the schema does not explicitly support certain key definitions.",
+        "evidence": [
+          "689|           if (!(key in shape)) {"
+        ],
+        "confidence": 0.85
+      }
+    ],
+    "dropped": []
+  }
+}

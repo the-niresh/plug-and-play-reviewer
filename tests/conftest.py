@@ -94,3 +94,14 @@ def clean_database() -> Iterator[None]:
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
     del session, exitstatus
     close_pool()
+
+@pytest.fixture(autouse=True)
+def _isolate_runner_config(tmp_path_factory, monkeypatch):
+    """Keep tests out of the developer's real ~/.config/pr-reviewer.
+
+    default_config_dir() resolves from XDG_CONFIG_HOME, and any test that builds a real
+    SecretStore or runs the setup wizard without passing config_dir writes there. One did:
+    a live setup.json was found holding the fixture value https://control.example.test,
+    which pointed a real runner at a control plane that does not exist.
+    """
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path_factory.mktemp("xdg-config")))

@@ -1,9 +1,14 @@
-# One-click deploy of the hosted control plane
+# Self-host the control plane
 
 This guide deploys the **hosted control plane only**. It does not deploy the
 local runner. Source, diffs, and model keys must stay on a machine you control.
 
-Both one-click targets start `pr-reviewer-api`:
+This is a bootstrap, not a single click. Five of the seven variables below
+only exist after you create a GitHub App by hand, and the deploy needs a
+second pass once you know your own URL. Read the next section before you
+press deploy.
+
+Both deploy targets start `pr-reviewer-api`:
 
 - Render reads `deploy/render.yaml` and runs
   `/app/.venv/bin/pr-reviewer-api`.
@@ -17,21 +22,48 @@ will be `plugandplayreviewer.online`, but it is not pointed yet.
 See [CONFIGURATION.md](CONFIGURATION.md) for the full list of control-plane
 variables and what each one does.
 
-## What you need before you start
+## Before you click: create a GitHub App
 
-1. A Render account or a Railway account.
-2. A Postgres database. On Render, `deploy/render.yaml` provisions one for you
-   (`reviewer-db`) and wires `DATABASE_URL` automatically, so you can skip this
-   step there. On Railway, bring your own Postgres (for example Neon) and copy
-   the connection string.
-3. A GitHub App with:
-   - App id (`GITHUB_APP_ID`)
-   - PEM private key (`GITHUB_APP_PRIVATE_KEY`)
-   - OAuth client id and secret (`GITHUB_OAUTH_CLIENT_ID`,
-     `GITHUB_OAUTH_CLIENT_SECRET`)
-   - Webhook secret (`GITHUB_WEBHOOK_SECRET`)
+Deploying without a GitHub App does not fail loudly. The service boots
+**healthy** and `/health` returns `200`. It just silently rejects every
+webhook, because there is no App to sign them. You get a working-looking
+service that reviews nothing, and nothing in the logs tells you that.
+
+Create the GitHub App first, and collect five values from it before you
+touch Render or Railway:
+
+1. App id (`GITHUB_APP_ID`) - the GitHub App settings page, top of the page.
+2. PEM private key (`GITHUB_APP_PRIVATE_KEY`) - GitHub App settings, generate
+   and download the PEM. Paste the full text including the `BEGIN` and `END`
+   lines.
+3. OAuth client id (`GITHUB_OAUTH_CLIENT_ID`) - GitHub App settings, OAuth
+   credentials section.
+4. OAuth client secret (`GITHUB_OAUTH_CLIENT_SECRET`) - same section as the
+   client id.
+5. Webhook secret (`GITHUB_WEBHOOK_SECRET`) - GitHub App settings, webhook
+   section. You choose this value yourself when you create the App.
 
 Do not commit any of these values.
+
+## The bootstrap sequence
+
+The App's webhook URL and OAuth callback both need your deployed URL, which
+does not exist until after the first deploy. So this takes two passes: deploy
+once with a placeholder origin, then set the real one and redeploy.
+
+1. Create the GitHub App and collect the five values above.
+2. Deploy on Render or import on
+   Railway.
+3. Copy the deployed URL.
+4. Set `PR_REVIEWER_HOSTED_ORIGIN` to that URL.
+5. Set the App's webhook URL to `<url>/api/github/webhook`.
+6. Set the App's callback URL to `<url>/api/auth/github/callback`.
+7. Redeploy.
+8. Verify: `curl <url>/health` returns 200, then open a pull request and
+   confirm a job is queued.
+
+Skipping step 5 is the mistake people actually make. It gives you a healthy
+service that reviews nothing, because GitHub has nowhere to send events.
 
 ## Environment variables
 
@@ -40,7 +72,7 @@ the names only. Values come from your accounts.
 
 | Name | Where to get the value |
 |---|---|
-| `DATABASE_URL` | On Render, filled in automatically from the `reviewer-db` database in `deploy/render.yaml`. You do not need to set it. On Railway, use your own Postgres connection string and add `sslmode=verify-full` if it is not already there. |
+| `DATABASE_URL` | Bring your own Postgres. Use Neon: its free tier does not expire, while a Render free database is deleted 30 days after it is created and takes every job record with it. Paste the pooled connection string from your Neon dashboard. Add `sslmode=verify-full` if it is not already there. |
 | `GITHUB_APP_ID` | GitHub App settings page. Numeric id. |
 | `GITHUB_APP_PRIVATE_KEY` | GitHub App settings. Generate or download the PEM. Paste the full text including `BEGIN` and `END` lines. |
 | `GITHUB_OAUTH_CLIENT_ID` | GitHub App settings, OAuth credentials section. |
@@ -64,7 +96,7 @@ service. Model keys belong on the runner only.
 
 ### Step 2. Fill environment variables
 
-Render already provisions `reviewer-db` and wires `DATABASE_URL` for you. In
+Set `DATABASE_URL` to your Neon connection string. In
 the Blueprint or service **Environment** tab, add the remaining six variables
 from the table above. For the first pass you can set
 `PR_REVIEWER_HOSTED_ORIGIN` to a placeholder such as
@@ -153,7 +185,9 @@ In GitHub App settings, set:
 - Callback: `https://<origin>/api/auth/github/callback`
 - Webhook: `https://<origin>/api/github/webhook`
 
-Until all three match, OAuth and webhooks will not reach this instance.
+Until all three match, OAuth and webhooks will not reach this instance. A
+service can look healthy while this step is still wrong: `/health` only
+checks that the process is up, not that GitHub can reach it.
 
 ## What this does not deploy
 
@@ -168,5 +202,7 @@ Until all three match, OAuth and webhooks will not reach this instance.
 - Process up, database down: `/health` is `200`, `/ready` is not.
 - Wrong port: the API reads `PORT` from the environment and defaults to `8000`.
 - Migrations missing: check that `preDeployCommand` ran `pr-reviewer-db-migrate`.
+- Healthy but no reviews: the webhook or callback URL does not match the
+  deployed origin. Recheck the three settings in the section above.
 
 See also [DEPLOY.md](DEPLOY.md) for the Vercel UI and a combined picture.

@@ -69,7 +69,11 @@ _SESSION_SECRET_NAME = "local_session_secret"
 _RUNNER_CREDENTIAL_SECRET = "runner_credential"
 _LOCAL_STATE_DB_NAME = "local_state.sqlite3"
 _RUNNER_STOP_DEADLINE_SECONDS = 1.0
-_RUNNER_POLL_INTERVAL_SECONDS = 0.1
+# How often the runner asks the control plane for work. At 0.1s a single runner made
+# ~864,000 requests a day, which reads as abuse on any shared host and is pointless: a
+# review that starts up to 10 seconds later is indistinguishable to a human. Both loops
+# that use this wait on an Event, so stop() still returns immediately.
+_RUNNER_POLL_INTERVAL_SECONDS = 10.0
 
 logger = logging.getLogger(__name__)
 

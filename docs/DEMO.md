@@ -120,7 +120,7 @@ from human replies automatically.
 [DEPLOY.md](DEPLOY.md) documents Render and Railway steps. A new instance
 still needs the owner's Neon `DATABASE_URL`, GitHub App secrets, and
 dashboard env vars. The live compose host at `reviewer.niresh.tech` is
-separate from a fresh one-click deploy.
+separate from a fresh self-hosted control plane.
 
 ## Published holdout baseline - ✅ measured
 

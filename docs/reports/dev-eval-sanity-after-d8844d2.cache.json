@@ -1,0 +1,134 @@
+{
+  "flask-py-001": {
+    "cost_usd": 0.0001959,
+    "latency_ms": 1140,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [],
+    "causes": [
+      "no finding"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-006": {
+    "cost_usd": 0.0001026,
+    "latency_ms": 726,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [],
+    "causes": [
+      "no finding"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-013": {
+    "cost_usd": 0.00014865,
+    "latency_ms": 1058,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [],
+    "causes": [
+      "no finding"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-020": {
+    "cost_usd": 0.0004623,
+    "latency_ms": 3676,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "key-ordering",
+        "file_path": "src/flask/sessions.py",
+        "line_start": 318,
+        "line_end": 329,
+        "title": "Improper key ordering for session signing",
+        "rationale": "The new implementation adds the current secret key at the bottom of the key list instead of the top, which can lead to failures in session validation when keys are rotated.",
+        "evidence": [
+          "318|         if not app.secret_key:",
+          "326|         keys.append(app.secret_key)  # itsdangerous expects current key at top"
+        ],
+        "confidence": 0.9
+      }
+    ],
+    "causes": [
+      "wrong concern",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  },
+  "zod-ts-005": {
+    "cost_usd": 0.00097365,
+    "latency_ms": 3547,
+    "schema_rejected": 0,
+    "grounding_rejected": 1,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "regex",
+        "file_path": "src/types.ts",
+        "line_start": 592,
+        "line_end": 598,
+        "title": "Potential issue with hyphen escape in regex",
+        "rationale": "The regex may allow an incorrect interpretation of hyphen usage in some contexts, affecting email validation accuracy.",
+        "evidence": [
+          "595|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+\\-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+        ],
+        "confidence": 0.75
+      }
+    ],
+    "causes": [
+      "wrong concern",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  },
+  "zod-ts-010": {
+    "cost_usd": 0.00036405,
+    "latency_ms": 3177,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "type mismatch",
+        "file_path": "packages/zod/src/v4/core/checks.ts",
+        "line_start": 51,
+        "line_end": 57,
+        "title": "Type mismatch in issc property",
+        "rationale": "Changing the type from $ZodIssueTooSmall to $ZodIssueTooBig can introduce logic errors in type checking and validation behavior, leading to incorrect application functionality.",
+        "evidence": [
+          "54|   issc: errors.$ZodIssueTooBig<T>;"
+        ],
+        "confidence": 0.9
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  }
+}

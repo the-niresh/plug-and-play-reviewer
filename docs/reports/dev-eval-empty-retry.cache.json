@@ -1,0 +1,210 @@
+{
+  "flask-py-001": {
+    "cost_usd": 0.00509385,
+    "latency_ms": 5399,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "blueprint-subdomain-inheritance",
+        "file_path": "src/flask/blueprints.py",
+        "line_start": 453,
+        "line_end": 467,
+        "title": "Subdomain inheritance for nested blueprints changes logic",
+        "rationale": "The new code alters how subdomain inheritance is handled for nested blueprints. If the parent's subdomain is set but the current blueprint's is not, it sets the child's to the parent's. However, if a subdomain is present in either, it selects the existing subdomain. This may differ from previous (potentially incorrect) behavior and deserves careful review to ensure all blueprints receive the desired subdomain handling and no accidental overrides happen.",
+        "evidence": [
+          "458|             if bp_subdomain is None:\n459|                 bp_subdomain = blueprint.subdomain\n460| \n461|             if state.subdomain is not None and bp_subdomain is None:\n462|                 bp_options[\"subdomain\"] = state.subdomain\n463|             elif bp_subdomain is not None:\n464|                 bp_options[\"subdomain\"] = bp_subdomain"
+        ],
+        "confidence": 0.8
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-006": {
+    "cost_usd": 0.0002769,
+    "latency_ms": 2465,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "maintainability",
+        "severity": "low",
+        "category": "code organization",
+        "file_path": "src/flask/__init__.py",
+        "line_start": 76,
+        "line_end": 82,
+        "title": "Import statement relocation",
+        "rationale": "The import statement for Markup is now conditionally imported based on the variable name, which may lead to code that is harder to follow and maintain.",
+        "evidence": [
+          "79|     if name == \"Markup\":",
+          "81|         from markupsafe import Markup"
+        ],
+        "confidence": 0.7
+      }
+    ],
+    "causes": [
+      "wrong concern",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  },
+  "flask-py-013": {
+    "cost_usd": 0.0035169,
+    "latency_ms": 3771,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "super-usage",
+        "file_path": "src/flask/cli.py",
+        "line_start": 858,
+        "line_end": 866,
+        "title": "Use of super() inside list comprehension",
+        "rationale": "The change assigns super().convert to a variable outside the list comprehension to avoid issues in Python versions prior to 3.12, where super() cannot be used with no arguments inside list comprehensions. This ensures compatibility and correct superclass method resolution.",
+        "evidence": [
+          "862|         super_convert = super().convert",
+          "863|         return [super_convert(item, param, ctx) for item in items]"
+        ],
+        "confidence": 1.0
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-020": {
+    "cost_usd": 0.0005559,
+    "latency_ms": 4045,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "key-selection-order",
+        "file_path": "src/flask/sessions.py",
+        "line_start": 318,
+        "line_end": 329,
+        "title": "Potential incorrect key usage",
+        "rationale": "Returning None when no secret key is defined may lead to unexpected behavior in session handling, especially if the expectation is for a session to always be retrievable.",
+        "evidence": [
+          "318|         if not app.secret_key:",
+          "319|             return None"
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "maintainability",
+        "severity": "medium",
+        "category": "type-hinting",
+        "file_path": "src/flask/sessions.py",
+        "line_start": 318,
+        "line_end": 329,
+        "title": "Type hint could lead to confusion",
+        "rationale": "The mixed type hinting may lead to confusion as to what types are expected in the list. This could complicate future modifications or understanding of the code.",
+        "evidence": [
+          "321|         keys: list[str | bytes] = []"
+        ],
+        "confidence": 0.75
+      }
+    ],
+    "causes": [
+      "wrong concern",
+      "false findings=2"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 2,
+    "needs_human_match": false
+  },
+  "zod-ts-005": {
+    "cost_usd": 0.00092235,
+    "latency_ms": 2649,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "regex-issue",
+        "file_path": "deno/lib/types.ts",
+        "line_start": 592,
+        "line_end": 602,
+        "title": "Potential Regex Misconfiguration",
+        "rationale": "The regex pattern has been changed which could affect email validation. The escape of the hyphen in the character class may have unintended consequences depending on intended matches.",
+        "evidence": [
+          "595|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+        ],
+        "confidence": 0.75
+      }
+    ],
+    "causes": [
+      "wrong file",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  },
+  "zod-ts-010": {
+    "cost_usd": 0.0004911,
+    "latency_ms": 4018,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "type-change",
+        "file_path": "packages/zod/src/v4/core/checks.ts",
+        "line_start": 51,
+        "line_end": 57,
+        "title": "Type change in error reporting",
+        "rationale": "The type of 'issc' has changed from 'ZodIssueTooSmall' to 'ZodIssueTooBig', which may lead to incorrect error handling in associated logic.",
+        "evidence": [
+          "54|   issc: errors.$ZodIssueTooBig<T>;"
+        ],
+        "confidence": 0.8
+      },
+      {
+        "concern": "maintainability",
+        "severity": "low",
+        "category": "removed-import",
+        "file_path": "play.ts",
+        "line_start": 1,
+        "line_end": 4,
+        "title": "Unused import removal",
+        "rationale": "The import of 'ZodArray' and 'ZodDiscriminatedUnion' have been removed, which can improve maintainability by reducing clutter, but if they were needed, it might cause issues.",
+        "evidence": [
+          "import type { ZodArray, ZodDiscriminatedUnion } from \"zod/v4\";"
+        ],
+        "confidence": 0.7
+      }
+    ],
+    "causes": [
+      "false findings=1"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  }
+}

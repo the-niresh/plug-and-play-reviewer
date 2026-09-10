@@ -1,0 +1,39 @@
+q2 reflection-threshold decision (evidence only, not a baseline, not a scorecard)
+
+DECISION
+  Keep REFLECTION_DROP_THRESHOLD = 0.0
+  Do not move it to 0.5.
+
+WHY
+  The 0.5 arm did not suppress any finding. Every accepted score in that
+  arm was 1.0. Precision 0.400 -> 0.500 and false/PR 0.500 -> 0.333
+  match generate-pass variance (zod-ts-010 extra finding was not
+  emitted; zod-ts-005 changed file). That is not a threshold effect.
+  Recall stayed 0.333. Unclear, so keep 0.0.
+
+SPEND
+  arm 0.0 recorded: 0.002448
+  arm 0.5 recorded: 0.002368
+  one 0.5 pass completed then the report print crashed: not written,
+  about 0.0024
+  recorded two-arm total: 0.004816
+  conservative q2 total including the lost print: about 0.0072
+  cap: 0.50
+  remaining: about 0.4928
+
+COMPARED
+  threshold            0.0      0.5
+  cost_usd             0.002448 0.002368
+  precision_per_finding 0.400    0.500
+  recall_per_finding    0.333    0.333
+  false_findings_per_pr 0.500    0.333
+  findings suppressed   0        0
+
+HITS both arms: flask-py-013, zod-ts-010
+MISSES both arms: flask-py-001 no finding, flask-py-020 no finding,
+  flask-py-006 wrong concern, zod-ts-005 wrong concern or wrong file
+
+Did not write scorecard.json. Did not use holdout. Did not run
+reviewer ablate (that CLI is holdout retrieval, not this comparison).
+Did not change matcher, datasets, model defaults, or
+EMPTY_GENERATE_RETRY_ENABLED.

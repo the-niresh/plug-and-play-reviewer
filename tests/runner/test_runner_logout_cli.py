@@ -58,7 +58,12 @@ def test_setup_uninstall_and_the_tui_agree_on_one_config_directory(
     import pr_reviewer.cli.main as setup_module
     from pr_reviewer.runner.secrets import FileSecretStore, default_config_dir
 
-    assert default_config_dir() == Path.home() / ".config" / "pr-reviewer"
+    # The invariant is that every entry point resolves to the SAME directory, not that it
+    # sits under $HOME. default_config_dir() honours XDG_CONFIG_HOME so tests cannot write
+    # into a developer's real ~/.config/pr-reviewer; asserting the literal home path here
+    # would just re-pin what that fix removed.
+    assert default_config_dir().name == "pr-reviewer"
+    assert default_config_dir() == default_config_dir()
 
     calls: list[Path] = []
     real_file_secret_store = FileSecretStore

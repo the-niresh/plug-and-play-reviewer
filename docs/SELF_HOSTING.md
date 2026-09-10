@@ -10,7 +10,7 @@ host above until it is.
 
 | Box | Where it runs | What it sees |
 |---|---|---|
-| **Hosted control plane** | Render, Railway, or similar. One-click deployable. | Job metadata, finding titles, rationale. Never source, diffs, or model keys. |
+| **Hosted control plane** | Render, Railway, or similar. See [SELF_HOST_CONTROL_PLANE.md](SELF_HOST_CONTROL_PLANE.md). | Job metadata, finding titles, rationale. Never source, diffs, or model keys. |
 | **Local runner** | Your laptop or a machine you control. Always local. | Source, diffs, model key, webhook URLs for notifications. |
 
 No deploy target in this repository runs the runner. `deploy/render.yaml` and
@@ -148,7 +148,7 @@ See [AGENT_CONTRACT.md](AGENT_CONTRACT.md) for JSON shapes and error codes.
 
 - [INSTALL.md](INSTALL.md) - install, setup, doctor, uninstall
 - [CONFIGURATION.md](CONFIGURATION.md) - every setting, control plane and runner
-- [ONE_CLICK_DEPLOY.md](ONE_CLICK_DEPLOY.md) - deploy your own hosted control plane
+- [SELF_HOST_CONTROL_PLANE.md](SELF_HOST_CONTROL_PLANE.md) - deploy your own hosted control plane
 - [CHANNELS.md](CHANNELS.md) - Slack, Telegram, Discord, and email notifications
 - [MCP.md](MCP.md) - drive reviews from another agent over stdio
 - [DEPLOY.md](DEPLOY.md) - Vercel UI plus Render or Railway API

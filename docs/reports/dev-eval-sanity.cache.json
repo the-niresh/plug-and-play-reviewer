@@ -1,0 +1,163 @@
+{
+  "flask-py-001": {
+    "cost_usd": 0.0001959,
+    "latency_ms": 2281,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [],
+    "causes": [
+      "no finding"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-006": {
+    "cost_usd": 0.000303,
+    "latency_ms": 3220,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "import-shadowing",
+        "file_path": "src/flask/__init__.py",
+        "line_start": 76,
+        "line_end": 82,
+        "title": "Importing Markup after condition check can shadow previous imports",
+        "rationale": "If there are other uses of 'Markup' in the code which occur before this conditional import, those will still reference the original import, potentially causing unexpected behavior.",
+        "evidence": [
+          "79|     if name == \"Markup\":",
+          "81|         from markupsafe import Markup"
+        ],
+        "confidence": 0.85
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-013": {
+    "cost_usd": 0.00039495000000000003,
+    "latency_ms": 3141,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "medium",
+        "category": "super-call-replacement",
+        "file_path": "src/flask/cli.py",
+        "line_start": 858,
+        "line_end": 866,
+        "title": "Inconsistent super call in refactored code",
+        "rationale": "The change alters how the super method is called which can impact the expected behavior of the method if not handled consistently.",
+        "evidence": [
+          "861|         # can't call no-arg super() inside list comprehension until Python 3.12",
+          "862|         super_convert = super().convert"
+        ],
+        "confidence": 0.75
+      }
+    ],
+    "causes": [
+      "hit"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "flask-py-020": {
+    "cost_usd": 0.0001866,
+    "latency_ms": 768,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [],
+    "causes": [
+      "no finding"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 0,
+    "needs_human_match": false
+  },
+  "zod-ts-005": {
+    "cost_usd": 0.00098505,
+    "latency_ms": 3717,
+    "schema_rejected": 0,
+    "grounding_rejected": 1,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "regex-escape",
+        "file_path": "src/types.ts",
+        "line_start": 592,
+        "line_end": 598,
+        "title": "Potential regex escape issue for hyphen",
+        "rationale": "Hyphens are unescaped in the regex character class which may lead to unexpected matching behavior.",
+        "evidence": [
+          "595|   /^(?!\\.)(?!.*\\.\\.)([A-Z0-9_'+\\-\\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\\-]*\\.)+[A-Z]{2,}$/i;"
+        ],
+        "confidence": 0.85
+      }
+    ],
+    "causes": [
+      "wrong concern",
+      "false findings=1"
+    ],
+    "matched": 0,
+    "unmatched_expected": 1,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  },
+  "zod-ts-010": {
+    "cost_usd": 0.00048555,
+    "latency_ms": 4276,
+    "schema_rejected": 0,
+    "grounding_rejected": 0,
+    "accepted": [
+      {
+        "concern": "correctness",
+        "severity": "high",
+        "category": "type-mismatch",
+        "file_path": "packages/zod/src/v4/core/checks.ts",
+        "line_start": 51,
+        "line_end": 57,
+        "title": "Incorrect Type Reference for 'issc'",
+        "rationale": "The type for 'issc' changed from 'errors.$ZodIssueTooSmall' to 'errors.$ZodIssueTooBig', which may lead to incorrect error reporting when the less than check fails.",
+        "evidence": [
+          "54|   issc: errors.$ZodIssueTooBig<T>;"
+        ],
+        "confidence": 0.9
+      },
+      {
+        "concern": "maintainability",
+        "severity": "low",
+        "category": "code-duplication",
+        "file_path": "play.ts",
+        "line_start": 1,
+        "line_end": 4,
+        "title": "Redundant import in play.ts",
+        "rationale": "The import of 'ZodArray' and 'ZodDiscriminatedUnion' is removed, indicating they were not used, which can lead to cleaner code.",
+        "evidence": [
+          "1| import { z } from \"zod/v4\";"
+        ],
+        "confidence": 0.8
+      }
+    ],
+    "causes": [
+      "false findings=1"
+    ],
+    "matched": 1,
+    "unmatched_expected": 0,
+    "unmatched_actual": 1,
+    "needs_human_match": false
+  }
+}

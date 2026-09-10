@@ -101,7 +101,14 @@ def default_config_dir() -> Path:
     meant a model key or runner credential set through one entry point was invisible to
     the others. This is the TUI's own convention (the one most people actually use), now
     the only one.
+
+    Honours XDG_CONFIG_HOME. Without it a test that forgot to pass config_dir wrote
+    straight into the developer's own ~/.config/pr-reviewer, which is how a fixture value
+    (https://control.example.test) was found in a real setup.json.
     """
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if xdg:
+        return Path(xdg) / "pr-reviewer"
     return Path.home() / ".config" / "pr-reviewer"
 
 

@@ -20,6 +20,7 @@ DOCS_AGENTS_PAGE = WEB_APP / "docs" / "agents" / "page.tsx"
 DASHBOARD_PAGE = WEB_APP / "dashboard" / "page.tsx"
 PROFILE_PAGE = WEB_APP / "dashboard" / "profile" / "page.tsx"
 SETTINGS_PAGE = WEB_APP / "dashboard" / "settings" / "page.tsx"
+SELF_HOST_CONTROL_PLANE_DOC = REPO / "docs" / "SELF_HOST_CONTROL_PLANE.md"
 
 READABILITY_PAGES = (
     LANDING_PAGE,
@@ -188,6 +189,19 @@ def test_landing_page_links_to_docs_and_dashboard() -> None:
     assert "SiteNav" in landing
     assert '"/docs"' in nav
     assert '"/dashboard"' in nav
+
+
+def test_self_host_bootstrap_is_never_called_one_click() -> None:
+    """Guards Task I: "one-click" must never describe the control-plane bootstrap again.
+
+    The bootstrap needs a hand-created GitHub App, a second deploy pass once the URL is
+    known, and a webhook URL set correctly, or the service boots healthy and reviews
+    nothing. Calling that "one-click" is what makes people skip the step that matters.
+    """
+    for path in (LANDING_PAGE, SELF_HOST_CONTROL_PLANE_DOC):
+        text = path.read_text(encoding="utf-8").lower()
+        assert "one-click" not in text, f"{path.relative_to(REPO)} still says one-click"
+        assert "one click" not in text, f"{path.relative_to(REPO)} still says one click"
 
 
 def test_docs_pages_pass_the_readability_gate() -> None:

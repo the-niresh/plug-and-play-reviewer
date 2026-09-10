@@ -1,0 +1,38 @@
+[
+  {
+    "name": "01-landing.png",
+    "url": "https://reviewer.niresh.tech/",
+    "status": 200,
+    "title": "PR Reviewer"
+  },
+  {
+    "name": "02-dashboard-logged-out.png",
+    "url": "https://reviewer.niresh.tech/dashboard",
+    "status": 200,
+    "title": "Dashboard | PR Reviewer"
+  },
+  {
+    "name": "03-connect-hosted.png",
+    "url": "https://reviewer.niresh.tech/connect",
+    "status": 200,
+    "title": "Choose repositories | PR Reviewer"
+  },
+  {
+    "name": "04-github-oauth.png",
+    "url": "https://github.com/login?client_id=Iv23lixZE1IwHodCw7y2&return_to=%2Flogin%2Foauth%2Fauthorize%3Fclient_id%3DIv23lixZE1IwHodCw7y2%26redirect_uri%3Dhttps%253A%252F%252Freviewer.niresh.tech%252Fapi%252Fauth%252Fgithub%252Fcallback%26state%3DclmM467EV0_8SQWBJaGnpfebj9adFeHyVnGRHUaiQTE",
+    "status": 200,
+    "title": "Sign in to GitHub · GitHub"
+  },
+  {
+    "name": "05-github-app.png",
+    "url": "https://github.com/apps/pr-reviewer-niresh",
+    "status": 200,
+    "title": "GitHub Apps - pr-reviewer-niresh · GitHub"
+  },
+  {
+    "name": "06-github-app-install.png",
+    "url": "https://github.com/login?integration=pr-reviewer-niresh&return_to=%2Fapps%2Fpr-reviewer-niresh%2Finstallations%2Fnew",
+    "status": 200,
+    "title": "Sign in to GitHub · GitHub"
+  }
+]

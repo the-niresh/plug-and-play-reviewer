@@ -1,0 +1,535 @@
+Holdout precision diagnosis
+cases: 7 holdout
+model_for_packing: gpt-4o-mini
+live_review: yes
+
+MATCHER-CACHE REPLAY (evidence only, not a published baseline)
+  commit: 9ce48c5 fix: match eval findings without category text
+  method: same 7 cached live reviews, new matcher, no new model calls
+  these numbers are evidence that category text was blocking real hits
+  they are not a new published baseline
+  do not write them into docs/reports/scorecard.json
+  do not quote them as a measured product score
+
+  precision_per_finding  0.000 -> 0.167
+  recall_per_finding     0.000 -> 0.286
+  false findings/PR      2.143 -> 1.429
+  needs_human_rate       0.000 -> 0.143
+
+  hits after 9ce48c5:
+    zod-ts-014  packages/zod/src/v4/core/util.ts:396-399  category=shallow-cloning
+    zod-ts-021  packages/zod/src/v4/core/regexes.ts:89    category=regex-limits
+  zod-ts-013 now needs_human_match (same concern, findings in test files)
+  zod-ts-020 still a concern mismatch (correctness vs labelled security)
+
+  remaining misses by cause:
+    wrong file     zod-ts-013  tests, not checks.ts
+    wrong lines    zod-ts-012  util.ts:605 and :689 vs 286-292
+    wrong lines    zod-ts-018  schemas.ts:2354-2356 vs comment at 2350
+    no finding     zod-ts-017  empty accepted list
+    wrong concern  zod-ts-020  correctness vs labelled security, lines overlap
+
+  gate for 9ce48c5: ruff 0, mypy src 0, dash grep empty,
+  pytest 1414 passed with landing/dashboard performance files ignored
+
+MATCHER RULES after 9ce48c5
+  A finding matches a label when ALL of these hold:
+  - concern is an exact string match
+  - file_path is an exact string match
+  - line ranges overlap (not an exact line match)
+  Category text is descriptive. It cannot turn a location hit into a miss.
+  needs_human_match is same concern and a different file.
+
+MATCHER RULES at diagnosis time (before 9ce48c5)
+  A finding matched a label only when ALL of these held:
+  - concern is an exact string match
+  - file_path is an exact string match
+  - line ranges overlap (not an exact line match)
+  - category matches after lowercasing and turning _ or space into -
+  A line-288 finding for a label at 286 would count as a hit if the
+  other three fields also match.
+  needs_human_match was only file-path disagreement when concern and
+  category already matched. A category wording miss was a silent miss.
+
+========================================================================
+CASE zod-ts-012
+========================================================================
+repository: colinhacks/zod
+sha: 3048d14bc7b803507302b8ee3cd1eeeffbd27396
+split: holdout
+source_evidence: Fix #4961
+
+LABELLED BUG
+  file_path: packages/zod/src/v4/core/util.ts
+  line_start: 286
+  line_end: 292
+  concern: correctness
+  category: cloneDef drops getters on chained extend
+
+PACKED DIFF
+packed_files: packages/zod/src/v4/core/util.ts, packages/zod/src/v4/core/tests/extend.test.ts, play.ts, packages/zod/jsr.json, packages/zod/package.json, packages/zod/src/v4/core/versions.ts
+omitted_files: (none)
+covers_all_changed_files: True
+prompt_tokens_heuristic: 3266
+labelled_lines_in_packed_new_side: yes (present=7/7)
+packed_new_side_range_for_labelled_file: 283-715
+packed_new_side_excerpt_around_label:
+    284| }
+    285| 
+    286| export function mergeDefs(...defs: Record<string, any>[]): any {
+    287|   const mergedDescriptors: Record<string, PropertyDescriptor> = {};
+    288| 
+    289|   for (const def of defs) {
+    290|     const descriptors = Object.getOwnPropertyDescriptors(def);
+    291|     Object.assign(mergedDescriptors, descriptors);
+    292|   }
+    293| 
+    294|   return Object.defineProperties({}, mergedDescriptors);
+
+REVIEW model=gpt-4o-mini cost_usd=0.0014 latency_ms=4115
+rejected: schema=0 grounding=0 duplicate=0
+accepted_count: 2
+dropped_by_reflection_count: 0
+matcher_matched: 0
+matcher_unmatched_expected: 1
+matcher_unmatched_actual: 2
+matcher_needs_human_match: False
+
+FINDINGS (accepted after reflection)
+finding 1
+  file_path: packages/zod/src/v4/core/util.ts
+  line_start: 605
+  line_end: 605
+  concern: correctness
+  category: inconsistent behavior in mergeDefs
+  title: Potential merging behavior change
+  confidence: 0.75
+  reflection_score: None
+  overlap_with_label: no (file=same, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+finding 2
+  file_path: packages/zod/src/v4/core/util.ts
+  line_start: 689
+  line_end: 689
+  concern: correctness
+  category: inconsistent handling of optional properties
+  title: Unrecognized key error may mislead users
+  confidence: 0.85
+  reflection_score: None
+  overlap_with_label: no (file=same, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+
+FINDINGS DROPPED BY REFLECTION
+  (none)
+
+========================================================================
+CASE zod-ts-013
+========================================================================
+repository: colinhacks/zod
+sha: 0313553db1bca4a023ff4767503befc025689188
+split: holdout
+source_evidence: fix(v4): make size-based Set/File min/max inclusive; update snapshots\n\n- Set and File min()/max() now emit inclusive: true\n- Aligns messages with Arrays (>= for min, <= for max)\n- Updates tests (inline snapshots) accordingly\n\nCloses #5091 (#5093)
+
+LABELLED BUG
+  file_path: packages/zod/src/v4/core/checks.ts
+  line_start: 470
+  line_end: 525
+  concern: correctness
+  category: size checks behave inclusive but say exclusive
+
+PACKED DIFF
+packed_files: packages/zod/src/v4/classic/tests/file.test.ts, packages/zod/src/v4/classic/tests/set.test.ts, packages/zod/src/v4/core/checks.ts
+omitted_files: (none)
+covers_all_changed_files: True
+prompt_tokens_heuristic: 769
+labelled_lines_in_packed_new_side: no (present=13/56, missing=[477, 478, 479, 480, 481, 482, 483, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493, 494, 495, 496, 497, 498, 499, 500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516, 517, 518, 519])
+packed_new_side_range_for_labelled_file: 470-526
+packed_new_side_excerpt_around_label:
+    470|         origin: util.getSizableOrigin(input),
+    471|         code: "too_big",
+    472|         maximum: def.maximum,
+    473|         inclusive: true,
+    474|         input,
+    475|         inst,
+    476|         continue: !def.abort,
+    520|         origin: util.getSizableOrigin(input),
+    521|         code: "too_small",
+    522|         minimum: def.minimum,
+    523|         inclusive: true,
+    524|         input,
+    525|         inst,
+    526|         continue: !def.abort,
+
+REVIEW model=gpt-4o-mini cost_usd=0.0008 latency_ms=6890
+rejected: schema=0 grounding=0 duplicate=0
+accepted_count: 4
+dropped_by_reflection_count: 0
+matcher_matched: 0
+matcher_unmatched_expected: 1
+matcher_unmatched_actual: 4
+matcher_needs_human_match: False
+
+FINDINGS (accepted after reflection)
+finding 1
+  file_path: packages/zod/src/v4/classic/tests/file.test.ts
+  line_start: 43
+  line_end: 43
+  concern: correctness
+  category: inclusive-comparison
+  title: Incorrect file size minimum message
+  confidence: 0.9
+  reflection_score: None
+  overlap_with_label: no (file=different, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+finding 2
+  file_path: packages/zod/src/v4/classic/tests/file.test.ts
+  line_start: 44
+  line_end: 44
+  concern: correctness
+  category: inclusive-comparison
+  title: Incorrect file size minimum message
+  confidence: 0.9
+  reflection_score: None
+  overlap_with_label: no (file=different, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+finding 3
+  file_path: packages/zod/src/v4/classic/tests/set.test.ts
+  line_start: 159
+  line_end: 159
+  concern: correctness
+  category: inclusive-comparison
+  title: Incorrect set size minimum message
+  confidence: 0.9
+  reflection_score: None
+  overlap_with_label: no (file=different, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+finding 4
+  file_path: packages/zod/src/v4/classic/tests/set.test.ts
+  line_start: 175
+  line_end: 175
+  concern: correctness
+  category: inclusive-comparison
+  title: Incorrect set size maximum message
+  confidence: 0.9
+  reflection_score: None
+  overlap_with_label: no (file=different, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+
+FINDINGS DROPPED BY REFLECTION
+  (none)
+
+========================================================================
+CASE zod-ts-014
+========================================================================
+repository: colinhacks/zod
+sha: e1f19482bbed3fbaa563a0d8e09f1a577cc58ac7
+split: holdout
+source_evidence: fix(v4): ensure array defaults are shallow-cloned (#5173)
+
+LABELLED BUG
+  file_path: packages/zod/src/v4/core/util.ts
+  line_start: 396
+  line_end: 398
+  concern: correctness
+  category: shallowClone skips arrays so defaults get shared
+
+PACKED DIFF
+packed_files: packages/zod/src/v4/classic/tests/default.test.ts, packages/zod/src/v4/core/util.ts
+omitted_files: (none)
+covers_all_changed_files: True
+prompt_tokens_heuristic: 265
+labelled_lines_in_packed_new_side: yes (present=3/3)
+packed_new_side_range_for_labelled_file: 395-401
+packed_new_side_excerpt_around_label:
+    395| 
+    396| export function shallowClone(o: any): any {
+    397|   if (isPlainObject(o)) return { ...o };
+    398|   if (Array.isArray(o)) return [...o];
+    399|   return o;
+    400| }
+
+REVIEW model=gpt-4o-mini cost_usd=0.0005 latency_ms=3862
+rejected: schema=0 grounding=0 duplicate=0
+accepted_count: 2
+dropped_by_reflection_count: 0
+matcher_matched: 0
+matcher_unmatched_expected: 1
+matcher_unmatched_actual: 2
+matcher_needs_human_match: False
+
+FINDINGS (accepted after reflection)
+finding 1
+  file_path: packages/zod/src/v4/core/util.ts
+  line_start: 396
+  line_end: 399
+  concern: correctness
+  category: shallow-cloning
+  title: Potential issue with cloning non-array objects
+  confidence: 0.9
+  reflection_score: None
+  overlap_with_label: yes (file=same, labelled_lines_overlapped=3)
+  category_equals_label: False
+  concern_equals_label: True
+finding 2
+  file_path: packages/zod/src/v4/classic/tests/default.test.ts
+  line_start: 331
+  line_end: 331
+  concern: correctness
+  category: array-equality
+  title: Incorrect expectation for array clones
+  confidence: 0.85
+  reflection_score: None
+  overlap_with_label: no (file=different, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+
+FINDINGS DROPPED BY REFLECTION
+  (none)
+
+========================================================================
+CASE zod-ts-017
+========================================================================
+repository: colinhacks/zod
+sha: 5b5745014af2a3b0ea6339ccd7bbcbdf845f7181
+split: holdout
+source_evidence: fix: respect `abort: true` in `.refine()` for checks with `when` function (#5681)
+
+LABELLED BUG
+  file_path: packages/zod/src/v4/core/schemas.ts
+  line_start: 222
+  line_end: 224
+  concern: correctness
+  category: abort true ignored when the check has a when function
+
+PACKED DIFF
+packed_files: packages/zod/src/v4/core/util.ts, packages/zod/src/v4/core/schemas.ts
+omitted_files: (none)
+covers_all_changed_files: True
+prompt_tokens_heuristic: 412
+labelled_lines_in_packed_new_side: yes (present=3/3)
+packed_new_side_range_for_labelled_file: 220-226
+packed_new_side_excerpt_around_label:
+    220|       let asyncResult!: Promise<unknown> | undefined;
+    221|       for (const ch of checks) {
+    222|         if (ch._zod.def.when) {
+    223|           if (util.explicitlyAborted(payload)) continue;
+    224|           const shouldRun = ch._zod.def.when(payload);
+    225|           if (!shouldRun) continue;
+    226|         } else if (isAborted) {
+
+REVIEW model=gpt-4o-mini cost_usd=0.0001 latency_ms=881
+rejected: schema=0 grounding=0 duplicate=0
+accepted_count: 0
+dropped_by_reflection_count: 0
+matcher_matched: 0
+matcher_unmatched_expected: 1
+matcher_unmatched_actual: 0
+matcher_needs_human_match: False
+
+FINDINGS (accepted after reflection)
+  (none)
+
+FINDINGS DROPPED BY REFLECTION
+  (none)
+
+========================================================================
+CASE zod-ts-018
+========================================================================
+repository: colinhacks/zod
+sha: c7a8ccc0d0fb4f2bd1c938b8d79873a8ebd6573e
+split: holdout
+source_evidence: fix: discriminatedUnion encode() with codec discriminator (#5769)
+
+LABELLED BUG
+  file_path: packages/zod/src/v4/core/schemas.ts
+  line_start: 2350
+  line_end: 2350
+  concern: correctness
+  category: discriminated union encode fails with a codec discriminator
+
+PACKED DIFF
+packed_files: packages/zod/src/v4/classic/tests/discriminated-unions.test.ts, packages/zod/src/v4/core/schemas.ts
+omitted_files: (none)
+covers_all_changed_files: True
+prompt_tokens_heuristic: 526
+labelled_lines_in_packed_new_side: yes (present=1/1)
+packed_new_side_range_for_labelled_file: 2347-2357
+packed_new_side_excerpt_around_label:
+    2348|       }
+    2349| 
+    2350|       // Fall back to union matching when the fast discriminator path fails:
+    2351|       // - explicitly enabled via unionFallback, or
+    2352|       // - during backward direction (encode), since codec-based discriminators
+
+REVIEW model=gpt-4o-mini cost_usd=0.0004 latency_ms=3140
+rejected: schema=0 grounding=0 duplicate=0
+accepted_count: 1
+dropped_by_reflection_count: 0
+matcher_matched: 0
+matcher_unmatched_expected: 1
+matcher_unmatched_actual: 1
+matcher_needs_human_match: False
+
+FINDINGS (accepted after reflection)
+finding 1
+  file_path: packages/zod/src/v4/core/schemas.ts
+  line_start: 2354
+  line_end: 2356
+  concern: correctness
+  category: logical-error
+  title: Potential fall-through in discriminator logic
+  confidence: 0.75
+  reflection_score: None
+  overlap_with_label: no (file=same, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: True
+
+FINDINGS DROPPED BY REFLECTION
+  (none)
+
+========================================================================
+CASE zod-ts-020
+========================================================================
+repository: colinhacks/zod
+sha: 573fcb75f7e08e8789cb9a1dbfa3a6128232d4af
+split: holdout
+source_evidence: fix(errors): use own-property semantics in every error-tree walker (#6213)
+
+LABELLED BUG
+  file_path: packages/zod/src/v3/ZodError.ts
+  line_start: 238
+  line_end: 258
+  concern: security
+  category: prototype pollution through __proto__ in the error path
+
+PACKED DIFF
+packed_files: packages/zod/src/v4/classic/tests/error-utils.test.ts, packages/zod/src/v4/core/errors.ts, packages/zod/src/v3/ZodError.ts, packages/zod/src/v3/tests/error.test.ts
+omitted_files: (none)
+covers_all_changed_files: True
+prompt_tokens_heuristic: 2689
+labelled_lines_in_packed_new_side: yes (present=21/21)
+packed_new_side_range_for_labelled_file: 238-263
+packed_new_side_excerpt_around_label:
+    238|             const el = issue.path[i]!;
+    239|             const terminal = i === issue.path.length - 1;
+    240| 
+    241|             // Create `el` as an own data property. A segment naming an inherited member
+    242|             // ("toString", "constructor") would otherwise read through to the prototype, and
+    243|             // assigning "__proto__" would hit the setter and walk into Object.prototype.
+    244|             if (!Object.prototype.hasOwnProperty.call(curr, el)) {
+    245|               if (el === "__proto__") {
+    246|                 Object.defineProperty(curr, el, {
+    247|                   value: { _errors: [] },
+    248|                   writable: true,
+    249|                   enumerable: true,
+    250|                   configurable: true,
+    251|                 });
+    252|               } else {
+    253|                 curr[el] = { _errors: [] };
+    254|               }
+    255|             }
+    256| 
+    257|             curr = curr[el];
+    258|             if (terminal) {
+    259|               curr._errors.push(mapper(issue));
+    260|             }
+
+REVIEW model=gpt-4o-mini cost_usd=0.0013 latency_ms=4475
+rejected: schema=0 grounding=0 duplicate=0
+accepted_count: 2
+dropped_by_reflection_count: 0
+matcher_matched: 0
+matcher_unmatched_expected: 1
+matcher_unmatched_actual: 2
+matcher_needs_human_match: False
+
+FINDINGS (accepted after reflection)
+finding 1
+  file_path: packages/zod/src/v4/core/errors.ts
+  line_start: 268
+  line_end: 269
+  concern: correctness
+  category: prototype pollution
+  title: Potential prototype pollution vulnerability with '__proto__' manipulation
+  confidence: 0.9
+  reflection_score: None
+  overlap_with_label: no (file=different, labelled_lines_overlapped=0)
+  category_equals_label: False
+  concern_equals_label: False
+finding 2
+  file_path: packages/zod/src/v3/ZodError.ts
+  line_start: 245
+  line_end: 246
+  concern: correctness
+  category: prototype pollution
+  title: Potential prototype pollution vulnerability with '__proto__' manipulation
+  confidence: 0.9
+  reflection_score: None
+  overlap_with_label: yes (file=same, labelled_lines_overlapped=2)
+  category_equals_label: False
+  concern_equals_label: False
+
+FINDINGS DROPPED BY REFLECTION
+  (none)
+
+========================================================================
+CASE zod-ts-021
+========================================================================
+repository: colinhacks/zod
+sha: 2a5164f5e753650c0dca74801c6cde38ca7be7d8
+split: holdout
+source_evidence: fix(v4): enforce RFC 1035 length limits in regexes.domain (#6035)
+
+LABELLED BUG
+  file_path: packages/zod/src/v4/core/regexes.ts
+  line_start: 89
+  line_end: 89
+  concern: correctness
+  category: domain regex has no RFC 1035 length limit
+
+PACKED DIFF
+packed_files: packages/zod/src/v4/classic/tests/string.test.ts, packages/docs/content/api.mdx, packages/zod/src/v4/core/regexes.ts
+omitted_files: (none)
+covers_all_changed_files: True
+prompt_tokens_heuristic: 834
+labelled_lines_in_packed_new_side: yes (present=1/1)
+packed_new_side_range_for_labelled_file: 86-92
+packed_new_side_excerpt_around_label:
+    87|   /^(?=.{1,253}\.?$)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[-0-9a-zA-Z]{0,61}[0-9a-zA-Z])?)*\.?$/;
+    88| 
+    89| export const domain: RegExp = /^(?=.{1,253}$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
+    90| 
+    91| export const httpProtocol: RegExp = /^https?$/;
+
+REVIEW model=gpt-4o-mini cost_usd=0.0007 latency_ms=3424
+rejected: schema=0 grounding=0 duplicate=0
+accepted_count: 1
+dropped_by_reflection_count: 0
+matcher_matched: 0
+matcher_unmatched_expected: 1
+matcher_unmatched_actual: 1
+matcher_needs_human_match: False
+
+FINDINGS (accepted after reflection)
+finding 1
+  file_path: packages/zod/src/v4/core/regexes.ts
+  line_start: 89
+  line_end: 89
+  concern: correctness
+  category: regex-limits
+  title: Domain regex may incorrectly match TLDs
+  confidence: 0.95
+  reflection_score: None
+  overlap_with_label: yes (file=same, labelled_lines_overlapped=1)
+  category_equals_label: False
+  concern_equals_label: True
+
+FINDINGS DROPPED BY REFLECTION
+  (none)
+

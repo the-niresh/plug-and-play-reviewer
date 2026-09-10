@@ -44,21 +44,21 @@ def test_render_blueprint_uses_one_web_process_with_boot_config_only() -> None:
         assert f"key: {key}" not in text
 
 
-def test_render_blueprint_provisions_and_wires_its_own_database() -> None:
-    """One-click means one-click: the user should not have to find and paste a
-    Postgres URL by hand. Render can provision Postgres with pgvector, and
-    db/migrations/0001_initial.sql already runs `create extension if not
-    exists vector`, so a Render-managed database works here.
+def test_render_blueprint_does_not_provision_a_render_database() -> None:
+    """Bring your own Neon database. Never a Render-managed free one.
+
+    A Render free Postgres is deleted 30 days after creation, plus a 14 day grace period,
+    and it would take every job record with it. Neon's free tier does not expire and
+    already provides the pgvector extension that db/migrations/0001_initial.sql needs.
+    So DATABASE_URL stays user-supplied and there is no databases: block to provision.
     """
     payload = yaml.safe_load(RENDER_BLUEPRINT.read_text(encoding="utf-8"))
-    databases = payload["databases"]
-    assert any(db["name"] == "reviewer-db" for db in databases)
+    assert "databases" not in payload
 
     env_vars = payload["services"][0]["envVars"]
     database_url_entry = next(entry for entry in env_vars if entry["key"] == "DATABASE_URL")
-    assert database_url_entry["fromDatabase"]["name"] == "reviewer-db"
-    assert database_url_entry["fromDatabase"]["property"] == "connectionString"
-    assert "sync" not in database_url_entry
+    assert database_url_entry["sync"] is False
+    assert "fromDatabase" not in database_url_entry
 
     # The other six control-plane variables are still user-supplied.
     manual_keys = {key for key in REQUIRED_BOOT_ENV if key != "DATABASE_URL"}

@@ -1,0 +1,54 @@
+6-dev reflection-threshold comparison (not a baseline, not a scorecard)
+cases: flask-py-001, flask-py-006, flask-py-013, flask-py-020, zod-ts-005, zod-ts-010
+model: gpt-4o-mini
+repeats: 1
+retrieval: off
+drop_threshold: 0.5
+cost_usd: 0.002368
+precision_per_finding: 0.500
+recall_per_finding: 0.333
+false_findings_per_pr: 0.333
+q2_spent_this_arm: 0.002368
+q2_spent_so_far_plus_this_arm: 0.007869
+
+
+CASE flask-py-001
+  label: src/flask/blueprints.py:453-455 correctness / nested blueprint does not inherit subdomain
+  cost_usd: 0.000196 latency_ms: 857
+  accepted: 0 suppressed: 0 matched: 0 unmatched_actual: 0
+  causes: no finding
+
+CASE flask-py-006
+  label: src/flask/__init__.py:79-79 correctness / wrong name in getattr branch
+  cost_usd: 0.000263 latency_ms: 2307
+  accepted: 1 suppressed: 0 matched: 0 unmatched_actual: 1
+  causes: wrong concern, false findings=1
+  finding 1: src/flask/__init__.py:76-82 maintainability score=1.0 / Restored deprecated import
+
+CASE flask-py-013
+  label: src/flask/cli.py:861-861 correctness / no-arg super in a list comprehension
+  cost_usd: 0.000441 latency_ms: 2895
+  accepted: 1 suppressed: 0 matched: 1 unmatched_actual: 0
+  causes: hit
+  finding 1: src/flask/cli.py:858-866 correctness score=1.0 / Potential issue with super() call in list comprehension
+
+CASE flask-py-020
+  label: src/flask/sessions.py:321-321 security / signing key order puts oldest fallback first
+  cost_usd: 0.000187 latency_ms: 708
+  accepted: 0 suppressed: 0 matched: 0 unmatched_actual: 0
+  causes: no finding
+
+CASE zod-ts-005
+  label: src/types.ts:595-596 security / unescaped hyphen makes a character range
+  cost_usd: 0.000914 latency_ms: 2710
+  accepted: 1 suppressed: 0 matched: 0 unmatched_actual: 1
+  causes: wrong concern, false findings=1
+  finding 1: src/types.ts:592-598 correctness score=1.0 / Potentially flawed email regex
+
+CASE zod-ts-010
+  label: packages/zod/src/v4/core/checks.ts:54-54 correctness / LessThan check typed with the TooSmall issue
+  cost_usd: 0.000368 latency_ms: 2592
+  accepted: 1 suppressed: 0 matched: 1 unmatched_actual: 0
+  causes: hit
+  finding 1: packages/zod/src/v4/core/checks.ts:51-57 correctness score=1.0 / Incorrect type assignment for 'issc'
+

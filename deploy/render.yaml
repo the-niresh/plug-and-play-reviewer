@@ -1,8 +1,12 @@
-databases:
-  - name: reviewer-db
-    plan: free
-    postgresMajorVersion: "16"
-
+# Render blueprint for the CONTROL PLANE only.
+#
+# This runs pr-reviewer-api. It never sees your source, your diffs, or your model key:
+# those stay on the runner, on your own machine. Do not add a model API key here. There is
+# a test that fails if anyone tries.
+#
+# There is deliberately no `databases:` block. A Render free Postgres is deleted 30 days
+# after creation (plus a 14 day grace period) and would take every job record with it.
+# Bring your own Neon database instead; its free tier does not expire.
 services:
   - type: web
     name: reviewer
@@ -14,13 +18,11 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      # The Postgres connection string. Render provisions and fills this in from
-      # the reviewer-db database above; you do not need to set it by hand.
+      # Postgres connection string. Use the pooled string from your Neon dashboard.
+      # The schema needs the pgvector extension, which Neon provides.
       # Without it the service cannot start.
       - key: DATABASE_URL
-        fromDatabase:
-          name: reviewer-db
-          property: connectionString
+        sync: false
       # The GitHub App's numeric id. Find it on the App's settings page.
       # Without it every request to the GitHub API is rejected.
       - key: GITHUB_APP_ID
@@ -43,7 +45,7 @@ services:
       - key: GITHUB_WEBHOOK_SECRET
         sync: false
       # The public https origin this service is reachable at, no trailing slash.
-      # Set it once you know the deployed hostname (or your custom domain).
-      # Without it, GitHub OAuth callback and App manifest URLs are wrong.
+      # Set it once you know the deployed hostname, then redeploy.
+      # Without it the OAuth callback and App manifest URLs are wrong.
       - key: PR_REVIEWER_HOSTED_ORIGIN
         sync: false

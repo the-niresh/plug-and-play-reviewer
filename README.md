@@ -29,7 +29,7 @@ a laptop or a server you run.
 
 | Box | Deploy | Sees |
 |---|---|---|
-| **Hosted control plane** | One-click on Render or Railway (`pr-reviewer-api` only) | Job metadata, finding titles, rationale |
+| **Hosted control plane** | Self-hosted on Render or Railway (`pr-reviewer-api` only) | Job metadata, finding titles, rationale |
 | **Local runner** | Always on your machine (`reviewer start`) | Source, diffs, model key |
 
 No deploy target in this repo runs the runner.
@@ -58,7 +58,7 @@ prices in this repository.
   `/ready` today.
 - A GitHub App pointed at that origin if you want live pull request events
 
-One-click Render still needs your own secrets and database. Railway starts from a repo import until a public template id exists.
+Self-hosting the control plane still needs your own secrets and database. Railway starts from a repo import until a public template id exists.
 Install the runner with [docs/INSTALL.md](docs/INSTALL.md) (`scripts/install-reviewer.sh`).
 The GitHub Release checksum path is documented in [docs/RELEASE.md](docs/RELEASE.md).
 
@@ -67,7 +67,7 @@ The GitHub Release checksum path is documented in [docs/RELEASE.md](docs/RELEASE
 | Doc | What it covers |
 |---|---|
 | [SELF_HOSTING.md](docs/SELF_HOSTING.md) | End-to-end flow from install to a claimed job |
-| [ONE_CLICK_DEPLOY.md](docs/ONE_CLICK_DEPLOY.md) | Render and Railway control plane deploy |
+| [SELF_HOST_CONTROL_PLANE.md](docs/SELF_HOST_CONTROL_PLANE.md) | Render and Railway control plane deploy |
 | [INSTALL.md](docs/INSTALL.md) | Install, setup, doctor, uninstall |
 | [DEPLOY.md](docs/DEPLOY.md) | Vercel UI plus hosted API |
 | [RUNBOOK.md](docs/RUNBOOK.md) | What is live and what needs the owner |
@@ -75,7 +75,7 @@ The GitHub Release checksum path is documented in [docs/RELEASE.md](docs/RELEASE
 | [CHANNELS.md](docs/CHANNELS.md) | Slack, Telegram, Discord, email |
 | [AGENT_CONTRACT.md](docs/AGENT_CONTRACT.md) | JSON shapes, exit codes, agent prompt |
 
-Start here: [Self-hosting](docs/SELF_HOSTING.md). Then [One-click deploy](docs/ONE_CLICK_DEPLOY.md) if you
+Start here: [Self-hosting](docs/SELF_HOSTING.md). Then [Self-host the control plane](docs/SELF_HOST_CONTROL_PLANE.md) if you
 want your own hosted instance.
 
 ## What is proved
