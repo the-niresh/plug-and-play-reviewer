@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from decimal import Decimal
 from typing import Any, Literal, Protocol
 
@@ -20,7 +21,7 @@ from pr_reviewer.security.prompt_boundaries import UntrustedText, wrap_untrusted
 
 ModelVendor = Literal["openai", "anthropic"]
 
-# USD per million tokens (input, output). Unknown models fail closed so cost cannot go uncounted.
+# USD per million tokens (input, output). Unpriced models record tokens with cost_usd=None.
 _PRICE_PER_MILLION: dict[tuple[str, str], tuple[Decimal, Decimal]] = {
     ("openai", "gpt-4o-mini"): (Decimal("0.15"), Decimal("0.60")),
     ("openai", "gpt-4o"): (Decimal("2.50"), Decimal("10.00")),
@@ -100,7 +101,7 @@ class ModelResponse(BaseModel):
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
     prompt_cache_hit_rate: float | None = Field(default=None, ge=0, le=1)
-    cost_usd: str
+    cost_usd: str | None
     latency_ms: int = Field(ge=0)
 
 
@@ -135,10 +136,39 @@ def model_call_ledger_fields(response: ModelResponse) -> dict[str, Any]:
     return fields
 
 
-def cost_usd_for(provider: str, model: str, input_tokens: int, output_tokens: int) -> str:
+def optional_cost_usd_decimal(value: str | None) -> Decimal | None:
+    if value is None:
+        return None
+    return Decimal(value)
+
+
+def optional_cost_usd_float(value: str | None) -> float | None:
+    if value is None:
+        return None
+    return float(value)
+
+
+def sum_known_cost_usd(values: Iterable[str | None]) -> tuple[float, bool]:
+    """Sum priced calls only. Returns (total, is_partial).
+
+    is_partial is True when any call was unpriced.
+    """
+    total = 0.0
+    is_partial = False
+    for value in values:
+        if value is None:
+            is_partial = True
+            continue
+        total += float(value)
+    return total, is_partial
+
+
+def cost_usd_for(
+    provider: str, model: str, input_tokens: int, output_tokens: int
+) -> str | None:
     prices = _PRICE_PER_MILLION.get((provider, model))
     if prices is None:
-        raise ModelProviderFailure(f"unknown model {provider}/{model}")
+        return None
     input_price, output_price = prices
     million = Decimal("1000000")
     total = (Decimal(input_tokens) / million * input_price) + (

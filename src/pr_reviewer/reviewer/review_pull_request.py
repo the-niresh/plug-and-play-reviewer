@@ -24,6 +24,7 @@ from pr_reviewer.models.provider import (
     ModelRequest,
     ModelResponse,
     cost_usd_for,
+    sum_known_cost_usd,
 )
 from pr_reviewer.prompts.diff_only import DIFF_ONLY_PROMPT
 from pr_reviewer.reliability.budget import BudgetLimit, CostEstimate, require_within_budget
@@ -102,7 +103,7 @@ def review_pull_request(
         model, prompt_content, model_name=model_name, budget=budget
     )
     parsed_candidates = _candidates_from_parsed(response.parsed, packed)
-    total_cost_usd = float(response.cost_usd)
+    cost_values: list[str | None] = [response.cost_usd]
     total_latency_ms = response.latency_ms
     if (
         EMPTY_GENERATE_RETRY_ENABLED
@@ -114,7 +115,7 @@ def review_pull_request(
             model, prompt_content, model_name=EMPTY_GENERATE_RETRY_MODEL, budget=budget
         )
         parsed_candidates = _candidates_from_parsed(retry.parsed, packed)
-        total_cost_usd += float(retry.cost_usd)
+        cost_values.append(retry.cost_usd)
         total_latency_ms += retry.latency_ms
     reflected = reflect_findings(
         model=model,
@@ -122,6 +123,7 @@ def review_pull_request(
         packed=packed,
         candidates=parsed_candidates.candidates,
     )
+    total_cost_usd, _ = sum_known_cost_usd(cost_values)
     total_cost_usd += reflected.cost_usd
     total_latency_ms += reflected.latency_ms
     return ReviewOutcome(
@@ -175,7 +177,10 @@ def estimate_review_cost(prompt_content: str, model_name: str) -> CostEstimate:
     vendor = _vendor_for_model(model_name)
     if vendor is None:
         raise ModelProviderFailure(f"unknown model {model_name}")
-    cost_usd = Decimal(cost_usd_for(vendor, model_name, input_tokens, MAX_OUTPUT_TOKENS))
+    priced = cost_usd_for(vendor, model_name, input_tokens, MAX_OUTPUT_TOKENS)
+    if priced is None:
+        raise ModelProviderFailure(f"unpriced model {model_name}")
+    cost_usd = Decimal(priced)
     return CostEstimate(
         input_tokens=input_tokens, output_tokens=MAX_OUTPUT_TOKENS, cost_usd=cost_usd
     )

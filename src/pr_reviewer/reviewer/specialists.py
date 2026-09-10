@@ -11,7 +11,7 @@ from pathlib import Path
 from pr_reviewer.contracts.finding_candidate import FindingCandidate
 from pr_reviewer.contracts.review_context import PackedDiff, ReviewContextItem, ReviewOutcome
 from pr_reviewer.github.pull_request import PullRequestSnapshot
-from pr_reviewer.models.provider import ModelProvider, ModelRequest
+from pr_reviewer.models.provider import ModelProvider, ModelRequest, sum_known_cost_usd
 from pr_reviewer.prompts.finding_schema import finding_draft_prompt_schema_section
 from pr_reviewer.prompts.registry import PromptRegistry, PromptVersion
 from pr_reviewer.reviewer.aggregate_findings import aggregate_findings
@@ -196,7 +196,8 @@ class BuiltinSpecialistReviewers:
     """One model call per enabled specialist, using the registered specialist prompt."""
 
     def __init__(self, model: ModelProvider, model_name: str) -> None:
-        self.cost_usd = 0.0
+        self._cost_values: list[str | None] = []
+        self.cost_is_partial = False
         self.latency_ms = 0
         self._model = model
         self._model_name = model_name
@@ -244,11 +245,18 @@ class BuiltinSpecialistReviewers:
                     max_output_tokens=MAX_OUTPUT_TOKENS,
                 )
             )
-            self.cost_usd += float(response.cost_usd)
+            self._cost_values.append(response.cost_usd)
+            _, partial = sum_known_cost_usd(self._cost_values)
+            self.cost_is_partial = partial
             self.latency_ms += response.latency_ms
             return _candidates_from_parsed(response.parsed, packed).candidates
 
         return review
+
+    @property
+    def cost_usd(self) -> float:
+        total, _ = sum_known_cost_usd(self._cost_values)
+        return total
 
 
 def apply_enabled_specialists(

@@ -226,6 +226,80 @@ def test_raise_for_provider_status_carries_code_and_message_not_request_body() -
     assert "definitely not logged source code" not in str(err)
 
 
+def test_unpriced_model_records_tokens_with_null_cost() -> None:
+    from pr_reviewer.models.provider import finish_completion
+
+    request = _request(model="unpriced-model-xyz")
+    response = finish_completion(
+        vendor="openai",
+        request=request,
+        content=json.dumps(VALID_FINDING),
+        input_tokens=2000,
+        output_tokens=1000,
+        provider_request_id="chatcmpl-unpriced",
+        latency_ms=12,
+    )
+    assert response.input_tokens == 2000
+    assert response.output_tokens == 1000
+    assert response.cost_usd is None
+
+
+def test_cost_usd_for_returns_none_for_unpriced_model() -> None:
+    from pr_reviewer.models.provider import cost_usd_for
+
+    assert cost_usd_for("openai", "unpriced-model-xyz", 2000, 1000) is None
+
+
+def test_sum_known_cost_usd_skips_unpriced_and_marks_partial() -> None:
+    from pr_reviewer.models.provider import sum_known_cost_usd
+
+    total, is_partial = sum_known_cost_usd(["0.001", None, "0.002"])
+    assert total == pytest.approx(0.003)
+    assert is_partial is True
+
+    full_total, full_partial = sum_known_cost_usd(["0.001", "0.002"])
+    assert full_total == pytest.approx(0.003)
+    assert full_partial is False
+
+
+def test_ledger_fields_write_null_cost_as_none_not_string() -> None:
+    from pr_reviewer.models.provider import (
+        ModelResponse,
+        finish_completion,
+        model_call_ledger_fields,
+    )
+
+    request = _request(model="unpriced-model-xyz")
+    response = finish_completion(
+        vendor="openai",
+        request=request,
+        content=json.dumps(VALID_FINDING),
+        input_tokens=100,
+        output_tokens=50,
+        provider_request_id=None,
+        latency_ms=1,
+    )
+    ledger = model_call_ledger_fields(response)
+    assert ledger["cost_usd"] is None
+    assert ledger["input_tokens"] == 100
+    assert ledger["output_tokens"] == 50
+
+    priced = ModelResponse(
+        parsed=VALID_FINDING,
+        output_hash="a" * 64,
+        provider_request_id=None,
+        provider="openai",
+        model="gpt-4o-mini",
+        prompt_name="reviewer",
+        prompt_version="1",
+        input_tokens=1,
+        output_tokens=1,
+        cost_usd="0.0009",
+        latency_ms=1,
+    )
+    assert model_call_ledger_fields(priced)["cost_usd"] == "0.0009"
+
+
 @pytest.mark.parametrize(
     ("kind", "model", "expected_cost"),
     [

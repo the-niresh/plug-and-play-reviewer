@@ -14,6 +14,7 @@ from pr_reviewer.models.provider import (
     ModelRequest,
     ModelSchemaMismatch,
     UntrustedInput,
+    sum_known_cost_usd,
 )
 from pr_reviewer.prompts.reflection_schema import reflection_prompt_schema_section
 
@@ -53,6 +54,7 @@ class ReflectionResult(BaseModel):
     accepted: tuple[FindingCandidate, ...]
     suppressed: tuple[FindingCandidate, ...]
     cost_usd: float = Field(default=0.0, ge=0)
+    cost_is_partial: bool = False
     latency_ms: int = Field(default=0, ge=0)
 
 
@@ -115,9 +117,11 @@ def reflect_findings(
             )
         )
 
+    cost_usd, cost_is_partial = sum_known_cost_usd([response.cost_usd])
     return ReflectionResult(
         accepted=tuple(accepted),
         suppressed=tuple(suppressed),
-        cost_usd=float(response.cost_usd),
+        cost_usd=cost_usd,
+        cost_is_partial=cost_is_partial,
         latency_ms=response.latency_ms,
     )
