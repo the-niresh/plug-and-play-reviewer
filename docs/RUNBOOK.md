@@ -67,6 +67,24 @@ When the owner is ready, set:
 
 Until those match, live events will not reach this instance.
 
+## Start the runner before you open the pull request
+
+The control plane runs on a Render free instance, which Render spins down after
+15 minutes with no traffic and takes about a minute to wake. GitHub gives a
+webhook 10 seconds. So a pull request opened against a cold control plane can
+fail delivery, and that delivery is lost rather than queued.
+
+A running runner keeps it awake on its own: it polls every 10 seconds, which is
+well inside the 15 minute window. So the rule is simply to start the runner
+first. If you open a pull request and nothing happens, look at the App's
+**Advanced** tab, find the delivery, and press **Redeliver**.
+
+We do not keep the service warm with a scheduled ping. Render grants 750 free
+instance hours per workspace per month, keeping one service awake around the
+clock costs about 730 of them, and running out suspends every free service in
+the workspace. Paying that for the case where no runner is running, which is the
+case where no review could happen anyway, is a bad trade.
+
 ## Rollback
 
 1. Stop the hosted overlay:
