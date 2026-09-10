@@ -34,10 +34,13 @@ REQUIRED_HEADINGS = (
     "What is not automatic yet",
 )
 
+# "model key" was renamed on 2026-09-10: it meant nothing to a reader, who has an OpenAI
+# or Anthropic or Groq API key, not a "model key". The claim being guarded is unchanged,
+# that the key stays on the runner; only the words a user actually understands changed.
 REQUIRED_PRIVACY_CLAIMS = (
     "source",
     "diffs",
-    "model key",
+    "provider api key",
 )
 
 REQUIRED_FLOW_STEPS = (

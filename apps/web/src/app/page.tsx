@@ -11,7 +11,7 @@ import type { ReviewFinding } from "@/lib/reviews";
 export const metadata = {
   title: pageTitle(),
   description:
-    "Private AI code review. Hosted jobs, a local runner, and your model key.",
+    "Private AI code review. Hosted jobs, a local runner, and your own LLM provider API key.",
 };
 
 const SIGN_IN_URL = "/api/auth/github/sign-in?return_to=/dashboard";
@@ -86,7 +86,8 @@ const FLOW_STEPS = [
 const PRIDE = [
   {
     title: "Local runner",
-    body: "The model call happens on your laptop or server. Source never goes to the hosted site.",
+    body:
+      "The model call happens on your laptop or server. Source never goes to the hosted site. The hosted plane only ever learns that a job ran, which repository it was for, and what it cost.",
   },
   {
     title: "Retrieval",
@@ -113,7 +114,11 @@ const PRIDE = [
 const PRIVACY_ROWS = [
   { item: "Source code", hosted: "Never", local: "Yes, on the runner" },
   { item: "Diffs", hosted: "Never", local: "Yes, packed for the model" },
-  { item: "Model key", hosted: "Never", local: "Yes, in the local key store" },
+  {
+    item: "Your LLM provider API key",
+    hosted: "Never",
+    local: "Yes, in the local key store",
+  },
   { item: "GitHub event metadata", hosted: "Yes", local: "Yes, to claim the job" },
   {
     item: "Finding title and rationale",
@@ -136,8 +141,9 @@ const SETUP_STEPS = [
     body: "Install the runner on the machine that may see your source.",
   },
   {
-    title: "Model key",
-    body: "Keep the model key on the runner. It never goes to the hosted database.",
+    title: "Your LLM provider API key",
+    body:
+      "The key from OpenAI, Anthropic, Groq or whoever you use. It stays on the runner and never reaches the hosted database.",
   },
 ] as const;
 
@@ -176,7 +182,7 @@ export default function HomePage() {
             </p>
             <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
               That boundary is not a promise on a slide. CI runs a schema check that fails
-              if source, diffs, or model keys could land on the hosted plane. See what we
+              if source, diffs, or provider keys could land on the hosted plane. See what we
               store in{" "}
               <Link
                 href="/privacy"
@@ -272,7 +278,7 @@ export default function HomePage() {
             {SECTIONS[1].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-            Source, diffs, and the model key stay on the runner. Finding text may sit on
+            Source, diffs, and your provider API key stay on the runner. Finding text may sit on
             the dashboard so you can read it before you approve a post.
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:hidden">
@@ -347,7 +353,7 @@ export default function HomePage() {
                 key={item.title}
                 className={cn(
                   "landing-card p-5",
-                  index === 0 && "sm:col-span-2 lg:row-span-2 lg:p-7",
+                  index === 0 && "sm:col-span-2 lg:p-7",
                 )}
               >
                 <h3 className="font-mono text-sm font-semibold">{item.title}</h3>

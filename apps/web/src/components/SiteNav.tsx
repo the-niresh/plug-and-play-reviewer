@@ -29,9 +29,13 @@ export function SiteNav() {
           className="text-foreground hover:text-primary focus-visible:ring-ring/50 aria-[current=page]:text-primary inline-flex items-center gap-2.5 text-sm font-semibold tracking-tight transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
         >
           <Logo className="size-7 shrink-0" title={PRODUCT_NAME} />
-          <span className="max-w-[12rem] truncate sm:max-w-none">{PRODUCT_NAME}</span>
+          {/* The wordmark plus three links overflow a 390px viewport, so below sm the
+              logo carries the brand on its own. Truncating instead just produced a
+              clipped name and a page that still scrolled sideways. */}
+          <span className="hidden sm:inline">{PRODUCT_NAME}</span>
+          <span className="sr-only sm:hidden">{PRODUCT_NAME}</span>
         </Link>
-        <nav aria-label="Site" className="flex items-center gap-1">
+        <nav aria-label="Site" className="flex shrink-0 items-center gap-1">
           {LINKS.map((item) => {
             const isCurrent = isNavCurrent(pathname, item.href);
             return (
