@@ -31,7 +31,10 @@ Commands:
   reviewer                      Open the terminal UI when stdin is a terminal. Signing in
                                  (GitHub pairing) happens here, interactively -- there is
                                  no headless equivalent, since it needs a browser.
-  reviewer login                Alias for bare `reviewer`: open the terminal UI to sign in.
+  reviewer login                Open the terminal UI to sign in.
+  reviewer login --no-tui       Sign in from a plain terminal instead. Prints the link
+                                 as ordinary text you can select and copy, and waits.
+                                 This is also what runs when stdin is not a terminal.
   reviewer logout               Revoke this terminal's pairing and forget its credential.
                                  Requires --yes. Non-interactive counterpart to the TUI's
                                  `l` key.
@@ -152,15 +155,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     subcommand, rest = args[0], args[1:]
 
     if subcommand == "login":
-        # Not a distinct flow: signing in only ever happens through the interactive TUI
-        # (it needs a browser), so this is the same bare-`reviewer` entry point under a
-        # name people look for out of habit (gh auth login, etc).
-        if sys.stdin.isatty():
-            from pr_reviewer.tui.app import run_tui
+        # Two ways in. --no-tui prints the sign-in link as ordinary terminal text and
+        # waits; the TUI does the same thing inside a full-screen app. The headless one
+        # is also what a non-tty gets, because "needs a terminal" was a refusal with no
+        # alternative behind it: sign-in needs a browser somewhere, not a terminal UI
+        # here, and printing a link satisfies that over SSH as well as anywhere else.
+        if "--no-tui" in rest or not sys.stdin.isatty():
+            from pr_reviewer.runner.cli.login import main as login_main
 
-            return run_tui()
-        print("reviewer login: needs a terminal (stdin is not a tty)", file=sys.stderr)
-        return 1
+            return login_main(rest)
+
+        from pr_reviewer.tui.app import run_tui
+
+        return run_tui()
 
     if subcommand == "logout":
         from pr_reviewer.runner.cli.logout import main as logout_main
