@@ -11,7 +11,7 @@ MODEL_CONTEXT_WINDOWS: dict[str, tuple[int, int]] = {
     "gpt-4.1": (1_047_576, 32_768),
     "gpt-4.1-nano": (1_047_576, 32_768),
     "o4-mini": (200_000, 100_000),
-    "claude-haiku-4-20250414": (200_000, 8_192),
+    "claude-haiku-4-5-20251001": (200_000, 64_000),
     "claude-sonnet-4-20250514": (200_000, 64_000),
     "claude-opus-4-20250514": (200_000, 64_000),
     "claude-3-7-sonnet-latest": (200_000, 64_000),

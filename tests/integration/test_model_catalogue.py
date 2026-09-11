@@ -40,7 +40,7 @@ def test_models_for_returns_provider_models() -> None:
     openai_models = {entry.model_id for entry in models_for("openai")}
     assert "gpt-4o-mini" in openai_models
     anthropic_models = {entry.model_id for entry in models_for("anthropic")}
-    assert "claude-haiku-4-20250414" in anthropic_models
+    assert "claude-haiku-4-5-20251001" in anthropic_models
 
 
 def test_unknown_provider_raises_key_error() -> None:
@@ -56,4 +56,4 @@ def test_is_known_provider_model() -> None:
 
 def test_default_model_is_the_first_listed_model() -> None:
     assert default_model_for("openai") == "gpt-4o-mini"
-    assert default_model_for("anthropic") == "claude-haiku-4-20250414"
+    assert default_model_for("anthropic") == "claude-haiku-4-5-20251001"

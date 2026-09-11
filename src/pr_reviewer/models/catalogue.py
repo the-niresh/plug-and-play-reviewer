@@ -42,7 +42,7 @@ def _build_catalogue() -> tuple[ProviderEntry, ...]:
             label="Anthropic",
             base_url="https://api.anthropic.com",
             models=(
-                ModelEntry("claude-haiku-4-20250414", "Claude Haiku 4"),
+                ModelEntry("claude-haiku-4-5-20251001", "Claude Haiku 4.5"),
                 ModelEntry("claude-sonnet-4-20250514", "Claude Sonnet 4"),
                 ModelEntry("claude-opus-4-20250514", "Claude Opus 4"),
                 ModelEntry("claude-3-7-sonnet-latest", "Claude 3.7 Sonnet"),

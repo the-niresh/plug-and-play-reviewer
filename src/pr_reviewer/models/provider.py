@@ -32,7 +32,7 @@ _PRICE_PER_MILLION: dict[tuple[str, str], tuple[Decimal, Decimal]] = {
     ("anthropic", "claude-3-5-sonnet-latest"): (Decimal("3.00"), Decimal("15.00")),
     ("anthropic", "claude-3-7-sonnet-latest"): (Decimal("3.00"), Decimal("15.00")),
     ("anthropic", "claude-sonnet-4-20250514"): (Decimal("3.00"), Decimal("15.00")),
-    ("anthropic", "claude-haiku-4-20250414"): (Decimal("1.00"), Decimal("5.00")),
+    ("anthropic", "claude-haiku-4-5-20251001"): (Decimal("1.00"), Decimal("5.00")),
 }
 
 

@@ -166,7 +166,7 @@ def test_setup_wizard_line_count_unchanged_with_colour(
     save_setup_config(
         SetupConfig(
             provider_id="anthropic",
-            model_id="claude-haiku-4-20250414",
+            model_id="claude-haiku-4-5-20251001",
             hosted_origin="https://control.example.test",
             prompt_name="diff_only_reviewer",
             prompt_version="1",
