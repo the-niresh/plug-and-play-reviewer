@@ -90,8 +90,18 @@ export async function POST(request: Request): Promise<NextResponse> {
   });
 
   if (!response.ok) {
+    // Carry Resend's own reason through. It is a description of what was wrong with the
+    // request ("you can only send to your own address until a domain is verified"), not a
+    // secret, and without it a 502 here is unfixable from the outside.
+    let reason = "";
+    try {
+      const detail = (await response.json()) as { message?: string };
+      reason = typeof detail.message === "string" ? ` (${detail.message})` : "";
+    } catch {
+      reason = "";
+    }
     return bad(
-      `We could not send that. Email ${SUPPORT_EMAIL} directly and we will pick it up.`,
+      `We could not send that${reason}. Email ${SUPPORT_EMAIL} directly and we will pick it up.`,
       502,
     );
   }
