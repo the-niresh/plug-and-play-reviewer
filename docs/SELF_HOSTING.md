@@ -30,7 +30,7 @@ Render would send your source to a remote host and break the privacy model.
 ### 1. Install the `reviewer` command
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
+curl -fsSL https://plugandplayreviewer.online/install | sh
 reviewer --help
 ```
 

@@ -6,6 +6,8 @@ the copy and structure, not at whether a function was called.
 
 from __future__ import annotations
 
+import re
+
 from repo_paths import REPO_ROOT
 
 REPO = REPO_ROOT
@@ -120,7 +122,10 @@ def test_landing_states_free_tier_without_checkout() -> None:
     source = landing_source().lower()
     assert "free tier" in source
     assert "one github user" in source or "one repository" in source
-    assert "$" not in source.split("what stays free")[1].split("what the evals")[0]
+    # A price, not a bare dollar sign. `${...}` inside a JSX template literal is not a
+    # checkout, and matching on that made an SVG path expression fail this test.
+    between = source.split("what stays free")[1].split("what the evals")[0]
+    assert re.search(r"\$\s*\d", between) is None
 
 
 def test_landing_does_not_use_a_purple_gradient_hero() -> None:

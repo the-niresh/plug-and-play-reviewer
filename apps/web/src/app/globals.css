@@ -230,3 +230,56 @@
     transform: translateY(0);
   }
 }
+
+/* Hero animation: the lens sweeps the branch and settles on the bug.
+   Only transform and opacity move, so the whole loop stays on the compositor. */
+.bug-hunt {
+  border-radius: 10px;
+}
+
+.bug-hunt-lens {
+  animation: bug-hunt-sweep 7s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  transform-origin: 114px 122px;
+}
+
+.bug-hunt-bug {
+  animation: bug-hunt-reveal 7s ease-in-out infinite;
+}
+
+.bug-hunt-caption {
+  animation: bug-hunt-caption 7s ease-in-out infinite;
+}
+
+@keyframes bug-hunt-sweep {
+  0%   { transform: translate(-58px, -96px) scale(0.82); }
+  22%  { transform: translate(-34px, -48px) scale(0.82); }
+  44%  { transform: translate(-10px, 44px)  scale(0.82); }
+  62%  { transform: translate(0, 0)         scale(1); }
+  92%  { transform: translate(0, 0)         scale(1); }
+  100% { transform: translate(-58px, -96px) scale(0.82); }
+}
+
+@keyframes bug-hunt-reveal {
+  0%, 55%   { opacity: 0.28; }
+  66%, 92%  { opacity: 1; }
+  100%      { opacity: 0.28; }
+}
+
+@keyframes bug-hunt-caption {
+  0%, 60%  { opacity: 0; }
+  70%, 92% { opacity: 1; }
+  100%     { opacity: 0; }
+}
+
+/* Parked on the bug: the one frame that says what the product does. */
+@media (prefers-reduced-motion: reduce) {
+  .bug-hunt-lens,
+  .bug-hunt-bug,
+  .bug-hunt-caption {
+    animation: none;
+  }
+  .bug-hunt-bug,
+  .bug-hunt-caption {
+    opacity: 1;
+  }
+}

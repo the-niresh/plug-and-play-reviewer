@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from pr_reviewer.config import get_settings
 from pr_reviewer.contracts.runner import PairingApproved, PairingDenied
+from pr_reviewer.control_plane.branded_page import render_page
 from pr_reviewer.control_plane.github_auth import (
     AccessDenied,
     LiveInstallationAssertion,
@@ -102,14 +103,19 @@ def sign_out_route() -> JSONResponse:
 # that the person sees a sentence and a link instead of a raw validation dump. The
 # durable fix is the App's Setup URL pointing at /sign-in; this is the safety net for
 # anyone who reaches the callback cold.
-_NO_STATE_PAGE = """<!doctype html>
-<title>Start sign-in again</title>
-<body style="font:16px/1.6 system-ui;max-width:34rem;margin:12vh auto;padding:0 1.5rem">
-<h1 style="font-size:1.4rem">Start sign-in from the beginning</h1>
-<p>This link is missing the one-time value that proves the sign-in started here, so it
-was not accepted. That is expected if you arrived straight from installing the App.</p>
-<p><a href="/api/auth/github/sign-in?return_to=/dashboard">Sign in with GitHub</a></p>
-</body>"""
+_NO_STATE_PAGE = render_page(
+    title="Start sign-in again",
+    heading="Start sign-in from the beginning",
+    body=(
+        "<p>This link is missing the one-time value that proves the sign-in started "
+        "here, so it was not accepted. That is expected if you arrived straight from "
+        "installing the App.</p>"
+        '<form method="get" action="/api/auth/github/sign-in">'
+        '<input type="hidden" name="return_to" value="/dashboard">'
+        '<button type="submit">Sign in with GitHub</button>'
+        "</form>"
+    ),
+)
 
 
 # Every reason PairingDenialReason can carry, in words a person waiting in a browser
@@ -133,6 +139,19 @@ _PAIRING_DENIED_MESSAGES: dict[str, str] = {
         "One of the repositories this pairing needs is not covered by this GitHub App "
         "installation. Go back to the terminal and press Sign in to get a new link."
     ),
+    # These two are limits, not accidents. Telling someone to sign in again would send
+    # them round the same loop forever, which is what the generic message used to do.
+    "free_tier_one_repository": (
+        "The free tier covers one repository per installation, and this installation "
+        "already has one. Pick that same repository, or remove the other one from the "
+        "GitHub App installation first."
+    ),
+    "free_tier_one_user": (
+        "The free tier covers one active runner per installation, and one is already "
+        "paired. Revoke the existing runner before pairing this terminal. If it is a "
+        "machine you no longer use, an owner can revoke it by running "
+        "scripts/revoke_runner.py against the database."
+    ),
 }
 
 
@@ -145,12 +164,11 @@ def _pairing_denied_page(reason: str) -> HTMLResponse:
         )
     )
     return HTMLResponse(
-        f"""<!doctype html>
-<title>Pairing not completed</title>
-<body style="font:16px/1.6 system-ui;max-width:34rem;margin:12vh auto;padding:0 1.5rem">
-<h1 style="font-size:1.4rem">Sign-in worked, but pairing did not complete</h1>
-<p>{message}</p>
-</body>"""
+        render_page(
+            title="Pairing not completed",
+            heading="Sign-in worked, but pairing did not complete",
+            body=f'<p class="lead">{message}</p>',
+        )
     )
 
 
@@ -160,15 +178,17 @@ def _pairing_approved_page(return_to: str) -> HTMLResponse:
     # interact with it.
     destination = html.escape(return_to, quote=True)
     return HTMLResponse(
-        f"""<!doctype html>
-<title>Terminal signed in</title>
-<meta http-equiv="refresh" content="5;url={destination}">
-<body style="font:16px/1.6 system-ui;max-width:34rem;margin:12vh auto;padding:0 1.5rem">
-<h1 style="font-size:1.4rem">Your terminal is signed in</h1>
-<p>The runner waiting in your terminal is now paired with this GitHub App
-installation. You can go back to it, or wait a moment to continue here.</p>
-<p><a href="{destination}">Continue now</a></p>
-</body>"""
+        render_page(
+            title="Terminal signed in",
+            heading="Your terminal is signed in",
+            head=f'<meta http-equiv="refresh" content="5;url={destination}">',
+            body=(
+                '<p class="lead">The runner waiting in your terminal is now paired with '
+                "this GitHub App installation. Go back to it, or wait a moment to "
+                "continue here.</p>"
+                f'<p class="quiet"><a href="{destination}">Continue now</a></p>'
+            ),
+        )
     )
 
 
@@ -185,19 +205,24 @@ def _pairing_confirm_page(pairing_code_hash: str, device_name: str, return_to: s
     destination = html.escape(return_to, quote=True)
     code_hash = html.escape(pairing_code_hash, quote=True)
     return HTMLResponse(
-        f"""<!doctype html>
-<title>Approve this device?</title>
-<body style="font:16px/1.6 system-ui;max-width:34rem;margin:12vh auto;padding:0 1.5rem">
-<h1 style="font-size:1.4rem">A terminal wants to pair as you</h1>
-<p>A device named <strong>{device}</strong> is waiting to pair with your GitHub account. Only
-approve this if you started that sign-in yourself, from that terminal.</p>
-<form method="post" action="/api/auth/github/approve-pairing">
-<input type="hidden" name="pairing_code_hash" value="{code_hash}">
-<input type="hidden" name="return_to" value="{destination}">
-<button type="submit">Approve "{device}"</button>
-</form>
-<p><a href="{destination}">Cancel, do not pair this device</a></p>
-</body>"""
+        render_page(
+            title="Approve this device?",
+            heading="A terminal wants to pair as you",
+            body=(
+                f'<p class="lead">A device named <strong>{device}</strong> is waiting to '
+                "pair with your GitHub account.</p>"
+                "<p>Only approve this if you started that sign-in yourself, from that "
+                "terminal. Approving lets it read the repositories this installation "
+                "covers.</p>"
+                '<form method="post" action="/api/auth/github/approve-pairing">'
+                f'<input type="hidden" name="pairing_code_hash" value="{code_hash}">'
+                f'<input type="hidden" name="return_to" value="{destination}">'
+                f'<button type="submit">Approve &ldquo;{device}&rdquo;</button>'
+                "</form>"
+                f'<p class="quiet"><a href="{destination}">Cancel, do not pair this '
+                "device</a></p>"
+            ),
+        )
     )
 
 

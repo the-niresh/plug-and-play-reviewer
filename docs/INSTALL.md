@@ -24,6 +24,13 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first, the
 run:
 
 ```sh
+curl -fsSL https://plugandplayreviewer.online/install | sh
+```
+
+`/install` relays the script from the repository, so there is still one copy of it.
+If the site is unreachable, fetch it from the source instead:
+
+```sh
 curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
 ```
 

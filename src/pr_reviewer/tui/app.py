@@ -6,6 +6,7 @@ import sys
 import time
 import traceback
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -459,12 +460,27 @@ class ReviewerApp(App[None]):
             # here tells a self-hoster to go and check a server that is not theirs.
             host = hosted_origin.removeprefix("https://").removeprefix("http://")
             if "401" in str(exc) or "unknown_credential" in str(exc):
+                # Drop the dead credential, or the advice below is impossible to follow.
+                # The connect screen only appears when no credential is stored, so a
+                # credential the server has forgotten used to leave this terminal on a
+                # screen telling it to sign in with nothing anywhere that could.
+                #
+                # Only when there is nothing else to show. A terminal already holding a
+                # snapshot is working; taking its credential away over one failed refresh
+                # would send it back to sign-in mid-session for no gain.
+                if self._installation_snapshot is None:
+                    self._forget_runner_credential()
                 return None, (
                     f"This terminal's pairing is no longer recognised by {host}. "
-                    "Sign in again to re-pair it."
+                    "Quit and run `reviewer` again to sign in."
                 )
             return None, f"Could not reach {host} ({exc})."
         return fetched, None
+
+    def _forget_runner_credential(self) -> None:
+        """Best effort. A secret store that refuses to delete must not crash the screen."""
+        with suppress(Exception):
+            self._secrets.delete(RUNNER_CREDENTIAL_SECRET)
 
     def _resolve_installation_snapshot(self) -> InstallationSnapshot | None:
         if self._installation_snapshot is not None:

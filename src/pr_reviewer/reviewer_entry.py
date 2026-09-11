@@ -113,9 +113,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     # directly and never calls it, so PR_REVIEWER_HOSTED_ORIGIN and GITHUB_APP_SLUG
     # were invisible and the connect screen could only ever raise. Loading here, at
     # the one entry every subcommand and the TUI share, fixes all of them at once.
-    # load_dotenv does not overwrite variables already in the environment.
+    #
+    # The runner's own config directory is loaded FIRST, and that ordering is the whole
+    # point: load_dotenv never overwrites a name already in the environment, so whatever
+    # this file sets wins over the bare load_dotenv() below, which searches upward from
+    # the current working directory. Without it, running `reviewer` inside any project
+    # that happens to have a .env silently repointed the runner at whatever control plane
+    # that unrelated file named, and `reviewer setup` looked like it had not saved.
     from dotenv import load_dotenv
 
+    from pr_reviewer.runner.secrets import default_config_dir
+
+    load_dotenv(default_config_dir() / ".env")
     load_dotenv()
 
     args = list(sys.argv[1:] if argv is None else argv)

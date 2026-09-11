@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CommandLine } from "@/components/CommandLine";
 import { LogoBadge } from "@/components/Logo";
 import { SiteNav } from "@/components/SiteNav";
 import { pageTitle, siteHost } from "@/lib/site";
@@ -23,7 +24,7 @@ const SECTIONS = [
       "The script checks a checksum before it copies files. If the checksum fails, the install stops.",
     ],
     commands: [
-      "curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh",
+      `curl -fsSL https://${siteHost()}/install | sh`,
       "reviewer --help",
     ],
     docHref: `${REPO_DOCS}/INSTALL.md`,
@@ -106,10 +107,8 @@ export default function DocsPage() {
               </div>
               <ul className="mt-5 flex flex-col gap-2">
                 {section.commands.map((command) => (
-                  <li key={command} className="overflow-x-auto">
-                    <pre className="bg-muted/50 rounded-md px-3 py-2.5 font-mono text-xs whitespace-pre">
-                      {command}
-                    </pre>
+                  <li key={command}>
+                    <CommandLine command={command} />
                   </li>
                 ))}
               </ul>

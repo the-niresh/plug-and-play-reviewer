@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { GithubMark } from "@/components/github-mark";
+import { BugHunt } from "@/components/landing/BugHunt";
 import { ProductStage } from "@/components/landing/ProductStage";
 import { SiteNav } from "@/components/SiteNav";
 import { buttonVariants } from "@/components/ui/button";
@@ -168,6 +169,7 @@ const SETUP_STEPS = [
 ] as const;
 
 const SECTIONS = [
+  { id: "on-a-real-pull-request", title: "On a real pull request" },
   { id: "how-a-review-moves", title: "How a review moves" },
   { id: "hosted-vs-local", title: "Hosted vs local" },
   { id: "what-already-works", title: "What already works" },
@@ -275,9 +277,42 @@ export default function HomePage() {
               See how a review moves
             </a>
           </div>
-          <div className="landing-rule min-w-0 lg:translate-y-3">
+          <div className="landing-rule flex min-w-0 flex-col gap-6 lg:translate-y-3">
+            <BugHunt />
             <ProductStage finding={EXAMPLE_FINDING} />
           </div>
+        </section>
+
+        <section
+          id="on-a-real-pull-request"
+          className="border-border scroll-mt-20 border-b py-14 lg:py-[var(--space-section)]"
+        >
+          <h2 className="landing-display landing-section-title font-semibold">
+            On a real pull request
+          </h2>
+          <p className="text-muted-foreground mt-4 max-w-prose text-base leading-relaxed">
+            Not a mockup. This is the App commenting on a pull request in one of our own
+            repositories, after a human approved the finding.
+          </p>
+          <p className="text-muted-foreground mt-4 max-w-prose text-base leading-relaxed">
+            Read the last line too. The finding is right, the suggested patch is not, and
+            the author says so. That is the whole reason a person approves every comment
+            before it posts, and the reason the{" "}
+            <Link href="/scorecard" className="landing-link">
+              scorecard
+            </Link>{" "}
+            reports what we measured instead of a number we like.
+          </p>
+          <figure className="border-border mt-10 max-w-3xl overflow-hidden rounded-lg border">
+            <img
+              src="/real-pull-request-review.png"
+              alt="A GitHub pull request where the pr-reviewer-niresh bot comments Potential division by zero on reviewer_uat_bug.py, offers a suggested change, and the author replies that the suggestion is wrong"
+              width={891}
+              height={1231}
+              loading="lazy"
+              className="block h-auto w-full"
+            />
+          </figure>
         </section>
 
         <section

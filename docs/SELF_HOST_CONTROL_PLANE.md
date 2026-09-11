@@ -8,16 +8,16 @@ only exist after you create a GitHub App by hand, and the deploy needs a
 second pass once you know your own URL. Read the next section before you
 press deploy.
 
-Both deploy targets start `pr-reviewer-api`:
+The image's own command is `pr-reviewer-serve`, which applies migrations and then
+serves. Neither deploy file starts the runner. Do not add a runner service to these
+platforms.
 
-- Render reads `deploy/render.yaml` and runs
-  `/app/.venv/bin/pr-reviewer-api`.
-- Railway reads `deploy/railway.json` and runs the same command.
+- Render reads `deploy/render.yaml`. It sets no start command, because the image
+  already does the right thing.
+- Railway reads `deploy/railway.json`, which does have a real pre-deploy step.
 
-Neither file starts the runner. Do not add a runner service to these platforms.
-
-The live instance today is `https://plugandplayreviewer.online`. The product domain
-will be `plugandplayreviewer.online`, but it is not pointed yet.
+The live instance is `https://api.plugandplayreviewer.online`, behind the website at
+`https://plugandplayreviewer.online`. Every step below was run against that deploy.
 
 See [CONFIGURATION.md](CONFIGURATION.md) for the full list of control-plane
 variables and what each one does.
@@ -52,18 +52,34 @@ does not exist until after the first deploy. So this takes two passes: deploy
 once with a placeholder origin, then set the real one and redeploy.
 
 1. Create the GitHub App and collect the five values above.
-2. Deploy on Render or import on
-   Railway.
-3. Copy the deployed URL.
-4. Set `PR_REVIEWER_HOSTED_ORIGIN` to that URL.
-5. Set the App's webhook URL to `<url>/api/github/webhook`.
-6. Set the App's callback URL to `<url>/api/auth/github/callback`.
+2. Deploy on Render or import on Railway.
+3. Decide your public origin and attach it, if you want one. See
+   "Which origin is the public one" below; getting this wrong is the failure
+   this guide exists to prevent.
+4. Set `PR_REVIEWER_HOSTED_ORIGIN` to that origin.
+5. Set the App's webhook URL to `<origin>/api/github/webhook`.
+6. Set the App's callback URL to `<origin>/api/auth/github/callback`.
 7. Redeploy.
-8. Verify: `curl <url>/health` returns 200, then open a pull request and
+8. Verify: `curl <api-url>/health` returns 200, then open a pull request and
    confirm a job is queued.
 
 Skipping step 5 is the mistake people actually make. It gives you a healthy
 service that reviews nothing, because GitHub has nowhere to send events.
+
+### Which origin is the public one
+
+`PR_REVIEWER_HOSTED_ORIGIN` is **the origin a person's browser is on during
+sign-in**, not necessarily the address of this service.
+
+- Control plane only, no separate frontend: they are the same. Use the Render
+  URL, or a custom domain pointing at it.
+- Separate frontend that proxies `/api/*` to this service, which is how
+  `plugandplayreviewer.online` is deployed: use the **website's** origin. The
+  service builds its OAuth `redirect_uri` from this value, and sign-in sets a
+  binding cookie on the sign-in response that the callback must read back. Point
+  it at the API host instead and the browser holds a cookie for one origin while
+  the callback lands on another, so it is never sent. Sign-in then fails with no
+  useful error, and every health check stays green.
 
 ## Environment variables
 
