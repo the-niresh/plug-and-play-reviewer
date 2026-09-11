@@ -139,11 +139,57 @@ default instance size.
 
 <!-- SCREENSHOT: Render deploy log showing the migrate and start command -->
 
+### Step 3b. Or skip the Blueprint and use the CLI
+
+This is how the live deploy was actually made, and it is one command:
+
+```sh
+render services create \
+  --name plug-and-play-reviewer --type web_service \
+  --repo https://github.com/<you>/plug-and-play-reviewer --branch main \
+  --runtime docker --plan free --region oregon \
+  --health-check-path /health --auto-deploy --confirm --output json \
+  --env-var DATABASE_URL="..." \
+  --env-var GITHUB_APP_ID="..." \
+  --env-var GITHUB_APP_PRIVATE_KEY="..." \
+  --env-var GITHUB_OAUTH_CLIENT_ID="..." \
+  --env-var GITHUB_OAUTH_CLIENT_SECRET="..." \
+  --env-var GITHUB_WEBHOOK_SECRET="..." \
+  --env-var PR_REVIEWER_HOSTED_ORIGIN="https://<your public origin>"
+```
+
+Two things to know about that command:
+
+- **`--start-command` is silently dropped for a docker runtime.** It exits `0`, prints
+  no warning, and leaves `dockerCommand` empty. `render services update` will then tell
+  you the flag is for native runtimes only. It does not matter here, because the image
+  migrates itself, but it would matter for anything that needed a custom command.
+- The env vars are on a command line, so they land in your shell history. Read them from
+  a file rather than typing them, and clear the history afterwards if you did not.
+
 ### Step 4. Set the public origin and redeploy
 
-Copy the assigned hostname, for example `reviewer-xxxx.onrender.com`. Set
-`PR_REVIEWER_HOSTED_ORIGIN` to `https://reviewer-xxxx.onrender.com` and
-redeploy once.
+Copy the assigned hostname, for example `reviewer-xxxx.onrender.com`. If that is the
+origin people will use, set `PR_REVIEWER_HOSTED_ORIGIN` to
+`https://reviewer-xxxx.onrender.com`. If a separate website will proxy `/api/*` to this
+service, use the website's origin instead, for the reason in "Which origin is the public
+one". Redeploy once after changing it.
+
+#### A custom domain
+
+Add it in the Render dashboard under **Settings**, then **Custom Domains**, or over the
+API:
+
+```sh
+curl -sS -X POST \
+  -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
+  -d '{"name":"api.example.com"}' \
+  "https://api.render.com/v1/services/<service-id>/custom-domains"
+```
+
+Then add a `CNAME` from that name to `<service>.onrender.com`. Render verifies the
+record and issues a certificate within a few minutes; until it does, the hostname
+answers with a TLS handshake failure rather than an HTTP error.
 
 ### Step 5. Verify
 
