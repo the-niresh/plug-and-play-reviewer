@@ -134,6 +134,7 @@ def incremental_review_pull_request(
     heartbeat: Callable[[], LeaseState] | None = None,
     budget: BudgetLimit | None = None,
     related_paths: frozenset[str] = frozenset(),
+    repository_prompt: str | None = None,
 ) -> ReviewOutcome:
     previous = cache.load_previous(installation_id, repository_id, snapshot.number)
     plan = plan_incremental_review(snapshot, previous, related_paths)
@@ -172,6 +173,7 @@ def incremental_review_pull_request(
         heartbeat=heartbeat,
         budget=budget,
         prior_findings=prior_texts,
+        repository_prompt=repository_prompt,
     )
     merged = _merge_carried(outcome, plan.carry)
     cache.save(

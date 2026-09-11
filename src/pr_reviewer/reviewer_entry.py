@@ -71,6 +71,9 @@ reviewer review exit codes:
   3  failure
 
 Use `reviewer <command> --help` for arguments and per-command output details.
+
+Something broken, or a review that got it wrong?
+  https://plugandplayreviewer.online/contact   or   niresh@yeahscene.com
 """
 
 _COMMAND_LINE = re.compile(r"^(?P<prefix>  )(reviewer(?:\s+\S+)*)(?P<gap>\s{2,})(?P<desc>.*)$")

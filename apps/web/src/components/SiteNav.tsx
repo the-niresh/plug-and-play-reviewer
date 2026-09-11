@@ -12,6 +12,7 @@ const GITHUB_REPO_URL = "https://github.com/the-niresh/plug-and-play-reviewer";
 const LINKS = [
   { href: "/docs", label: "Docs" },
   { href: "/scorecard", label: "Scorecard" },
+  { href: "/contact", label: "Talk to us" },
   { href: "/dashboard", label: "Dashboard" },
 ] as const;
 

@@ -6,7 +6,7 @@ import "./globals.css";
 import { AnalyticsGate } from "@/components/AnalyticsGate";
 import { ClientRuntime } from "@/components/ClientRuntime";
 import { CookieNotice } from "@/components/CookieNotice";
-import { PRODUCT_NAME, pageTitle, siteOrigin } from "@/lib/site";
+import { PRODUCT_NAME, SUPPORT_EMAIL, TAGLINE, pageTitle, siteOrigin } from "@/lib/site";
 
 const landingSans = Atkinson_Hyperlegible({
   subsets: ["latin"],
@@ -28,6 +28,31 @@ const landingMono = IBM_Plex_Mono({
   variable: "--font-landing-mono",
   display: "swap",
 });
+
+/** Who publishes this and what the site is. Every value is a literal in this file, so
+ *  nothing a visitor supplied reaches the JSON. */
+const SITE_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${siteOrigin()}/#website`,
+      url: siteOrigin(),
+      name: PRODUCT_NAME,
+      description: TAGLINE,
+      inLanguage: "en",
+      publisher: { "@id": `${siteOrigin()}/#org` },
+    },
+    {
+      "@type": "Organization",
+      "@id": `${siteOrigin()}/#org`,
+      name: PRODUCT_NAME,
+      url: siteOrigin(),
+      email: SUPPORT_EMAIL,
+      sameAs: ["https://github.com/the-niresh/plug-and-play-reviewer"],
+    },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
@@ -53,6 +78,12 @@ export const metadata: Metadata = {
     siteName: PRODUCT_NAME,
     locale: "en_US",
   },
+  // Google Search Console needs a property before it will crawl a new domain on request,
+  // and the meta tag is the verification method that survives a redeploy. Set the token
+  // in Vercel; without it this renders nothing, which is the correct default.
+  verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+    : undefined,
   twitter: {
     card: "summary_large_image",
   },
@@ -65,6 +96,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${landingSans.variable} ${landingDisplay.variable} ${landingMono.variable}`}
     >
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(SITE_JSON_LD) }}
+        />
         <ClientRuntime />
         {children}
         <CookieNotice />

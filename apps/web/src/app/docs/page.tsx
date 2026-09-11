@@ -92,6 +92,13 @@ export default function DocsPage() {
             </p>
           </div>
         </header>
+        <p className="text-muted-foreground mt-6 max-w-prose text-sm leading-relaxed">
+          Stuck, or something behaved differently from this page?{" "}
+          <Link href="/contact" className="text-foreground rounded-sm underline-offset-4 hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
+            Tell us
+          </Link>
+          . It reaches a person.
+        </p>
         <div className="mt-12 flex flex-col">
           {SECTIONS.map((section) => (
             <section

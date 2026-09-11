@@ -12,6 +12,10 @@ export const PRODUCT_NAME = "Plug and Play Reviewer";
  *  and sentence case in a search result reads like a fragment. */
 export const TAGLINE = "Private AI PR Reviewer for GitHub";
 
+/** Where a person reaches a human. One constant, so the address on the page, in the
+ *  form handler and in the docs can never drift apart. */
+export const SUPPORT_EMAIL = "niresh@yeahscene.com";
+
 /** Where this website lives, and also the origin a runner is pointed at.
  *
  *  Those are the same host on purpose. next.config.ts rewrites /api/* here to the API

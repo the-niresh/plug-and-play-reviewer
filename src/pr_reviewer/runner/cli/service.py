@@ -338,6 +338,13 @@ class DiffOnlyRunnerReviewExecutor:
             model_name = choice.model_id
             packed = pack_diff(snapshot, context_budget_for_model(model_name), _count_tokens)
             store = open_or_recover_local_store(default_config_dir() / _LOCAL_STATE_DB_NAME)
+            config_path = default_repo_config_path()
+            # The repository's own prompt, if someone saved one in `reviewer` under
+            # agent-prompts. Until this was read, the panel saved a version, said so, and
+            # every review still sent the built-in prompt.
+            repo_prompt = RepoConfigStore(config_path).get_active_repository_prompt(
+                job.repository_id
+            )
             outcome = incremental_review_pull_request(
                 snapshot,
                 model,
@@ -346,8 +353,8 @@ class DiffOnlyRunnerReviewExecutor:
                 installation_id=job.installation_id,
                 repository_id=job.repository_id,
                 heartbeat=lambda: self._heartbeat(job),
+                repository_prompt=repo_prompt.content if repo_prompt else None,
             )
-            config_path = default_repo_config_path()
             if get_enabled_specialists(config_path, job.repository_id):
                 tracker = BuiltinSpecialistReviewers(model, model_name)
                 outcome = apply_enabled_specialists(

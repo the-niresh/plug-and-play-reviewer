@@ -68,7 +68,15 @@ def review_pull_request(
     heartbeat: Callable[[], LeaseState] | None = None,
     budget: BudgetLimit | None = None,
     prior_findings: Sequence[UntrustedText] = (),
+    repository_prompt: str | None = None,
 ) -> ReviewOutcome:
+    """`repository_prompt` is the repository's own extra instruction, added not swapped.
+
+    It is wrapped as untrusted, the same as the diff and the PR body, because it is text a
+    person typed and the model must not read it as a system instruction. Replacing the
+    built-in prompt with it would drop the output schema contract and the grounding rules
+    with it, so the review would stop parsing rather than start obeying.
+    """
     if heartbeat is not None:
         lease = heartbeat()
         if lease.status == "cancelled":
@@ -92,12 +100,17 @@ def review_pull_request(
         retrieved_chunks=tuple(UntrustedText(item.content) for item in context),
     )
     prior_sections = [wrap_untrusted("prior_finding", item) for item in prior_findings]
+    repository_sections = (
+        [wrap_untrusted("repository_prompt", UntrustedText(repository_prompt))]
+        if repository_prompt and repository_prompt.strip()
+        else []
+    )
     prompt_content = (
         DIFF_ONLY_PROMPT.content
         + "\n"
         + omission_prompt_section(packed)
         + "\n\n"
-        + "\n\n".join((*sections, *prior_sections))
+        + "\n\n".join((*sections, *repository_sections, *prior_sections))
     )
     response = _complete_generate(
         model, prompt_content, model_name=model_name, budget=budget

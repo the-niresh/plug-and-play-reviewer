@@ -580,6 +580,9 @@ export default function HomePage() {
             <Link href="/terms" className="landing-link">
               Terms
             </Link>
+            <Link href="/contact" className="landing-link">
+              Talk to us
+            </Link>
           </nav>
         </footer>
       </main>
