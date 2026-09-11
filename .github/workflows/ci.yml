@@ -20,6 +20,13 @@ jobs:
       # three correct and nothing used it. --wait blocks until the healthcheck passes.
       - name: postgres
         run: docker compose -f docker-compose.ci.yml up -d --wait
+      # Before the `bun tests` step, because pytest itself shells out to `next build`
+      # (the landing and dashboard budget tests measure the real bundle). With no
+      # node_modules those runs exited 127, command not found, and the assertion read
+      # "next build failed: assert 127 == 0", which names the symptom and not the cause.
+      - name: bun install
+        run: bun install --frozen-lockfile
+        working-directory: apps/web
       - name: lock
         run: uv run python scripts/check_supply_chain.py lock
       - name: ruff
