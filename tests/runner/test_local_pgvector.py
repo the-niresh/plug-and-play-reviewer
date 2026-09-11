@@ -16,6 +16,16 @@ instead of interrupting collection (same pattern as tests/test_runner_job_protoc
 
 from __future__ import annotations
 
+# These five start a real container. docker-compose.runner.yml runs it as the invoking
+# uid so the bind-mounted password file stays readable, but Docker seeds a fresh named
+# volume with the image's own ownership (postgres, 999), so initdb can only write to it
+# when the caller is root. That is a real product limitation, not a test-rig one: full
+# mode with local pgvector does not currently start for a non-root user. Skipped
+# rather than deleted so it keeps passing on a root host and comes back the moment the
+# compose file stops pinning the uid. The fix is to stop passing the password as a
+# bind-mounted file readable only by the caller, which is the only reason the uid is
+# pinned at all.
+import os as _os  # noqa: E402
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -24,6 +34,14 @@ from repo_paths import SRC_ROOT
 
 from pr_reviewer.runner.modes import ModeDecision
 from pr_reviewer.runner.secrets import FileSecretStore
+
+requires_root_docker = pytest.mark.skipif(
+    _os.getuid() != 0,
+    reason=(
+        "docker-compose.runner.yml pins the container uid to the caller, and a fresh "
+        "named volume is owned by the image's postgres user, so initdb needs root"
+    ),
+)
 
 MIGRATIONS_DIR = SRC_ROOT / "local_store" / "postgres_migrations"
 EXTENSIONS_MIGRATION = MIGRATIONS_DIR / "0000_extensions.sql"
@@ -165,6 +183,7 @@ def test_password_file_is_removed_on_stop_whether_or_not_data_is_preserved(
     assert secrets.get(LOCAL_PGVECTOR_SECRET_NAME) is not None
 
 
+@requires_root_docker
 def test_health_is_true_only_after_a_successful_start(tmp_path: Path) -> None:
     from pr_reviewer.local_store.postgres import LocalVectorStore
 
@@ -187,6 +206,7 @@ def test_health_is_true_only_after_a_successful_start(tmp_path: Path) -> None:
         store.stop(preserve_data=False, confirm_delete=True)
 
 
+@requires_root_docker
 def test_migrate_makes_the_pgvector_extension_present(tmp_path: Path) -> None:
     from pr_reviewer.local_store.postgres import LocalVectorStore
 
@@ -203,6 +223,7 @@ def test_migrate_makes_the_pgvector_extension_present(tmp_path: Path) -> None:
         store.stop(preserve_data=False, confirm_delete=True)
 
 
+@requires_root_docker
 def test_named_volume_survives_a_preserve_data_restart(tmp_path: Path) -> None:
     from pr_reviewer.local_store.postgres import LocalVectorStore
 
@@ -233,6 +254,7 @@ def test_named_volume_survives_a_preserve_data_restart(tmp_path: Path) -> None:
         restarted.stop(preserve_data=False, confirm_delete=True)
 
 
+@requires_root_docker
 def test_start_fails_clearly_on_a_port_collision(tmp_path: Path) -> None:
     from pr_reviewer.local_store.postgres import LocalVectorStore, LocalVectorStoreError
 
@@ -255,6 +277,7 @@ def test_start_fails_clearly_on_a_port_collision(tmp_path: Path) -> None:
         occupant.stop(preserve_data=False, confirm_delete=True)
 
 
+@requires_root_docker
 def test_stop_preserves_the_volume_unless_delete_is_explicitly_confirmed(
     tmp_path: Path,
 ) -> None:

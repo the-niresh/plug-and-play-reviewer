@@ -12,11 +12,22 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
 from repo_paths import REPO_ROOT
 
 REPO = REPO_ROOT
 GRAPHIFY = Path("/opt/graphify-venv/bin/graphify")
 GRAPHIFY_PYTHON = Path("/opt/graphify-venv/bin/python")
+
+# graphify is installed by hand into /opt on a machine that indexes repositories; it is
+# not a Python dependency and `uv sync` does not put it there. The two tests below drive
+# the real binary, so on a machine without it they were not failing usefully, they were
+# reporting FileNotFoundError for a tool that was never meant to be present. Skip, so a
+# machine that does have it still gets the check.
+requires_graphify = pytest.mark.skipif(
+    not GRAPHIFY.exists() or not GRAPHIFY_PYTHON.exists(),
+    reason="graphify is not installed at /opt/graphify-venv on this machine",
+)
 
 
 def _node(node_id: str, label: str, source_file: str) -> dict[str, str]:
@@ -287,6 +298,7 @@ def test_code_graph_module_does_not_call_the_undirected_cli() -> None:
     assert "subprocess" not in source
 
 
+@requires_graphify
 def test_graphify_venv_has_tree_sitter_sql() -> None:
     result = subprocess.run(
         [str(GRAPHIFY_PYTHON), "-c", "import tree_sitter_sql"],
@@ -297,6 +309,7 @@ def test_graphify_venv_has_tree_sitter_sql() -> None:
     assert result.returncode == 0, result.stderr
 
 
+@requires_graphify
 def test_graphify_update_includes_sql_tables(tmp_path: Path) -> None:
     repo = tmp_path / "sqlrepo"
     (repo / "migrations").mkdir(parents=True)
