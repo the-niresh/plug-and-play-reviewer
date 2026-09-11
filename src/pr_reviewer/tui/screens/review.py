@@ -22,6 +22,7 @@ from pr_reviewer.local_store.review_log import ReviewLogStore
 from pr_reviewer.reviewer.receipt import FindingReceipt, SandboxVerification
 from pr_reviewer.reviewer.remediation import RemediationPrompt
 from pr_reviewer.reviewer.specialists import SPECIALIST_CONCERNS
+from pr_reviewer.tui.clipboard import copy_to_system_clipboard
 from pr_reviewer.tui.out_of_tokens import OutOfTokensState, out_of_tokens_message
 from pr_reviewer.tui.push_review_summary import (
     PushReviewSummaryResult,
@@ -220,7 +221,10 @@ class ReviewPanel(Widget):
             finding_id = button_id.removeprefix("copy-remediation-")
             prompt = self._remediation_prompts.get(finding_id)
             if prompt is not None:
+                # Same pair as the connect screen: OSC 52 for terminals that honour it,
+                # the system tool for the ones that do not (macOS Terminal.app).
                 self.app.copy_to_clipboard(prompt)
+                copy_to_system_clipboard(prompt)
 
     def start_agent_reasoning(
         self,

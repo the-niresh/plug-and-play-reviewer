@@ -12,6 +12,7 @@ import hashlib
 import os
 import secrets
 import socket
+import sys
 import webbrowser
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Label, Static
 
+from pr_reviewer.tui.clipboard import copy_to_system_clipboard
 from pr_reviewer.tui.github_connect import (
     HostedOriginError,
     build_github_sign_in_url,
@@ -45,7 +47,14 @@ PAIRING_DEADLINE_SECONDS = 300.0
 CONSOLE_BROWSER_NAMES = frozenset({"lynx", "links", "elinks", "w3m", "www-browser"})
 
 # A GUI browser is only plausible when something suggests a graphical session exists.
+# These are X11, Wayland and an explicit override, so they only mean anything on Linux
+# and the BSDs.
 GUI_ENV_VARS = ("DISPLAY", "WAYLAND_DISPLAY", "BROWSER")
+
+# macOS and Windows always have a window server, and neither sets DISPLAY. Requiring one
+# of GUI_ENV_VARS made `o` answer "No graphical browser detected here" on every Mac,
+# before it ever tried to open anything.
+ALWAYS_GRAPHICAL_PLATFORMS = frozenset({"darwin", "win32"})
 
 
 def sha256_hex(value: str) -> str:
@@ -53,7 +62,9 @@ def sha256_hex(value: str) -> str:
 
 
 def gui_browser_plausible() -> bool:
-    if not any(os.environ.get(name) for name in GUI_ENV_VARS):
+    if sys.platform not in ALWAYS_GRAPHICAL_PLATFORMS and not any(
+        os.environ.get(name) for name in GUI_ENV_VARS
+    ):
         return False
     try:
         browser = webbrowser.get()
@@ -220,8 +231,16 @@ class ConnectPanel(Widget):
         if not self._sign_in_url:
             self.notify("No link yet -- press Sign in first.", severity="warning")
             return
+        # OSC 52 as well as the system clipboard: the terminal sequence is what works
+        # over SSH, and the system tool is what works in a terminal that ignores it.
         self.app.copy_to_clipboard(self._sign_in_url)
-        self.notify("Link copied.", severity="information")
+        if copy_to_system_clipboard(self._sign_in_url):
+            self.notify("Link copied.", severity="information")
+        else:
+            self.notify(
+                "Asked the terminal to copy. If nothing pasted, select the link above.",
+                severity="warning",
+            )
 
     def action_open_browser(self) -> None:
         if not self._sign_in_url:
