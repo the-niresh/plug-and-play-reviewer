@@ -1,7 +1,10 @@
 services:
   postgres:
     image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
-    user: "70:70"
+    # No `user:` override. 70:70 was here, which is the postgres uid on Alpine; this
+    # image is Debian-based and uses 999. initdb could not chown its own data directory
+    # and the container exited 1 before ever listening. The entrypoint already starts as
+    # root and steps down to postgres itself, so pinning a uid only breaks that.
     environment:
       POSTGRES_USER: pr_reviewer
       POSTGRES_PASSWORD: pr_reviewer

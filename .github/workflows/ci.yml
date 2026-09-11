@@ -8,13 +8,18 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
       - uses: oven-sh/setup-bun@v2
+      # docker-compose.ci.yml, not a `services:` block. The tests connect to
+      # localhost:54329 with the pr_reviewer role, and a services entry cannot express
+      # that: it published no port, set no POSTGRES_PASSWORD (so the container exited
+      # during init), and had no health gate, so every run reached pytest with nothing
+      # listening and died on "connection refused". The compose file already had all
+      # three correct and nothing used it. --wait blocks until the healthcheck passes.
+      - name: postgres
+        run: docker compose -f docker-compose.ci.yml up -d --wait
       - name: lock
         run: uv run python scripts/check_supply_chain.py lock
       - name: ruff
