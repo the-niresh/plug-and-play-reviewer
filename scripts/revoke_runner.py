@@ -23,6 +23,16 @@ from pr_reviewer.config import normalize_database_url
 from pr_reviewer.control_plane.repository_policy import revoke_runner
 
 
+def _revoked_at(database_url: str, runner_id: uuid.UUID) -> object | None:
+    with psycopg.connect(normalize_database_url(database_url), row_factory=dict_row) as conn:
+        row = conn.execute(
+            "select revoked_at from runners where id = %s", (str(runner_id),)
+        ).fetchone()
+    if row is None:
+        raise SystemExit(f"no runner with id {runner_id}")
+    return row["revoked_at"]
+
+
 def _active_runners(database_url: str) -> list[dict[str, object]]:
     with psycopg.connect(normalize_database_url(database_url), row_factory=dict_row) as conn:
         rows = conn.execute(
@@ -60,8 +70,19 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 0
 
-    revoke_runner(uuid.UUID(args.runner_id))
-    print(f"revoked {args.runner_id}")
+    runner_id = uuid.UUID(args.runner_id)
+    # Say what actually happened. revoke_runner is a no-op on an already revoked row, so
+    # printing "revoked" either way would report work that did not occur.
+    already = _revoked_at(database_url, runner_id)
+    if already is not None:
+        print(f"{runner_id} was already revoked at {already}")
+        return 0
+
+    revoke_runner(runner_id)
+    if _revoked_at(database_url, runner_id) is None:
+        print(f"{runner_id} is still active after the revoke", file=sys.stderr)
+        return 1
+    print(f"revoked {runner_id}")
     return 0
 
 
