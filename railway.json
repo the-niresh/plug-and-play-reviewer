@@ -5,8 +5,8 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "/app/.venv/bin/pr-reviewer-api",
     "healthcheckPath": "/health",
-    "preDeployCommand": "/app/.venv/bin/pr-reviewer-db-migrate"
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
   }
 }

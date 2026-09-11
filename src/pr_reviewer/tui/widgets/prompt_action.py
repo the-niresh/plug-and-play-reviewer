@@ -18,6 +18,19 @@ class PromptAction(Static):
 
     can_focus = True
 
+    # can_focus without a focus style is a keyboard trap with the lights off. Tab into a
+    # list of these and the arrow keys move focus with nothing on screen changing, so
+    # pressing Enter is a guess about which row you are on. Styled here rather than per
+    # screen so every list of these rows shows its current item, not just the ones
+    # somebody remembered.
+    DEFAULT_CSS = """
+    PromptAction:focus {
+        background: $primary;
+        color: $background;
+        text-style: bold;
+    }
+    """
+
     class Activated(Message):
         def __init__(self, prompt_action: PromptAction) -> None:
             self.prompt_action = prompt_action

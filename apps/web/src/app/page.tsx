@@ -4,6 +4,7 @@ import Link from "next/link";
 import { GithubMark } from "@/components/github-mark";
 import { BugHunt } from "@/components/landing/BugHunt";
 import { ProductStage } from "@/components/landing/ProductStage";
+import { TerminalStage } from "@/components/landing/TerminalStage";
 import { SiteNav } from "@/components/SiteNav";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -280,6 +281,7 @@ export default function HomePage() {
           <div className="landing-rule flex min-w-0 flex-col gap-6 lg:translate-y-3">
             <BugHunt />
             <ProductStage finding={EXAMPLE_FINDING} />
+            <TerminalStage />
           </div>
         </section>
 

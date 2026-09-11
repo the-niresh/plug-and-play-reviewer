@@ -124,7 +124,9 @@ keys from the runner.
 ## Railway
 
 1. In Railway, create a service from a repo import of this repository. It
-   reads `deploy/railway.json`. There is no public Railway template id yet.
+   reads `railway.json` from the repository root. There is no public Railway template
+   id yet. See [SELF_HOST_CONTROL_PLANE.md](SELF_HOST_CONTROL_PLANE.md) for the CLI
+   path, which is the one that was actually used.
 2. In the service variables, add every name in the table above. Railway does
    not take those values from the JSON file.
 3. Deploy. Railway runs `/app/.venv/bin/pr-reviewer-db-migrate` before it

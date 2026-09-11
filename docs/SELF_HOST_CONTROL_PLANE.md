@@ -14,7 +14,9 @@ platforms.
 
 - Render reads `deploy/render.yaml`. It sets no start command, because the image
   already does the right thing.
-- Railway reads `deploy/railway.json`, which does have a real pre-deploy step.
+- Railway reads `railway.json` at the repository root. It sets no start command
+  either. That file is deprecated in favour of `.railway/railway.ts` and keeps
+  working until 2026-12-01; see the Railway section for why we have not moved yet.
 
 The live instance is `https://api.plugandplayreviewer.online`, behind the website at
 `https://plugandplayreviewer.online`. Every step below was run against that deploy.
@@ -205,41 +207,106 @@ Neon. If it fails, check `DATABASE_URL` and that migrations ran.
 
 ## Railway
 
-### Step 1. Import the repository
+Every command below was run against a real deploy on 11 Sep 2026 and the output is what
+it actually printed. Railway has no free tier, so this costs credit; Render's free plan
+is the no-cost option.
 
-1. Open [Railway](https://railway.com) and sign in.
-2. Create a **New Project** from a GitHub repo import of
-   `the-niresh/plug-and-play-reviewer`.
-3. Railway reads `deploy/railway.json`. There is no public template id yet.
+### Step 1. Create the project and service
 
-<!-- SCREENSHOT: Railway new service from GitHub repo import -->
+Railway's CLI does all of this without the dashboard. Install it, sign in, then from a
+checkout of this repository:
 
-### Step 2. Add environment variables
+```sh
+railway login                                  # opens a browser; also creates accounts
+railway init --name plug-and-play-reviewer     # prompts for the workspace
+railway add --service reviewer-api             # an empty service, not a database
+```
 
-Open the service **Variables** tab. Railway does not read secrets from
-`railway.json`. Add every name from the environment table manually.
+`railway init` and `railway add` both prompt even with `--json`. Answer the workspace and
+name prompts; the ids come back on the last line.
 
-<!-- SCREENSHOT: Railway variables tab with the seven required names -->
+### Step 2. Set the seven variables
+
+Railway does not read secrets from `railway.json`, so they are set from the CLI. Do not
+type them: read them from a file, or they land in your shell history.
+
+```sh
+railway variable set --service reviewer-api \
+  DATABASE_URL="..." \
+  GITHUB_APP_ID="..." \
+  GITHUB_APP_PRIVATE_KEY="..." \
+  GITHUB_OAUTH_CLIENT_ID="..." \
+  GITHUB_OAUTH_CLIENT_SECRET="..." \
+  GITHUB_WEBHOOK_SECRET="..." \
+  PR_REVIEWER_HOSTED_ORIGIN="https://<your public origin>"
+```
+
+The PEM is multi-line. Pass it as one argument, quoted, or read it with a script.
 
 ### Step 3. Deploy
 
-Railway has a real pre-deploy step, so unlike the Render free plan it runs the
-migration separately:
+```sh
+railway up --service reviewer-api --detach -m "first control plane deploy"
+```
 
-- `preDeployCommand`: `/app/.venv/bin/pr-reviewer-db-migrate`
-- `startCommand`: `/app/.venv/bin/pr-reviewer-api`
-- `healthcheckPath`: `/health`
+Railway reads `railway.json` at the repository root: builder `DOCKERFILE`, health check
+`/health`, and no start command, because the image's own `pr-reviewer-serve` migrates and
+then serves. `.railwayignore` keeps `.env`, `secrets/` and the caches out of the upload.
 
-<!-- SCREENSHOT: Railway deployment details showing start command and health check -->
+`--detach` returns as soon as the upload finishes, which is **not** a successful deploy.
+Follow the deployment id the upload printed:
 
-### Step 4. Set the public origin and redeploy
+```sh
+railway deployment list --service reviewer-api --json
+```
 
-Copy the public Railway URL. Set `PR_REVIEWER_HOSTED_ORIGIN` to that https
-origin and redeploy.
+Wait for `SUCCESS`. `BUILDING` and `DEPLOYING` are in progress; `FAILED` and `CRASHED`
+need the logs. A first build takes a few minutes.
+
+### Step 4. Give it a domain
+
+```sh
+railway domain --service reviewer-api --json
+# {"domain": "https://reviewer-api-production.up.railway.app"}
+```
+
+If that is the origin people will use, set `PR_REVIEWER_HOSTED_ORIGIN` to it and deploy
+again. If a separate website proxies `/api/*` to this service, use the website's origin
+instead, for the reason in "Which origin is the public one".
 
 ### Step 5. Verify
 
-Same `/health` and `/ready` checks as Render.
+```sh
+curl -sS https://<your-domain>/health          # {"status":"ok"}
+curl -sS https://<your-domain>/ready           # {"status":"ok"}, so it reaches Postgres
+curl -sS -o /dev/null -w "%{http_code}\n" \
+  -X POST https://<your-domain>/api/github/webhook \
+  -H "X-GitHub-Event: ping" -H "X-GitHub-Delivery: probe" \
+  -H "Content-Type: application/json" -d '{}'   # 401, the signature check working
+```
+
+A `401` there is the good answer. A `200` would mean the webhook secret is not being
+checked.
+
+```sh
+railway logs --service reviewer-api --lines 40
+```
+
+### Things that will surprise you
+
+- **`railway.json` is deprecated.** Every command prints a warning: Railway now prefers
+  `.railway/railway.ts` infrastructure as code, and config-as-code files keep working
+  only **until 2026-12-01**. `railway config migrate --apply` writes the TypeScript file,
+  but `railway config plan` then needs the `railway` npm package installed at the
+  repository root, which is a Node dependency this Python repo does not otherwise have.
+  The migration also names the service after the project rather than after your service,
+  so review the generated file before applying it. We stayed on `railway.json` for now
+  deliberately; it is a scheduled piece of work, not a surprise.
+- **The config file has to be at the repository root.** It used to live in `deploy/`,
+  where Railway never looked at it.
+- **`railway status` fails before you link.** "No linked project found" is the expected
+  first output, not an error to chase.
+- **There is no free tier.** Railway bills usage against credit from the first deploy.
 
 ## Point the GitHub App at the new origin
 

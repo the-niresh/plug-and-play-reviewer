@@ -1,0 +1,24 @@
+# railway up uploads this directory to Railway's builder before Docker ever applies
+# .dockerignore, so anything secret has to be excluded here too. .gitignore already
+# covers .env, but a build upload is the wrong place to rely on that indirection.
+.env
+.env.*
+secrets/
+*.pem
+*.key
+
+# Large and useless to a build. The Dockerfile installs from pyproject/uv.lock and the
+# UI stage runs its own bun install.
+.git
+.venv
+node_modules
+apps/web/node_modules
+apps/web/.next
+apps/web/.next-dev
+__pycache__
+.mypy_cache
+.pytest_cache
+.ruff_cache
+datasets
+docs/reports
+.claude

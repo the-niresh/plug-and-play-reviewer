@@ -49,6 +49,11 @@ FROM python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1
 COPY --from=python-deps /app /app
 WORKDIR /app
 ENV PATH=/app/.venv/bin:$PATH
+# Without this, Python block-buffers stdout when it is a pipe rather than a terminal, and
+# "Database migrations complete." lands in the deploy log *after* uvicorn's startup lines.
+# The one message that proves the migration ran before the server did then appears to say
+# the opposite. Both Render and Railway showed it out of order until this was set.
+ENV PYTHONUNBUFFERED=1
 USER 65532:65532
 EXPOSE 8000
 CMD ["/app/.venv/bin/pr-reviewer-serve"]

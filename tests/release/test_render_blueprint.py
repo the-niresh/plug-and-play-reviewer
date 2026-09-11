@@ -10,7 +10,10 @@ from repo_paths import REPO_ROOT
 
 REPO = REPO_ROOT
 RENDER_BLUEPRINT = REPO / "deploy" / "render.yaml"
-RAILWAY_TEMPLATE = REPO / "deploy" / "railway.json"
+# Repository root, not deploy/: Railway only reads a config file from the service's
+# root directory, so the copy in deploy/ was never read by anything.
+RAILWAY_TEMPLATE = REPO / "railway.json"
+RAILWAY_IGNORE = REPO / ".railwayignore"
 DEPLOY_GUIDE = REPO / "docs" / "DEPLOY.md"
 
 REQUIRED_BOOT_ENV = (
@@ -79,18 +82,34 @@ def test_no_deploy_file_ever_gets_a_model_key_variable() -> None:
         assert forbidden.lower() not in railway_text
 
 
-def test_railway_template_matches_the_railway_schema_and_migrates_on_deploy() -> None:
+def test_railway_config_builds_the_dockerfile_and_lets_the_image_migrate() -> None:
+    """No startCommand and no preDeployCommand, for the same reason as Render.
+
+    The image's own command is pr-reviewer-serve, which migrates and then serves. A
+    startCommand here would override it with the serve-only entry point and quietly drop
+    the migration, which is exactly the failure this project keeps having to fix.
+    """
     payload = json.loads(RAILWAY_TEMPLATE.read_text(encoding="utf-8"))
     assert "service" not in payload
     assert "volumes" not in payload
+    assert payload["build"]["builder"] == "DOCKERFILE"
+    assert payload["build"]["dockerfilePath"] == "Dockerfile"
     deploy = payload["deploy"]
-    assert deploy["startCommand"] == API
     assert deploy["healthcheckPath"] == "/health"
-    assert deploy["preDeployCommand"] == MIGRATE
+    assert "startCommand" not in deploy
+    assert "preDeployCommand" not in deploy
     environment = payload.get("deploy", {}).get("environment", {})
     for key in FORBIDDEN_RUNTIME_SECRET_ENV:
         assert key not in environment
     assert "NEXT_PUBLIC_CONTROL_PLANE_ORIGIN" not in json.dumps(payload)
+
+
+def test_railway_upload_excludes_secrets() -> None:
+    """`railway up` uploads this directory to Railway's builder before Docker ever applies
+    .dockerignore, so .env has to be excluded here too."""
+    text = RAILWAY_IGNORE.read_text(encoding="utf-8")
+    for secret_path in (".env", "secrets/", "*.pem", "*.key"):
+        assert secret_path in text
 
 
 def test_deploy_guide_names_every_boot_env_and_the_health_paths() -> None:

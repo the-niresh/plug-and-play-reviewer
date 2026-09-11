@@ -14,7 +14,7 @@ host above until it is.
 | **Local runner** | Your laptop or a machine you control. Always local. | Source, diffs, model key, webhook URLs for notifications. |
 
 No deploy target in this repository runs the runner. `deploy/render.yaml` and
-`deploy/railway.json` both start `pr-reviewer-api` only. Putting the runner on
+`railway.json` both start `pr-reviewer-api` only. Putting the runner on
 Render would send your source to a remote host and break the privacy model.
 
 ## What you need
