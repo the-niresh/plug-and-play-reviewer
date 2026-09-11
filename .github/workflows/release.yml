@@ -15,11 +15,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
+      # compose.release.yml guards every runtime variable with `${VAR:?...}`, and compose
+      # resolves the whole file before it builds anything, so `build` fails on a missing
+      # secret it will never use. These placeholders satisfy the parser. They are not
+      # secrets and nothing here is published: the release ships the compose file and its
+      # checksums, not images.
       - name: build images
+        env:
+          # localhost on purpose: the supply-chain secret scan refuses any remote
+          # postgres URL in a tracked file, and it is right to.
+          DATABASE_URL: postgresql://placeholder@localhost:5432/placeholder
+          GITHUB_APP_ID: "0"
+          GITHUB_APP_PRIVATE_KEY: placeholder
+          GITHUB_OAUTH_CLIENT_ID: placeholder
+          GITHUB_OAUTH_CLIENT_SECRET: placeholder
+          GITHUB_WEBHOOK_SECRET: placeholder
+          GITHUB_APP_SLUG: placeholder
+          PR_REVIEWER_HOSTED_ORIGIN: https://placeholder.invalid
         run: docker compose -f compose.release.yml build
       - name: build release assets
         run: |
           sh scripts/build-local-release.sh dist
+      # syft is not on the runner image. Without this the sbom step fails with
+      # "syft: command not found" after the build has already spent its minutes.
+      - name: install syft
+        uses: anchore/sbom-action/download-syft@v0
       - name: sbom
         run: syft dir:. -o spdx-json > dist/sbom.spdx.json
       - name: container scan
