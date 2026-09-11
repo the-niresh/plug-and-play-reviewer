@@ -40,6 +40,13 @@ jobs:
       - name: frontend build
         run: bun run build
         working-directory: apps/web
+      # playwright.config.ts declares a chromium project, and Playwright uses its own
+      # pinned browser build rather than whatever Chrome the runner image ships. Without
+      # this install the test step cannot launch a browser at all. --with-deps pulls the
+      # shared libraries headless chromium needs on a bare ubuntu runner.
+      - name: playwright browsers
+        run: bunx playwright install --with-deps chromium
+        working-directory: apps/web
       - name: playwright
         run: bunx playwright test
         working-directory: apps/web
