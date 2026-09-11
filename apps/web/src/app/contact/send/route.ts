@@ -10,8 +10,17 @@ import { SUPPORT_EMAIL } from "@/lib/site";
  *  and has no business crossing that boundary.
  */
 
-const FROM = "Plug and Play Reviewer <onboarding@resend.dev>";
 const RESEND_URL = "https://api.resend.com/emails";
+
+/** Both sides of the envelope are configurable, because Resend's own rules force it.
+ *
+ *  Until a domain is verified at resend.com/domains, an account may only send FROM
+ *  onboarding@resend.dev and only TO the address that signed up. Hardcoding the real
+ *  support address meant every message bounced with a 502. Verify the domain, then set
+ *  CONTACT_FROM_EMAIL to an address on it and drop the CONTACT_TO_EMAIL override. */
+const FROM =
+  process.env.CONTACT_FROM_EMAIL ?? "Plug and Play Reviewer <onboarding@resend.dev>";
+const TO = process.env.CONTACT_TO_EMAIL ?? SUPPORT_EMAIL;
 
 const LIMITS = { name: 120, email: 254, message: 5000 } as const;
 
@@ -82,7 +91,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
     body: JSON.stringify({
       from: FROM,
-      to: [SUPPORT_EMAIL],
+      to: [TO],
       reply_to: email,
       subject: `Plug and Play Reviewer: ${name}`,
       text: [`From: ${name} <${email}>`, "", message].join("\n"),
