@@ -20,7 +20,48 @@ import pytest  # noqa: E402
 from pr_reviewer.config import default_database_url  # noqa: E402
 
 os.environ["DATABASE_URL"] = default_database_url()
-os.environ["GITHUB_WEBHOOK_SECRET"] = "test-secret"
+
+# Every setting get_settings() reads, pinned to a fixture value.
+#
+# Only DATABASE_URL and GITHUB_WEBHOOK_SECRET used to be set here, and get_settings()
+# calls load_dotenv(), so the rest came from whatever .env the developer happened to
+# have. Tests that assert on the sign-in redirect and its state cookie therefore passed
+# on a machine with real GitHub OAuth credentials and failed everywhere else, CI
+# included, where an empty client id makes the route return no Set-Cookie at all. A test
+# suite must not read a developer's private .env to pass. setdefault, not assignment, so
+# a deliberate override from the environment still wins.
+os.environ.update(
+    {
+        "GITHUB_WEBHOOK_SECRET": "test-secret",
+        "GITHUB_OAUTH_CLIENT_ID": "Iv1.testclientid",
+        "GITHUB_OAUTH_CLIENT_SECRET": "test-oauth-client-secret",
+        "GITHUB_APP_ID": "123456",
+        "GITHUB_APP_SLUG": "pr-reviewer-test",
+        "PR_REVIEWER_HOSTED_ORIGIN": "https://control.example.test",
+    }
+)
+
+
+def _throwaway_app_private_key() -> str:
+    """A real RSA key, generated here, never written down.
+
+    The installation lifecycle signs an app JWT, so a placeholder string is not enough:
+    PyJWT raises InvalidKeyError on anything that is not a parseable PEM. Generated at
+    import rather than committed because a checked-in PEM is exactly what the `secret
+    scan` CI step exists to reject, and rightly so. It lives only in this process.
+    """
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
+
+
+os.environ["GITHUB_APP_PRIVATE_KEY"] = _throwaway_app_private_key()
 
 from pr_reviewer.contracts.runner import VerifiedInstallationAccess  # noqa: E402
 from pr_reviewer.db.client import close_pool, connection  # noqa: E402
