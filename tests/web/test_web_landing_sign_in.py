@@ -16,7 +16,6 @@ from repo_paths import REPO_ROOT
 
 from pr_reviewer.control_plane.github_oauth import (
     ALLOWED_RETURN_TO_PATHS,
-    LIVE_SIGN_IN_COOKIE_NAME,
 )
 
 WEB_SRC = REPO_ROOT / "apps" / "web" / "src"
@@ -67,26 +66,17 @@ def test_landing_page_no_longer_sends_a_fresh_visitor_to_local_runner_pairing() 
     assert '"/onboarding"' not in source
 
 
-def test_middleware_exists() -> None:
-    assert MIDDLEWARE.is_file(), f"missing {MIDDLEWARE}"
+def test_the_landing_page_is_reachable_when_signed_in() -> None:
+    """There is no middleware, and there must not be one that bounces "/" to /dashboard.
 
-
-def test_middleware_redirects_a_signed_in_visitor_away_from_the_landing_page() -> None:
-    middleware = MIDDLEWARE.read_text(encoding="utf-8")
-    session = SESSION.read_text(encoding="utf-8")
-    assert 'from "@/lib/session"' in middleware
-    assert "request.cookies.has(SIGN_IN_COOKIE_NAME)" in middleware
-    assert f'SIGN_IN_COOKIE_NAME = "{LIVE_SIGN_IN_COOKIE_NAME}"' in session
-    assert "/dashboard" in middleware
-    assert "NextResponse.redirect" in middleware
-
-
-def test_middleware_only_matches_the_landing_route() -> None:
-    """A matcher scoped to "/" only: this must never intercept /dashboard/* (which already
-    has its own, real, cookie-verifying sign-in check) or /api/* (the OAuth routes it would
-    otherwise redirect before they can run)."""
-    source = MIDDLEWARE.read_text(encoding="utf-8")
-    assert 'matcher: "/"' in source
+    A signed-in visitor who clicks the logo, follows a shared link, or wants to read the
+    docs pitch was redirected away from the page before it rendered. Nobody asked for
+    that, and a marketing page that hides itself from its own users is a bug. Signed-in
+    state belongs in what the page shows, not in whether the page loads.
+    """
+    assert not MIDDLEWARE.exists(), (
+        f"{MIDDLEWARE} is back; the landing page must render for signed-in visitors too"
+    )
 
 
 def test_the_sign_in_href_pattern_actually_catches_a_violation() -> None:

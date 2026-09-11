@@ -139,18 +139,12 @@ _PAIRING_DENIED_MESSAGES: dict[str, str] = {
         "One of the repositories this pairing needs is not covered by this GitHub App "
         "installation. Go back to the terminal and press Sign in to get a new link."
     ),
-    # These two are limits, not accidents. Telling someone to sign in again would send
-    # them round the same loop forever, which is what the generic message used to do.
-    "free_tier_one_repository": (
-        "The free tier covers one repository per installation, and this installation "
-        "already has one. Pick that same repository, or remove the other one from the "
-        "GitHub App installation first."
-    ),
-    "free_tier_one_user": (
-        "The free tier covers one active runner per installation, and one is already "
-        "paired. Revoke the existing runner before pairing this terminal. If it is a "
-        "machine you no longer use, an owner can revoke it by running "
-        "scripts/revoke_runner.py against the database."
+    # A limit, not an accident. Telling someone to sign in again would send them round
+    # the same loop forever, which is what the generic message used to do.
+    "repository_claimed_by_another_user": (
+        "One of the repositories you asked for is already connected to someone else's "
+        "runner. A repository has one owner at a time. Pick a repository nobody has "
+        "claimed, or ask the person holding it to revoke their runner first."
     ),
 }
 

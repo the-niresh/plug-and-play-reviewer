@@ -476,12 +476,14 @@ export default function HomePage() {
               What stays free and what is for teams
             </h2>
             <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-              A single person running a local reviewer can stay on a simple path.
-              The free tier allows one GitHub user and one repository per installation.
+              A single person running a local reviewer can stay on a simple path. On the
+              free tier a repository has one owner at a time: connect as many as your
+              GitHub App installation covers, and nobody else can pair against one you
+              already hold.
             </p>
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-              Team controls, shared prompts, and extra repositories are the paid path. There
-              are no prices on this page.
+              Team controls, shared prompts, and more than one person on the same
+              repository are the paid path. There are no prices on this page.
             </p>
           </article>
         </section>

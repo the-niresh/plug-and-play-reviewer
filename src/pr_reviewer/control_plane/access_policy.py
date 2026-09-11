@@ -30,13 +30,24 @@ def free_tier_pairing_denial(
     github_user_id: int,
     github_repository_ids: Sequence[int],
 ) -> PairingDenialReason | None:
+    """One person per repository. Not one repository per installation.
+
+    A repository is held by one runner at a time, and repository_assignments enforces
+    that for every tier with a hard unique(repository_id). This check exists so the limit
+    is explained at pairing time, in words, instead of letting someone finish GitHub
+    sign-in and then meet a conflict when their runner first tries to claim.
+
+    It is deliberately not a count. An installation may connect every repository it
+    covers, and two people may hold different repositories on the same installation. The
+    earlier version denied any pairing that named more than one repository and denied a
+    second runner on an installation even for the same person, which is not the rule.
+    """
     if installation_access_tier(conn, installation_id) != FREE_ACCESS_TIER:
         return None
+    if not github_repository_ids:
+        return None
 
-    if len(github_repository_ids) > 1:
-        return "free_tier_one_repository"
-
-    assigned_repos = conn.execute(
+    held_by_someone_else = conn.execute(
         """
         select distinct r.github_repository_id
         from repository_assignments ra
@@ -44,32 +55,13 @@ def free_tier_pairing_denial(
         join runners ru on ru.id = ra.runner_id
         where r.installation_id = %s
           and ru.revoked_at is null
+          and ru.github_user_id is distinct from %s
+          and r.github_repository_id = any(%s)
         """,
-        (installation_id,),
+        (installation_id, github_user_id, list(github_repository_ids)),
     ).fetchall()
-    assigned_ids = {int(row["github_repository_id"]) for row in assigned_repos}
-    if (
-        assigned_ids
-        and github_repository_ids
-        and github_repository_ids[0] not in assigned_ids
-    ):
-        return "free_tier_one_repository"
-
-    active_users = conn.execute(
-        """
-        select distinct github_user_id
-        from runners
-        where installation_id = %s
-          and revoked_at is null
-          and github_user_id is not null
-        """,
-        (installation_id,),
-    ).fetchall()
-    if active_users:
-        active_user_ids = {int(row["github_user_id"]) for row in active_users}
-        if github_user_id not in active_user_ids:
-            return "free_tier_one_user"
-        return "free_tier_one_user"
+    if held_by_someone_else:
+        return "repository_claimed_by_another_user"
 
     return None
 

@@ -32,9 +32,9 @@ const TERMS = [
   },
   {
     tag: "The free tier",
-    title: "One GitHub user, one repository",
+    title: "A repository has one owner",
     body: [
-      "The hosted control plane allows one GitHub user and one repository per installation on the free tier.",
+      "On the free tier a repository is connected to one person's runner at a time. Connect as many repositories as your GitHub App installation covers; nobody else can pair against one you already hold until you revoke your runner.",
       "Self-hosting is not limited by that. The code is MIT and you can run the whole thing yourself.",
     ],
   },

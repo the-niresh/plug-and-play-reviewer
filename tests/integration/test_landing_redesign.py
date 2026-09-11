@@ -121,7 +121,10 @@ def test_landing_does_not_call_evals_a_baseline() -> None:
 def test_landing_states_free_tier_without_checkout() -> None:
     source = landing_source().lower()
     assert "free tier" in source
-    assert "one github user" in source or "one repository" in source
+    # The rule is one person per repository, not one repository per installation. The
+    # earlier wording described a limit the product was never meant to have.
+    assert "one owner at a time" in source
+    assert "one repository per installation" not in source
     # A price, not a bare dollar sign. `${...}` inside a JSX template literal is not a
     # checkout, and matching on that made an SVG path expression fail this test.
     between = source.split("what stays free")[1].split("what the evals")[0]

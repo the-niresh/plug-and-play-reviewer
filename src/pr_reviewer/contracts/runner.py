@@ -28,8 +28,7 @@ PairingDenialReason = Literal[
     "repository_not_in_installation",
     "revoked_installation",
     "unknown_installation",
-    "free_tier_one_repository",
-    "free_tier_one_user",
+    "repository_claimed_by_another_user",
 ]
 
 # A caller presenting a runner credential already possesses evidence of prior legitimate

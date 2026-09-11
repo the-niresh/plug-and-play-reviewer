@@ -1,4 +1,8 @@
-"""Backend enforcement for free mode: one GitHub user and one repository."""
+"""Backend enforcement for free mode: one person per repository.
+
+A repository is held by one runner at a time. It is not a count: an installation may
+connect every repository it covers, and two people may hold different repositories on
+the same installation."""
 
 from __future__ import annotations
 
@@ -76,9 +80,11 @@ def _pair_runner(
     return exchanged
 
 
-def test_free_tier_denies_approval_of_two_repositories(
+def test_free_tier_allows_a_pairing_that_names_several_repositories(
     make_verified_installation_access,
 ) -> None:
+    """The old rule denied this outright, which is what blocked the owner's own install:
+    a GitHub App installed on three repositories could never pair at all."""
     installation_id = 9101
     _insert_installation(installation_id)
     challenge = create_pairing_code("laptop", _sha256_hex("v"))
@@ -86,11 +92,10 @@ def test_free_tier_denies_approval_of_two_repositories(
 
     result = approve_pairing(challenge.code, access, [11, 12])
 
-    assert isinstance(result, PairingDenied)
-    assert result.reason == "free_tier_one_repository"
+    assert isinstance(result, PairingApproved)
 
 
-def test_free_tier_denies_a_second_github_user(
+def test_free_tier_denies_a_repository_another_person_already_holds(
     make_verified_installation_access,
 ) -> None:
     installation_id = 9102
@@ -108,13 +113,35 @@ def test_free_tier_denies_a_second_github_user(
     result = approve_pairing(challenge.code, access, [11])
 
     assert isinstance(result, PairingDenied)
-    assert result.reason == "free_tier_one_user"
+    assert result.reason == "repository_claimed_by_another_user"
 
 
-def test_free_tier_denies_a_second_repository_after_one_is_assigned(
+def test_free_tier_lets_two_people_hold_different_repositories(
     make_verified_installation_access,
 ) -> None:
+    """Same installation, different repositories, different owners. Allowed."""
     installation_id = 9103
+    _insert_installation(installation_id)
+    _pair_runner(
+        installation_id=installation_id,
+        github_user_id=1001,
+        github_repository_id=11,
+        device_name="first-laptop",
+        verifier="v1",
+    )
+
+    challenge = create_pairing_code("second-laptop", _sha256_hex("v2"))
+    access = make_verified_installation_access(1002, installation_id, {12: "acme/other"})
+    result = approve_pairing(challenge.code, access, [12])
+
+    assert isinstance(result, PairingApproved)
+
+
+def test_free_tier_lets_one_person_hold_a_second_repository(
+    make_verified_installation_access,
+) -> None:
+    """The old rule refused this too, even though it is the same person."""
+    installation_id = 9106
     _insert_installation(installation_id)
     _pair_runner(
         installation_id=installation_id,
@@ -128,8 +155,7 @@ def test_free_tier_denies_a_second_repository_after_one_is_assigned(
     access = make_verified_installation_access(1001, installation_id, {12: "acme/other"})
     result = approve_pairing(challenge.code, access, [12])
 
-    assert isinstance(result, PairingDenied)
-    assert result.reason == "free_tier_one_repository"
+    assert isinstance(result, PairingApproved)
 
 
 def test_free_tier_allows_repairing_after_revoke(
