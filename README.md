@@ -44,12 +44,12 @@ No deploy target in this repo runs the runner.
 - Review pings go to Slack, Discord, Telegram or email. See `reviewer notify`.
 - Custom agents and prompts stay private to that repository.
 
-A single person running a local reviewer can stay on a simple path. On the free
-tier a repository has one owner: the first person to pair a runner against it
-holds it, and a second person has to pick a different repository or have the
-first one release it. The number of repositories is not capped. Team controls
-and shared prompts are the paid path later. There are no prices in this
-repository.
+A single person running a local reviewer can stay on a simple path. On the
+free tier a repository has one owner: the first person to pair a runner
+against it holds it, and a second person has to pick a different repository
+or have the first one release it. The number of repositories is not capped.
+Team controls and shared prompts are the paid path later. There are no prices
+in this repository.
 
 ## What you need
 

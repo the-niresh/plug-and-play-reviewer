@@ -125,7 +125,8 @@ const PRIDE = [
   },
   {
     title: "Opt-in specialists",
-    body: "Extra reviewers run only when a repo turns them on. They are off by default.",
+    body:
+      "Security, correctness, tests and docs reviewers run only when a repo turns them on, under agent-prompts in the terminal UI. Off by default, because each one is another model call.",
   },
   {
     title: "Human gate",

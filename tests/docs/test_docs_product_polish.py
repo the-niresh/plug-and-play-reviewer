@@ -163,9 +163,16 @@ def test_runbook_links_live_proof_reports() -> None:
 
 
 def test_readme_states_free_tier_without_prices() -> None:
+    """The rule is one person per repository, not one repository per installation.
+
+    This used to accept "one github user" or "one repository", which is the older and
+    wrong phrasing: the free tier caps who owns a repository, not how many repositories
+    an installation may have. See control_plane/access_policy.free_tier_pairing_denial.
+    """
     text = _text(README).lower()
     assert "free tier" in text
-    assert "one github user" in text or "one repository" in text
+    assert "one owner" in text
+    assert "one repository per installation" not in text
 
 
 def test_release_doc_describes_checksum_install_path() -> None:

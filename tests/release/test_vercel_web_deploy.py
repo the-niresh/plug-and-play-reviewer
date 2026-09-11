@@ -134,12 +134,20 @@ def test_deploy_docs_explain_vercel_ui_and_api_proxy() -> None:
     assert "runner" in text.lower()
 
 
-def test_readme_has_deploy_buttons_for_vercel_render_and_railway() -> None:
+def test_readme_has_deploy_buttons_for_render_and_railway_only() -> None:
+    """No Vercel button, for the same reason the landing page has none.
+
+    See test_landing_does_not_offer_to_clone_the_frontend below. A "Deploy frontend to
+    Vercel" button clones the marketing site and dashboard, which nobody installing the
+    product wants; the thing worth self-hosting is the control plane, and Render and
+    Railway cover that. The landing page dropped it on 2026-09-11 and the README kept it
+    for another day, which left the repo saying two different things.
+    """
     text = README.read_text(encoding="utf-8")
-    assert "Deploy frontend to Vercel" in text
+    assert "Deploy frontend to Vercel" not in text
+    assert "vercel.com/new/clone" not in text
     assert "Deploy API on Render" in text
     assert "Deploy API on Railway" in text
-    assert "vercel.com/new/clone" in text
     assert "render.com/deploy" in text
     assert "railway.com/new" in text
     assert "One-click Render or Railway" not in text
