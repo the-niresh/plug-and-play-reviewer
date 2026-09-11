@@ -174,7 +174,6 @@ class RepositoriesPanel(Widget):
         if button_id.startswith("repository-"):
             repo_id = int(button_id.removeprefix("repository-"))
             selected = next(repo for repo in self._repositories if repo.id == repo_id)
-            owner, _, name = selected.full_name.partition("/")
             self._selected_repository = selected
             if self._pull_requests_reader is None:
                 self._pull_requests = ()
@@ -184,7 +183,7 @@ class RepositoriesPanel(Widget):
             else:
                 try:
                     self._pull_requests = self._pull_requests_reader.list_open_pull_requests(
-                        owner, name
+                        selected.id, self._installation_id
                     )
                     self._pull_requests_error = None
                 except Exception as exc:  # hosted plane or GitHub call failed after all

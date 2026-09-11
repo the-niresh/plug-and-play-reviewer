@@ -41,10 +41,18 @@ class InstallationRepositoriesReader(Protocol):
 
 
 class OpenPullRequestsReader(Protocol):
+    """Takes ids, not an owner/name pair.
+
+    github.open_pull_requests.list_open_pull_requests asks GitHub for
+    /repositories/{id}/pulls and needs the installation id to mint a token. The adapter
+    used to be handed owner and repository strings and pass them straight through, which
+    could never have worked: wrong arity, wrong types, and no installation id.
+    """
+
     def list_open_pull_requests(
         self,
-        owner: str,
-        repository: str,
+        repository_id: int,
+        installation_id: int,
     ) -> tuple[OpenPullRequest, ...]: ...
 
 
@@ -63,10 +71,10 @@ class FakeOpenPullRequestsReader:
 
     def list_open_pull_requests(
         self,
-        owner: str,
-        repository: str,
+        repository_id: int,
+        installation_id: int,
     ) -> tuple[OpenPullRequest, ...]:
-        del owner, repository
+        del repository_id, installation_id
         return self.pull_requests
 
 
@@ -195,11 +203,13 @@ class _RealOpenPullRequestsReader:
 
     def list_open_pull_requests(
         self,
-        owner: str,
-        repository: str,
+        repository_id: int,
+        installation_id: int,
     ) -> tuple[OpenPullRequest, ...]:
         rows = self._module.list_open_pull_requests(
-            owner, repository, token_provider=self._token_provider
+            repository_id,
+            installation_id=installation_id,
+            token_provider=self._token_provider,
         )
         return tuple(
             OpenPullRequest(

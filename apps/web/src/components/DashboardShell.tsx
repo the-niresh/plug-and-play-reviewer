@@ -6,8 +6,15 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { SiteNav } from "@/components/SiteNav";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Approvals, Evals and Connectors used to live here too, each reading a session from the
 // local runner's own loopback API. They moved to the runner's own web surface (task
@@ -22,10 +29,19 @@ const NAV = [
   { href: "/dashboard/settings", label: "Settings" },
 ] as const;
 
-type Profile = { login: string | null } | null;
+type Profile = { login: string | null; github_user_id: number } | null;
 
 function initialsFor(login: string | null): string {
   return login ? login.slice(0, 2).toUpperCase() : "?";
+}
+
+/** GitHub serves any account's picture from its numeric id, so there is nothing to store
+ *  and nothing to keep in sync when someone changes their photo. This is the one
+ *  third-party request on the dashboard, and it is the viewer's own avatar on a page they
+ *  reached by signing in with GitHub; it carries no identifier GitHub does not already
+ *  have. It never appears on the marketing pages, which stay request-free. */
+function avatarUrlFor(githubUserId: number): string {
+  return `https://avatars.githubusercontent.com/u/${githubUserId}?v=4&s=96`;
 }
 
 function UserMenu({ profile }: { profile: Profile }) {
@@ -47,14 +63,38 @@ function UserMenu({ profile }: { profile: Profile }) {
     }
   }
 
+  const label = profile.login ?? "your account";
+
   return (
-    <div className="ml-auto flex items-center gap-3">
-      <Avatar size="sm">
-        <AvatarFallback>{initialsFor(profile.login)}</AvatarFallback>
-      </Avatar>
-      <Button variant="outline" size="sm" onClick={handleSignOut} disabled={isSigningOut}>
-        {isSigningOut ? "Signing out..." : "Log out"}
-      </Button>
+    <div className="ml-auto flex items-center">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={`Account menu for ${label}`}
+          className="focus-visible:ring-ring/50 rounded-full focus-visible:ring-[3px] focus-visible:outline-none"
+        >
+          <Avatar size="default">
+            {/* Empty alt: the trigger's aria-label already names this control, and a
+                second name here would be read out twice. */}
+            <AvatarImage src={avatarUrlFor(profile.github_user_id)} alt="" />
+            <AvatarFallback>{initialsFor(profile.login)}</AvatarFallback>
+          </Avatar>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel className="truncate">{label}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={isSigningOut}
+            onSelect={(event) => {
+              // Radix closes the menu on select and would unmount this handler's owner
+              // mid-request; the sign-out finishes on its own and navigates.
+              event.preventDefault();
+              void handleSignOut();
+            }}
+          >
+            {isSigningOut ? "Signing out..." : "Log out"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
