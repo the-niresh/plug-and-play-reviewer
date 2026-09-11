@@ -1,6 +1,6 @@
 [project]
 name = "plug-and-play-reviewer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Plug and play AI pull request reviewer"
 requires-python = ">=3.12"
 dependencies = [

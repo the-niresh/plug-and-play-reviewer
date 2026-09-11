@@ -14,7 +14,7 @@ Each tagged release publishes:
 | `sbom.spdx.json` | SPDX SBOM from syft (CI release workflow) |
 
 Version comes from `pyproject.toml` (`project.version`). Tag names use a `v`
-prefix (`v0.1.0` for version `0.1.0`).
+prefix (`v0.2.0` for version `0.1.0`).
 
 ## Build assets locally
 
@@ -41,13 +41,13 @@ After a release exists on GitHub:
 
 ```sh
 mkdir -p /tmp/pr-reviewer-release-prefix
-sh scripts/install-from-release.sh --version 0.1.0 --prefix /tmp/pr-reviewer-release-prefix
+sh scripts/install-from-release.sh --version 0.2.0 --prefix /tmp/pr-reviewer-release-prefix
 ```
 
 Or download manually:
 
 ```sh
-VERSION=0.1.0
+VERSION=0.2.0
 TAG=v${VERSION}
 ASSET=pr-reviewer-${VERSION}-compose.release.yml
 curl -fsSL "https://github.com/the-niresh/plug-and-play-reviewer/releases/download/${TAG}/SHA256SUMS" -o SHA256SUMS
@@ -66,8 +66,8 @@ Prerequisites: push access, `gh auth login`, Docker on the runner.
 3. Tag and push:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 4. GitHub Actions workflow `.github/workflows/release.yml` runs on `v*` tags,
@@ -75,8 +75,8 @@ git push origin v0.1.0
 5. Verify:
 
 ```sh
-gh release view v0.1.0 --repo the-niresh/plug-and-play-reviewer
-gh release download v0.1.0 --repo the-niresh/plug-and-play-reviewer -D /tmp/release-check
+gh release view v0.2.0 --repo the-niresh/plug-and-play-reviewer
+gh release download v0.2.0 --repo the-niresh/plug-and-play-reviewer -D /tmp/release-check
 cat /tmp/release-check/SHA256SUMS
 ```
 
@@ -84,7 +84,7 @@ Manual fallback if CI is unavailable:
 
 ```sh
 sh scripts/build-local-release.sh dist
-gh release create v0.1.0 dist/* --repo the-niresh/plug-and-play-reviewer --title "v0.1.0"
+gh release create v0.2.0 dist/* --repo the-niresh/plug-and-play-reviewer --title "v0.2.0"
 ```
 
 Proof report: [reports/release-checksum-install-proof.md](reports/release-checksum-install-proof.md).

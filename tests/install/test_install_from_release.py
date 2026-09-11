@@ -10,7 +10,19 @@ import pytest
 from repo_paths import REPO_ROOT
 
 REPO = REPO_ROOT
-ASSET_NAME = "pr-reviewer-0.1.0-compose.release.yml"
+
+
+def _asset_name() -> str:
+    """Derived, not pinned. scripts/build-local-release.sh names the asset from
+    pyproject's version, so a version bump used to break these tests with a message
+    about a missing file rather than about the release."""
+    import tomllib
+
+    version = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]["version"]
+    return f"pr-reviewer-{version}-compose.release.yml"
+
 
 
 def test_install_from_release_script_uses_local_dist_with_checksum(tmp_path: Path) -> None:
@@ -44,8 +56,8 @@ def test_install_from_release_script_uses_local_dist_with_checksum(tmp_path: Pat
         timeout=60,
     )
     assert result.returncode == 0, result.stderr + result.stdout
-    assert (prefix / ASSET_NAME).is_file()
-    assert ASSET_NAME in result.stdout
+    assert (prefix / _asset_name()).is_file()
+    assert _asset_name() in result.stdout
 
 
 def test_release_docs_describe_checksum_path() -> None:

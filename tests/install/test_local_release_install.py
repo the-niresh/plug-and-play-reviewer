@@ -10,8 +10,20 @@ import pytest
 from repo_paths import REPO_ROOT
 
 REPO = REPO_ROOT
+
+
+def _asset_name() -> str:
+    """Derived, not pinned. scripts/build-local-release.sh names the asset from
+    pyproject's version, so a version bump used to break these tests with a message
+    about a missing file rather than about the release."""
+    import tomllib
+
+    version = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]["version"]
+    return f"pr-reviewer-{version}-compose.release.yml"
+
 BUSYBOX = "busybox@sha256:73aaf090f3d85aa34ee199857f03fa3a95c8ede2ffd4cc2cdb5b94e566b11662"
-ASSET_NAME = "pr-reviewer-0.1.0-compose.release.yml"
 
 
 def test_local_versioned_asset_installs_in_clean_linux_container(tmp_path: Path) -> None:
@@ -27,10 +39,10 @@ def test_local_versioned_asset_installs_in_clean_linux_container(tmp_path: Path)
         timeout=60,
     )
     assert built.returncode == 0, built.stderr + built.stdout
-    asset = dest / ASSET_NAME
+    asset = dest / _asset_name()
     sums = dest / "SHA256SUMS"
     assert asset.is_file()
-    assert ASSET_NAME in sums.read_text(encoding="utf-8")
+    assert _asset_name() in sums.read_text(encoding="utf-8")
     asset_text = asset.read_text(encoding="utf-8")
     assert "${DATABASE_URL:?DATABASE_URL must be set}" in asset_text
     assert "${GITHUB_APP_PRIVATE_KEY:?GITHUB_APP_PRIVATE_KEY must be set}" in asset_text
@@ -45,14 +57,14 @@ def test_local_versioned_asset_installs_in_clean_linux_container(tmp_path: Path)
             "-v",
             f"{REPO / 'scripts' / 'install.sh'}:/install.sh:ro",
             "-v",
-            f"{asset}:/{ASSET_NAME}:ro",
+            f"{asset}:/{_asset_name()}:ro",
             "-v",
             f"{sums}:/SHA256SUMS:ro",
             BUSYBOX,
             "sh",
             "/install.sh",
             "--archive",
-            f"/{ASSET_NAME}",
+            f"/{_asset_name()}",
             "--checksum-file",
             "/SHA256SUMS",
             "--prefix",
@@ -64,4 +76,4 @@ def test_local_versioned_asset_installs_in_clean_linux_container(tmp_path: Path)
         timeout=60,
     )
     assert result.returncode == 0, result.stderr + result.stdout
-    assert f"{ASSET_NAME}: OK" in result.stdout
+    assert f"{_asset_name()}: OK" in result.stdout

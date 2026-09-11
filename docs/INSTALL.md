@@ -91,16 +91,16 @@ mkdir -p /tmp/pr-reviewer-release-prefix
 sh scripts/install-from-release.sh --dist dist --prefix /tmp/pr-reviewer-release-prefix
 ```
 
-After the owner publishes `v0.1.0` on GitHub:
+After the owner publishes `v0.2.0` on GitHub:
 
 ```sh
-sh scripts/install-from-release.sh --version 0.1.0 --prefix /tmp/pr-reviewer-release-prefix
+sh scripts/install-from-release.sh --version 0.2.0 --prefix /tmp/pr-reviewer-release-prefix
 ```
 
 Pin the runner CLI to the same tag (still needs network to git):
 
 ```sh
-PR_REVIEWER_GIT_REF=v0.1.0 curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
+PR_REVIEWER_GIT_REF=v0.2.0 curl -fsSL https://raw.githubusercontent.com/the-niresh/plug-and-play-reviewer/main/scripts/install-reviewer.sh | sh
 ```
 
 Publishing a release needs owner auth. See [RELEASE.md](RELEASE.md).
