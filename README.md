@@ -4,9 +4,6 @@ Private AI code review. A hosted control plane takes GitHub events. A local
 runner reads the diff, retrieves repo context, and calls your model.
 
 <p>
-  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fthe-niresh%2Fplug-and-play-reviewer&project-name=pr-reviewer-web&repository-name=plug-and-play-reviewer&env=NEXT_PUBLIC_SITE_ORIGIN,NEXT_PUBLIC_CONTROL_PLANE_ORIGIN,NEXT_PUBLIC_GITHUB_APP_SLUG&envDescription=Public%20web%20origin,%20hosted%20API%20origin,%20and%20GitHub%20App%20slug">
-    <img alt="Deploy frontend to Vercel" src="https://img.shields.io/badge/Deploy%20frontend%20to%20Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white">
-  </a>
   <a href="https://render.com/deploy?repo=https://github.com/the-niresh/plug-and-play-reviewer">
     <img alt="Deploy API on Render" src="https://render.com/images/deploy-to-render-button.svg">
   </a>
