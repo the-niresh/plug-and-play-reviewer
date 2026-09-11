@@ -8,7 +8,7 @@ import uuid
 from pr_reviewer.db.client import connection
 
 _ENDPOINT_HASH = re.compile(r"^[0-9a-f]{64}$")
-_TRANSPORTS = frozenset({"slack", "telegram", "discord"})
+_TRANSPORTS = frozenset({"slack", "telegram", "discord", "email"})
 _PURPOSES = frozenset({"security_alert", "review_ping"})
 _CONFIDENTIALITY = frozenset({"restricted", "ordinary"})
 

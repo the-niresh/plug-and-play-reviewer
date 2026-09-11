@@ -60,6 +60,7 @@ from pr_reviewer.runner.client import RunnerClient
 from pr_reviewer.runner.daemon import ReviewExecutor, RunnerDaemon, open_or_recover_local_store
 from pr_reviewer.runner.github_access import fetch_job_snapshot
 from pr_reviewer.runner.modes import RuntimeMode
+from pr_reviewer.runner.notify import notify_review_finished
 from pr_reviewer.runner.secrets import SecretStore, default_config_dir, get_secret_store
 
 LINUX_UNIT_RELATIVE = Path(".config") / "systemd" / "user" / "pr-reviewer.service"
@@ -415,6 +416,7 @@ class DiffOnlyRunnerReviewExecutor:
             number=snapshot.number,
         )
         idempotency_key = posting_idempotency_key(ref, snapshot.head_sha, job.policy_version)
+        self._notify(ref=ref, findings=findings, idempotency_key=idempotency_key)
         patches = tuple(
             FilePatch(path=file.path, patch=file.patch or "", previous_path=file.previous_path)
             for file in snapshot.files
@@ -440,6 +442,29 @@ class DiffOnlyRunnerReviewExecutor:
             )
         except StalePullRequestHead:
             return
+
+    def _notify(
+        self,
+        *,
+        ref: PullRequestRef,
+        findings: Sequence[tuple[Finding, RouteDecision]],
+        idempotency_key: str,
+    ) -> None:
+        """Ping the user's own channels. Never let that failure fail the review.
+
+        This runs before post_review rather than after, because post_review returns
+        early on a stale head. A review that found something and could not post it is
+        exactly the one worth being told about.
+        """
+        try:
+            notify_review_finished(
+                self._secrets,
+                [finding for finding, _decision in findings],
+                pull_request=f"{ref.owner}/{ref.repository}#{ref.number}",
+                idempotency_key=idempotency_key,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("notification delivery failed: %s", exc)
 
 
 def build_review_executor(

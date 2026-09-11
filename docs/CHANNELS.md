@@ -4,8 +4,34 @@ Plug and Play Reviewer can send review notifications to Slack, Discord,
 Telegram, and email. Delivery runs on the **local runner**. Webhook URLs, bot
 tokens, and email API keys never reach the hosted database.
 
-The live control plane is `https://plugandplayreviewer.online`. The product domain
-will be `plugandplayreviewer.online`, but it is not pointed yet.
+The site is `https://plugandplayreviewer.online`; the control plane API is
+`https://api.plugandplayreviewer.online`.
+
+## Set one up
+
+Endpoints go into the runner's secret store, the same place as the model key.
+Nothing here reaches the hosted database.
+
+```bash
+reviewer notify set slack    --slack-webhook https://hooks.slack.com/services/T000/B000/XXXX
+reviewer notify set discord  --discord-webhook https://discord.com/api/webhooks/000/XXXX
+reviewer notify set telegram --telegram-bot-token 123456:ABC --telegram-chat-id -1001234567890
+reviewer notify set email    --email-to you@example.com \
+                             --email-from reviewer@yourdomain.com \
+                             --resend-key re_xxxxxxxx
+
+reviewer notify list      # which transports are configured, and what a partial one still needs
+reviewer notify test      # send a real message to every configured transport
+reviewer notify remove slack
+```
+
+Every flag for a transport is required. Setting only
+`--telegram-bot-token` leaves Telegram listed as `incomplete` and sends nothing,
+rather than failing later with `missing_endpoint` at review time.
+
+When a review finds something, each configured transport gets **one** message
+naming the pull request and listing the findings. One per review, not one per
+finding.
 
 ## How the two sides split
 
@@ -87,10 +113,10 @@ Each notification also carries metadata from `NotificationChannel`:
 | `purpose` | `security_alert`, `review_ping` | Which job types may use this channel. |
 | `confidentiality` | `restricted`, `ordinary` | Default is `restricted` when unset. Never inferred from transport. |
 
-The hosted database migration allows `slack`, `telegram`, and `discord` as
-transport values. Email delivery exists in the runner senders but is not yet in
-the hosted transport enum. Use Slack, Telegram, or Discord for channels declared
-on the hosted plane today.
+All four transports are accepted on both sides. The hosted check constraint
+was widened to include `email` in migration
+`202609120200_notification_channels_email.sql`; before that the contract and the
+runner sender both supported email and the hosted table rejected it.
 
 ## Routing rules
 
@@ -118,7 +144,7 @@ import hashlib
 endpoint_hash = hashlib.sha256(webhook_url.encode("utf-8")).hexdigest()
 ```
 
-Allowed hosted transports: `slack`, `telegram`, `discord`.
+Allowed hosted transports: `slack`, `telegram`, `discord`, `email`.
 Allowed purposes: `security_alert`, `review_ping`.
 Optional confidentiality: `restricted` (default) or `ordinary`.
 
@@ -149,10 +175,15 @@ endpoints = {
 The runner matches hosted channel ids to these local secrets. Webhook URLs and
 tokens stay in local storage only.
 
+`reviewer notify` builds this map for you from the secret store. The example
+above is the shape it produces; you only need it directly when embedding the
+runner in your own code.
+
 ## What this doc does not cover
 
-There is no `reviewer setup` flag for notification secrets today. `reviewer
-setup` stores the model key only. Channel endpoint wiring is handled inside the
-runner delivery path, not through CLI flags documented in `reviewer_entry.py`.
+Declaring a channel on the hosted plane is optional and separate. Delivery works
+entirely from the runner: the hosted row exists so the control plane can show
+that a channel exists, and it holds only a hash of the endpoint, so it can never
+be the thing that sends.
 
 See [SELF_HOSTING.md](SELF_HOSTING.md) for the full runner install flow.

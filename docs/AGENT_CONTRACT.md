@@ -24,6 +24,17 @@ This command reads captured GitHub review-comment replies from the hosted
 database and prints human-reviewable improvement candidates. It is read-only. It
 does not rewrite prompts, eval labels, model choice, routing, or policy.
 
+Notification endpoints are managed with:
+
+- `reviewer notify list`
+- `reviewer notify set <slack|discord|telegram|email> <flags>`
+- `reviewer notify remove <transport>`
+- `reviewer notify test`
+
+These write to the runner's secret store, never to the hosted database. Exit
+codes are `0` done, `1` refused (a missing flag, or nothing configured), and
+`2` a test send that failed. See [CHANNELS.md](CHANNELS.md).
+
 ## Exit Codes
 
 `reviewer review` uses distinct exit codes:

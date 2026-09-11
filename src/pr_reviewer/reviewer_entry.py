@@ -21,7 +21,7 @@ from typing import TextIO
 
 _USAGE = (
     "usage: reviewer <setup|login|logout|doctor|trace|start|stop|status|open|service|update"
-    "|uninstall|review|ablate|feedback|mcp|a2a|acp> [args...]"
+    "|uninstall|review|ablate|feedback|notify|mcp|a2a|acp> [args...]"
 )
 
 _HELP = """\
@@ -54,6 +54,13 @@ Commands:
                                 Run a retrieval ablation over the holdout.
   reviewer feedback candidates [--json]
                                 Print human-reviewable improvement candidates from feedback.
+  reviewer notify list          Show which notification transports are configured.
+  reviewer notify set <slack|discord|telegram|email> ...
+                                Store where review pings go. Endpoints stay on this
+                                 machine, in the same secret store as the model key.
+  reviewer notify remove <transport>
+                                Forget one transport's endpoint.
+  reviewer notify test          Send a test message to every configured transport.
   reviewer mcp                  Serve MCP tools over newline JSON-RPC on stdio.
   reviewer a2a                  Serve A2A JSON-RPC on stdio.
   reviewer acp                  Serve ACP messages on stdio.
@@ -209,6 +216,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         from pr_reviewer.cli.feedback import main as feedback_main
 
         return feedback_main(rest)
+
+    if subcommand == "notify":
+        from pr_reviewer.runner.cli.notify import main as notify_main
+
+        return notify_main(rest)
 
     if subcommand == "mcp":
         from pr_reviewer.runner.cli.mcp import main as mcp_main
