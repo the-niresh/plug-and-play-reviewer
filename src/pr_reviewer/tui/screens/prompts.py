@@ -8,6 +8,12 @@ from textual.widget import Widget
 from textual.widgets import Label, Select, Static, TextArea
 
 from pr_reviewer.local_store.repo_config import RepoConfigStore
+from pr_reviewer.reviewer.specialists import (
+    SPECIALIST_CONCERNS,
+    get_enabled_specialists,
+    set_enabled_specialists,
+    specialist_cost_notice,
+)
 from pr_reviewer.tui.agent_prompt_catalogue import list_builtin_agent_prompts
 from pr_reviewer.tui.installation_snapshot import InstallationSnapshot
 from pr_reviewer.tui.repository_prompt import quote_repository_prompt
@@ -46,6 +52,21 @@ class AgentPromptsPanel(Widget):
     AgentPromptsPanel .custom-prompt-action {
         color: $accent;
         margin-top: 1;
+    }
+
+    AgentPromptsPanel .specialist-heading {
+        text-style: bold;
+        color: $accent;
+        margin-top: 2;
+    }
+
+    AgentPromptsPanel .specialist-hint,
+    AgentPromptsPanel .specialist-cost {
+        color: $text-muted;
+    }
+
+    AgentPromptsPanel .specialist-toggle {
+        margin-top: 0;
     }
     """
 
@@ -109,17 +130,48 @@ class AgentPromptsPanel(Widget):
                     Static("", id="custom-prompt-versions"),
                 ]
             )
+            rows.extend(
+                [
+                    Label(
+                        "Specialist reviewers",
+                        classes="specialist-heading",
+                        id="specialist-heading",
+                    ),
+                    Static(
+                        "Extra passes over the same diff, one per concern. Off by default "
+                        "because each one is another model call. Applies to the repository "
+                        "selected above.",
+                        classes="specialist-hint",
+                        id="specialist-hint",
+                    ),
+                ]
+            )
+            rows.extend(
+                PromptAction(
+                    f"> (off) {concern}",
+                    id=f"specialist-{concern}",
+                    classes="specialist-toggle",
+                )
+                for concern in SPECIALIST_CONCERNS
+            )
+            rows.append(Static("", classes="specialist-cost", id="specialist-cost"))
         yield Vertical(*rows, id="agent-prompts-panel")
 
     def on_mount(self) -> None:
         self._refresh_custom_prompt_display()
+        self._refresh_specialist_display()
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id == "custom-prompt-repo" and event.value is not Select.NULL:
             self._refresh_custom_prompt_display()
+            self._refresh_specialist_display()
 
     def on_prompt_action_activated(self, event: PromptAction.Activated) -> None:
-        if event.prompt_action.id != "custom-prompt-save" or self._repo_config is None:
+        action_id = event.prompt_action.id or ""
+        if action_id.startswith("specialist-"):
+            self._toggle_specialist(action_id.removeprefix("specialist-"))
+            return
+        if action_id != "custom-prompt-save" or self._repo_config is None:
             return
         repo_id = self._selected_repo_id()
         if repo_id is None:
@@ -163,6 +215,46 @@ class AgentPromptsPanel(Widget):
             for item in versions
         ]
         self.query_one("#custom-prompt-versions", Static).update("\n".join(lines))
+
+    def _toggle_specialist(self, concern: str) -> None:
+        """Write the change straight through, no separate save step.
+
+        The onboarding panel collected every toggle and wrote once at the end, which is
+        why this setting was unreachable: that panel is mounted by nothing. Here each
+        toggle is its own edit, so there is no half-applied state to lose.
+        """
+        if concern not in SPECIALIST_CONCERNS or self._repo_config is None:
+            return
+        repo_id = self._selected_repo_id()
+        if repo_id is None:
+            return
+        enabled = set(get_enabled_specialists(self._repo_config.path, repo_id))
+        if concern in enabled:
+            enabled.discard(concern)
+        else:
+            enabled.add(concern)
+        set_enabled_specialists(self._repo_config.path, repo_id, tuple(sorted(enabled)))
+        self._refresh_specialist_display()
+
+    def _refresh_specialist_display(self) -> None:
+        if self._repo_config is None or not self._repo_options:
+            return
+        repo_id = self._selected_repo_id()
+        if repo_id is None:
+            return
+        enabled = set(get_enabled_specialists(self._repo_config.path, repo_id))
+        for concern in SPECIALIST_CONCERNS:
+            # Parentheses, not the [x] a checkbox wants: Textual reads square brackets as
+            # markup, so "[x] security" renders as "security" styled 'x' and the toggle
+            # looks like it did nothing.
+            mark = "(on) " if concern in enabled else "(off)"
+            self.query_one(f"#specialist-{concern}", PromptAction).update(
+                f"> {mark} {concern}"
+            )
+        notice = specialist_cost_notice(len(enabled))
+        self.query_one("#specialist-cost", Static).update(
+            notice or "No specialists enabled. Reviews stay at one model call."
+        )
 
     def _set_custom_status(self, message: str) -> None:
         self.query_one("#custom-prompt-status", Static).update(message)

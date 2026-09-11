@@ -108,3 +108,43 @@ def test_user_can_save_custom_repository_prompt(tmp_path: Path) -> None:
             assert "v1" in versions
 
     asyncio.run(exercise())
+
+
+def test_specialists_can_be_turned_on_from_the_agent_prompts_screen(tmp_path: Path) -> None:
+    """The switch existed, was read at review time, and nothing mounted could set it.
+
+    set_enabled_specialists only ever had one caller, OnboardingPanel, and OnboardingPanel
+    is constructed by tests and by nothing else. So "multi-model agents, off by default"
+    was true and there was no on.
+    """
+    from pr_reviewer.local_store.repo_config import RepoConfigStore
+    from pr_reviewer.reviewer.specialists import get_enabled_specialists
+    from pr_reviewer.tui.widgets.prompt_action import PromptAction
+
+    config_path = tmp_path / "repo_config.json"
+    repo_config = RepoConfigStore(config_path)
+
+    async def exercise() -> None:
+        from textual.app import App, ComposeResult
+
+        class Harness(App[None]):
+            def compose(self) -> ComposeResult:
+                yield AgentPromptsPanel(SAMPLE_INSTALLATION, repo_config=repo_config)
+
+        async with Harness().run_test() as pilot:
+            panel = pilot.app.query_one(AgentPromptsPanel)
+            assert get_enabled_specialists(config_path, 11) == ()
+
+            panel.query_one("#specialist-security", PromptAction).press()
+            await pilot.pause()
+            assert get_enabled_specialists(config_path, 11) == ("security",)
+            assert "(on)  security" in str(panel.query_one("#specialist-security").render())
+            assert "$" in str(panel.query_one("#specialist-cost").render())
+
+            # Toggling the same row off must write the removal, not just redraw.
+            panel.query_one("#specialist-security", PromptAction).press()
+            await pilot.pause()
+            assert get_enabled_specialists(config_path, 11) == ()
+            assert "(off) security" in str(panel.query_one("#specialist-security").render())
+
+    asyncio.run(exercise())
