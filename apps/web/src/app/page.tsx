@@ -74,7 +74,8 @@ const EXAMPLE_FINDING: ReviewFinding = {
     output_tokens: null,
     cost_usd: null,
     verification_status: "asserted",
-    verification_reason: "No sandbox run. A human still has to approve posting.",
+    verification_reason:
+      "No sandbox run. A human still has to approve posting.",
     sandbox_run_id: null,
     command_id: null,
     verification_detail: null,
@@ -108,8 +109,7 @@ const FLOW_STEPS = [
 const PRIDE = [
   {
     title: "Local runner",
-    body:
-      "The model call happens on your laptop or server. Source never goes to the hosted site. The hosted plane only ever learns that a job ran, which repository it was for, and what it cost.",
+    body: "The model call happens on your laptop or server. Source never goes to the hosted site. The hosted plane only ever learns that a job ran, which repository it was for, and what it cost.",
   },
   {
     title: "Retrieval",
@@ -125,7 +125,7 @@ const PRIDE = [
   },
   {
     title: "Opt-in specialists",
-    body: "Extra reviewers run only when a repo turns them on. They are off by default.",
+    body: "Security, correctness, tests and docs reviewers run only when a repo turns them on, under agent-prompts in the terminal UI. Off by default, because each one is another model call.",
   },
   {
     title: "Human gate",
@@ -141,7 +141,11 @@ const PRIVACY_ROWS = [
     hosted: "Never",
     local: "Yes, in the local key store",
   },
-  { item: "GitHub event metadata", hosted: "Yes", local: "Yes, to claim the job" },
+  {
+    item: "GitHub event metadata",
+    hosted: "Yes",
+    local: "Yes, to claim the job",
+  },
   {
     item: "Finding title and rationale",
     hosted: "Yes, so the dashboard can show it",
@@ -164,8 +168,7 @@ const SETUP_STEPS = [
   },
   {
     title: "Your LLM provider API key",
-    body:
-      "The key from OpenAI, Anthropic, Groq or whoever you use. It stays on the runner and never reaches the hosted database.",
+    body: "The key from OpenAI, Anthropic, Groq or whoever you use. It stays on the runner and never reaches the hosted database.",
   },
 ] as const;
 
@@ -204,28 +207,26 @@ export default function HomePage() {
               Private AI code review that stays on your machine
             </h1>
             <p className="text-muted-foreground mt-6 max-w-prose text-lg leading-relaxed">
-              A hosted control plane takes GitHub events. Your local runner reads the diff
-              and calls your model. The patch never leaves the machine you trust.
+              A hosted control plane takes GitHub events. Your local runner
+              reads the diff and calls your model. The patch never leaves the
+              machine you trust.
             </p>
             <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-              That boundary is not a promise on a slide. CI runs a schema check that fails
-              if source, diffs, or provider keys could land on the hosted plane. See what we
-              store in{" "}
-              <Link
-                href="/privacy"
-              className="landing-link"
-            >
-              Privacy
-            </Link>
+              That boundary is not a promise on a slide. CI runs a schema check
+              that fails if source, diffs, or provider keys could land on the
+              hosted plane. See what we store in{" "}
+              <Link href="/privacy" className="landing-link">
+                Privacy
+              </Link>
               .
             </p>
             <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-              An open source PR reviewer built for private AI code review.
-              It is AI code review self hosted on a laptop or a server you run.
+              An open source PR reviewer built for private AI code review. It is
+              AI code review self hosted on a laptop or a server you run.
             </p>
             <p className="text-muted-foreground mt-8 max-w-prose text-sm leading-relaxed">
-              Self-hosting the control plane needs a GitHub App before you click either
-              button below. Read{" "}
+              Self-hosting the control plane needs a GitHub App before you click
+              either button below. Read{" "}
               <a
                 href={SELF_HOST_DOC_URL}
                 target="_blank"
@@ -274,7 +275,10 @@ export default function HomePage() {
                 />
               </a>
             </div>
-            <a href="#how-a-review-moves" className="landing-link mt-6 inline-block text-sm">
+            <a
+              href="#how-a-review-moves"
+              className="landing-link mt-6 inline-block text-sm"
+            >
               See how a review moves
             </a>
           </div>
@@ -293,13 +297,13 @@ export default function HomePage() {
             On a real pull request
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose text-base leading-relaxed">
-            Not a mockup. This is the App commenting on a pull request in one of our own
-            repositories, after a human approved the finding.
+            Not a mockup. This is the App commenting on a pull request in one of
+            our own repositories, after a human approved the finding.
           </p>
           <p className="text-muted-foreground mt-4 max-w-prose text-base leading-relaxed">
-            Read the last line too. The finding is right, the suggested patch is not, and
-            the author says so. That is the whole reason a person approves every comment
-            before it posts, and the reason the{" "}
+            Read the last line too. The finding is right, the suggested patch is
+            not, and the author says so. That is the whole reason a person
+            approves every comment before it posts, and the reason the{" "}
             <Link href="/scorecard" className="landing-link">
               scorecard
             </Link>{" "}
@@ -325,8 +329,8 @@ export default function HomePage() {
             {SECTIONS[0].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose text-base leading-relaxed">
-            GitHub PR to hosted job to local runner to retrieval to review comment. The
-            hosted box never holds the patch.
+            GitHub PR to hosted job to local runner to retrieval to review
+            comment. The hosted box never holds the patch.
           </p>
           <ol className="mt-10 grid gap-0 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.2fr]">
             {FLOW_STEPS.map((step, index) => (
@@ -338,7 +342,9 @@ export default function HomePage() {
                   index > 0 && "lg:pt-0",
                 )}
               >
-                <h3 className="font-mono text-sm font-semibold">{step.title}</h3>
+                <h3 className="font-mono text-sm font-semibold">
+                  {step.title}
+                </h3>
                 <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                   {step.body}
                 </p>
@@ -355,8 +361,9 @@ export default function HomePage() {
             {SECTIONS[1].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-            Source, diffs, and your provider API key stay on the runner. Finding text may sit on
-            the dashboard so you can read it before you approve a post.
+            Source, diffs, and your provider API key stay on the runner. Finding
+            text may sit on the dashboard so you can read it before you approve
+            a post.
           </p>
           <div className="mt-8 grid gap-0 sm:grid-cols-2 lg:hidden">
             {PRIVACY_ROWS.map((row, index) => (
@@ -388,17 +395,24 @@ export default function HomePage() {
           <div className="landing-rule mt-8 hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[36rem] border-collapse text-sm">
               <caption className="sr-only">
-                What the hosted control plane sees versus what stays on the local runner
+                What the hosted control plane sees versus what stays on the
+                local runner
               </caption>
               <thead>
                 <tr className="bg-muted/40 text-muted-foreground text-left">
                   <th scope="col" className="px-4 py-3 font-medium">
                     Data
                   </th>
-                  <th scope="col" className="text-foreground px-4 py-3 font-semibold">
+                  <th
+                    scope="col"
+                    className="text-foreground px-4 py-3 font-semibold"
+                  >
                     Hosted
                   </th>
-                  <th scope="col" className="text-foreground px-4 py-3 font-semibold">
+                  <th
+                    scope="col"
+                    className="text-foreground px-4 py-3 font-semibold"
+                  >
                     Local
                   </th>
                 </tr>
@@ -409,8 +423,12 @@ export default function HomePage() {
                     <th scope="row" className="px-4 py-3 text-left font-medium">
                       {row.item}
                     </th>
-                    <td className="text-muted-foreground px-4 py-3">{row.hosted}</td>
-                    <td className="text-muted-foreground px-4 py-3">{row.local}</td>
+                    <td className="text-muted-foreground px-4 py-3">
+                      {row.hosted}
+                    </td>
+                    <td className="text-muted-foreground px-4 py-3">
+                      {row.local}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -426,8 +444,8 @@ export default function HomePage() {
             {SECTIONS[2].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-            Grounded findings, suggestion blocks, and the human gate are product rules, not
-            slogans.
+            Grounded findings, suggestion blocks, and the human gate are product
+            rules, not slogans.
           </p>
           <div className="mt-10 grid gap-0 lg:grid-cols-12">
             {PRIDE.map((item, index) => (
@@ -441,7 +459,9 @@ export default function HomePage() {
                   index > 0 && index % 2 === 1 && "lg:col-start-8",
                 )}
               >
-                <h3 className="font-mono text-sm font-semibold">{item.title}</h3>
+                <h3 className="font-mono text-sm font-semibold">
+                  {item.title}
+                </h3>
                 <p
                   className={cn(
                     "text-muted-foreground mt-2 leading-relaxed",
@@ -464,12 +484,12 @@ export default function HomePage() {
               {SECTIONS[3].title}
             </h2>
             <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-              You can add agents and edit prompts per repository. Those settings stay
-              private to that repo.
+              You can add agents and edit prompts per repository. Those settings
+              stay private to that repo.
             </p>
             <p className="text-muted-foreground mt-3 max-w-prose leading-relaxed">
-              Repo A never receives Repo B prompts. This is permissioned team power, not a
-              public dump.
+              Repo A never receives Repo B prompts. This is permissioned team
+              power, not a public dump.
             </p>
           </article>
           <article className="border-border border-t pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
@@ -478,14 +498,15 @@ export default function HomePage() {
               What stays free and what is for teams
             </h2>
             <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-              A single person running a local reviewer can stay on a simple path. On the
-              free tier a repository has one owner at a time: connect as many as your
-              GitHub App installation covers, and nobody else can pair against one you
-              already hold.
+              A single person running a local reviewer can stay on a simple
+              path. On the free tier a repository has one owner at a time:
+              connect as many as your GitHub App installation covers, and nobody
+              else can pair against one you already hold.
             </p>
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-              Team controls, shared prompts, and more than one person on the same
-              repository are the paid path. There are no prices on this page.
+              Team controls, shared prompts, and more than one person on the
+              same repository are the paid path. There are no prices on this
+              page.
             </p>
           </article>
         </section>
@@ -498,13 +519,16 @@ export default function HomePage() {
             {SECTIONS[4].title}
           </h2>
           <p className="text-muted-foreground mt-4 max-w-prose leading-relaxed">
-            Every finding is scored by a second model call and anything ungrounded is
-            dropped before you see it. The scorecard shows the measured result on a
-            human-judged holdout, with the model and the sample it was run on.
-            That holdout is seven human-judged cases from the Zod repository, so it is
-            evidence, not a published baseline.
+            Every finding is scored by a second model call and anything
+            ungrounded is dropped before you see it. The scorecard shows the
+            measured result on a human-judged holdout, with the model and the
+            sample it was run on. That holdout is seven human-judged cases from
+            the Zod repository, so it is evidence, not a published baseline.
           </p>
-          <Link href="/scorecard" className="landing-link mt-8 inline-block text-sm font-medium">
+          <Link
+            href="/scorecard"
+            className="landing-link mt-8 inline-block text-sm font-medium"
+          >
             Open the scorecard
           </Link>
         </section>
@@ -523,7 +547,9 @@ export default function HomePage() {
                   key={step.title}
                   className="border-border border-t px-0 py-4 first:border-t-0 first:pt-0"
                 >
-                  <p className="font-mono text-sm font-semibold">{step.title}</p>
+                  <p className="font-mono text-sm font-semibold">
+                    {step.title}
+                  </p>
                   <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                     {step.body}
                   </p>
@@ -531,13 +557,14 @@ export default function HomePage() {
               ))}
             </ol>
             <p className="text-muted-foreground mt-5 max-w-prose text-sm leading-relaxed">
-              Step 02 is the only part you can hand to a host. These deploy the control
-              plane, not the runner: the runner must stay on a machine you trust, which is
-              the whole point.
+              Step 02 is the only part you can hand to a host. These deploy the
+              control plane, not the runner: the runner must stay on a machine
+              you trust, which is the whole point.
             </p>
             <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
-              Self-hosting the control plane still needs your own secrets and database.
-              Railway starts from a repo import until a public template id exists.
+              Self-hosting the control plane still needs your own secrets and
+              database. Railway starts from a repo import until a public
+              template id exists.
             </p>
             <Link
               href="/docs"
@@ -554,12 +581,12 @@ export default function HomePage() {
             <ul className="text-muted-foreground mt-4 space-y-3 text-sm leading-relaxed">
               <li>The reviewer does not learn from human replies yet.</li>
               <li>
-                The published scorecard is a narrow holdout sample, not a guarantee on your
-                repository.
+                The published scorecard is a narrow holdout sample, not a
+                guarantee on your repository.
               </li>
               <li>
-                An empty-generate retry exists but stays off. It raised false findings when
-                we tried it.
+                An empty-generate retry exists but stays off. It raised false
+                findings when we tried it.
               </li>
             </ul>
           </aside>
@@ -571,10 +598,7 @@ export default function HomePage() {
           </p>
           <p className="mt-2">Built for fast shipping solo founders.</p>
           <nav aria-label="Legal" className="mt-4 flex flex-wrap gap-4">
-            <Link
-              href="/privacy"
-              className="landing-link"
-            >
+            <Link href="/privacy" className="landing-link">
               Privacy
             </Link>
             <Link href="/terms" className="landing-link">
