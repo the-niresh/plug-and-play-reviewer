@@ -14,9 +14,9 @@ const SEVERITIES = [
 ] as const;
 
 const ROWS = [
-  { repo: "YeahScene-AI", pr: "#11", findings: "4 findings", when: "2m ago", current: true },
-  { repo: "Niresh-portfolio", pr: "#7", findings: "2 findings", when: "1h ago", current: false },
-  { repo: "plug-and-play-reviewer", pr: "#42", findings: "4 findings", when: "3h ago", current: false },
+  { repo: "YeahScene-AI", pr: "#11", findings: "4 findings", current: true },
+  { repo: "Niresh-portfolio", pr: "#7", findings: "2 findings", current: false },
+  { repo: "plug-and-play-reviewer", pr: "#42", findings: "4 findings", current: false },
 ] as const;
 
 const SECTIONS = ["repositories", "agent-prompts", "profile", "reviews"] as const;
@@ -89,17 +89,19 @@ export function TerminalStage() {
                 <li
                   key={`${row.repo}${row.pr}`}
                   aria-current={row.current ? "true" : undefined}
+                  // A grid, not flex-wrap: at the hero's column width a wrapping row put
+                  // the timestamp on its own line and the list stopped reading as a table.
                   className={
-                    "flex min-w-0 flex-wrap items-baseline gap-x-3 " +
+                    "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 " +
                     (row.current
                       ? "bg-foreground text-background -mx-1 rounded-sm px-1 font-semibold"
                       : "text-muted-foreground")
                   }
                 >
-                  <span className="truncate">{row.repo}</span>
-                  <span>{row.pr}</span>
-                  <span className="ml-auto">{row.findings}</span>
-                  <span>{row.when}</span>
+                  <span className="truncate">
+                    {row.repo} {row.pr}
+                  </span>
+                  <span className="whitespace-nowrap">{row.findings}</span>
                 </li>
               ))}
             </ul>
