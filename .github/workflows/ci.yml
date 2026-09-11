@@ -41,9 +41,12 @@ jobs:
         run: uv run pr-reviewer-db-migrate
       - name: migration-upgrade
         run: uv run pr-reviewer-db-migrate
-      - name: bun tests
-        run: bun test
-        working-directory: apps/web
+      # No `bun test` step. apps/web has no bun unit tests: every file under its tests/
+      # directory is a Playwright spec, and bun's default glob picks those up and runs
+      # them itself, which fails with "Playwright Test did not expect
+      # test.describe.configure() to be called here". The playwright step below is what
+      # runs them, with the runner Playwright expects. Add this step back the day there
+      # is a real bun test to run, scoped so it cannot glob the specs again.
       - name: frontend build
         run: bun run build
         working-directory: apps/web
