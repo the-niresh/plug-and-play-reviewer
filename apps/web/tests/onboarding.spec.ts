@@ -1,16 +1,40 @@
 import { expect, test } from "@playwright/test";
 
-const LOCAL_API = process.env.NEXT_PUBLIC_LOCAL_API_ORIGIN ?? "http://127.0.0.1:8741";
+/** The local onboarding page.
+ *
+ *  Three tests here used to fill a model-key field on this page and assert a POST to
+ *  /onboarding/model-key. That field was deliberately removed: the key belongs in the
+ *  machine's keychain via the TUI, and the page now says so in as many words. Asserting
+ *  the old behaviour meant the suite was guarding the return of a trust-boundary
+ *  violation. The property those tests cared about -- a stored key is never echoed back
+ *  -- is covered where the endpoint actually lives, in tests/runner/test_local_auth.py,
+ *  which checks the key is absent from the body, the headers and the parsed JSON.
+ */
 
-test("onboarding covers pairing, repositories, model key, doctor, and runtime mode", async ({
+const MODEL_KEY_CARD = /model key/i;
+
+test("the page covers GitHub sign-in, the model key rule, and runtime mode", async ({
   page,
 }) => {
   await page.goto("/onboarding");
-  await expect(page.getByRole("heading", { name: /pair/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /repositor/i })).toBeVisible();
-  await expect(page.getByLabel(/api key|model key/i)).toBeVisible();
-  await expect(page.getByRole("heading", { name: /doctor/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /runtime mode/i })).toBeVisible();
+
+  await expect(page.getByText("GitHub", { exact: true })).toBeVisible();
+  await expect(page.getByText(MODEL_KEY_CARD).first()).toBeVisible();
+  await expect(page.getByText(/runtime mode/i).first()).toBeVisible();
+});
+
+test("the model key card sends people to the TUI and offers no field of its own", async ({
+  page,
+}) => {
+  await page.goto("/onboarding");
+
+  await expect(page.getByText(/add your provider key in the tui, not here/i)).toBeVisible();
+  await expect(page.getByText(/never sent to this site/i)).toBeVisible();
+
+  // The point of the card. A key input here would put a model key on a web page, which
+  // is the one thing the two-process split exists to prevent.
+  await expect(page.getByLabel(/api key|model key/i)).toHaveCount(0);
+  await expect(page.locator('input[type="password"]')).toHaveCount(0);
 });
 
 test("disabled features are the list GET /onboarding/mode returned", async ({ page }) => {
@@ -20,43 +44,15 @@ test("disabled features are the list GET /onboarding/mode returned", async ({ pa
   );
   await page.goto("/onboarding");
   const body = (await (await modeResponse).json()) as { disabled_features: string[] };
-  const items = page.getByTestId("disabled-features").getByRole("listitem");
-  await expect(items).toHaveCount(body.disabled_features.length);
-  for (const feature of body.disabled_features) {
-    await expect(page.getByTestId("disabled-features")).toContainText(feature);
+
+  // The list element is always rendered, empty or not, so count the items in it rather
+  // than the list itself. An empty list and a missing list are different things.
+  const list = page.getByTestId("disabled-features");
+  await expect(list.getByRole("listitem")).toHaveCount(body.disabled_features.length);
+  if (body.disabled_features.length === 0) {
+    return;
   }
-});
-
-test("model key POST success does not echo the key", async ({ page }) => {
-  const key = "sk-playwright-must-not-echo";
-  await page.goto("/onboarding");
-  await expect(page.getByRole("button", { name: /save|continue|submit/i })).toBeEnabled();
-  await page.getByLabel(/api key|model key/i).fill(key);
-  const posted = page.waitForRequest(
-    (request) => request.url().includes("/onboarding/model-key") && request.method() === "POST",
-  );
-  await page.getByRole("button", { name: /save|continue|submit/i }).click();
-  const request = await posted;
-  expect(request.url()).toContain(`${LOCAL_API}/onboarding/model-key`);
-  await expect(page.getByText(/api key saved/i)).toBeVisible();
-  await expect(page.locator("body")).not.toContainText(key);
-});
-
-test("a failed model-key save does not show the success message", async ({ page }) => {
-  await page.route("**/onboarding/model-key", (route) =>
-    route.fulfill({
-      status: 500,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "store_failed" }),
-    }),
-  );
-  await page.goto("/onboarding");
-  await expect(page.getByRole("button", { name: /save|continue|submit/i })).toBeEnabled();
-  await page.getByLabel(/api key|model key/i).fill("sk-playwright-failed-save");
-  const posted = page.waitForRequest(
-    (request) => request.url().includes("/onboarding/model-key") && request.method() === "POST",
-  );
-  await page.getByRole("button", { name: /save|continue|submit/i }).click();
-  await posted;
-  await expect(page.getByText(/api key saved/i)).not.toBeVisible();
+  for (const feature of body.disabled_features) {
+    await expect(list).toContainText(feature);
+  }
 });

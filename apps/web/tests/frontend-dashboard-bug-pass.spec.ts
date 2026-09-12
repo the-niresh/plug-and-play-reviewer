@@ -45,6 +45,15 @@ async function auditRoute(page: Page, route: string, prefix: string) {
       const style = window.getComputedStyle(el);
       if (style.display === "none" || style.visibility === "hidden") return false;
       if (style.position === "absolute" && style.width === "1px") return false;
+      // Anything inside an overlay, not just the overlay itself. An overlay sits on top
+      // of the page by design, so it overlaps whatever is under it. Its children are
+      // position:static but ride along with it, so checking only the element itself
+      // still reported the cookie banner's inner div as "DIV overlaps DIV" and called
+      // correct layout a bug.
+      for (let node: Element | null = el; node; node = node.parentElement) {
+        const p = window.getComputedStyle(node).position;
+        if (p === "fixed" || p === "sticky") return false;
+      }
       const rect = el.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return false;
       const text = (el as HTMLElement).innerText?.trim() ?? "";
